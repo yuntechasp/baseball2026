@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理員後台</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1a5fa8;--blue-dark:#0d3b6e;--blue-light:#e6f1fb;
+  --green:#1d9e75;--accent:#e85d24;--amber:#ba7517;--red:#a32d2d;
+  --gray-50:#f7f6f3;--gray-100:#ededea;--gray-200:#d5d4ce;
+  --gray-400:#888780;--gray-600:#5f5e5a;--gray-700:#3d3d3a;--gray-900:#1c1c1a;
+  --white:#fff;--radius:8px;--radius-lg:12px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.07);--shadow:0 2px 8px rgba(0,0,0,.10);
+}
+body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
+  background:var(--gray-50);color:var(--gray-700);font-size:14px;line-height:1.6;min-height:100vh}
+
+/* ── Login ── */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);
+  box-shadow:var(--shadow);padding:36px 32px;width:100%;max-width:380px;text-align:center}
+.login-logo{font-size:40px;margin-bottom:12px}
+.login-box h2{font-size:20px;font-weight:700;color:var(--gray-900);margin-bottom:4px}
+.login-box p{font-size:13px;color:var(--gray-400);margin-bottom:24px}
+.login-box input{width:100%;padding:10px 13px;border:1px solid var(--gray-200);
+  border-radius:var(--radius);font-size:14px;margin-bottom:12px;font-family:inherit}
+.login-box input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,95,168,.12)}
+.login-err{font-size:12px;color:var(--red);margin-top:-4px;margin-bottom:10px;display:none}
+.login-err.show{display:block}
+
+/* ── Layout ── */
+.admin-wrap{display:flex;min-height:100vh}
+.sidebar{width:220px;flex-shrink:0;background:var(--blue-dark);color:#fff;
+  display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:50;
+  transition:transform .3s}
+.sidebar-header{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-title{font-size:15px;font-weight:700;line-height:1.3}
+.sidebar-sub{font-size:11px;opacity:.6;margin-top:2px}
+.sidebar-nav{flex:1;padding:10px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 18px;
+  font-size:13px;font-weight:500;color:rgba(255,255,255,.75);cursor:pointer;
+  border-left:3px solid transparent;transition:all .15s;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:#fff}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;border-radius:10px;
+  font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center}
+.sidebar-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.1);
+  font-size:12px;opacity:.5}
+.content{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--white);border-bottom:1px solid var(--gray-100);
+  padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:40;box-shadow:var(--shadow-sm)}
+.topbar-title{font-size:15px;font-weight:700;color:var(--gray-900)}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.main-content{padding:24px;flex:1}
+.page{display:none}.page.active{display:block}
+
+/* ── Cards ── */
+.card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);
+  box-shadow:var(--shadow-sm);margin-bottom:20px}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--gray-100);
+  display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-title{font-size:14px;font-weight:700;color:var(--gray-900);display:flex;align-items:center;gap:7px}
+.card-body{padding:18px}
+
+/* ── Stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat-box{background:var(--white);border-radius:var(--radius);padding:16px;
+  border:1px solid var(--gray-100);box-shadow:var(--shadow-sm)}
+.stat-label{font-size:11px;color:var(--gray-400);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.stat-val{font-size:26px;font-weight:700;color:var(--gray-900);line-height:1.2;margin-top:2px}
+.stat-sub{font-size:11px;color:var(--gray-400);margin-top:2px}
+.stat-box.blue .stat-val{color:var(--blue)}
+.stat-box.green .stat-val{color:var(--green)}
+.stat-box.amber .stat-val{color:var(--amber)}
+.stat-box.red .stat-val{color:var(--red)}
+
+/* ── Tables ── */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{background:var(--gray-50);padding:9px 12px;font-size:11px;font-weight:700;
+  color:var(--gray-400);text-align:left;border-bottom:1px solid var(--gray-100);
+  text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--gray-100);font-size:13px;vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--gray-50)}
+.data-table-wrap{overflow-x:auto}
+
+/* Status badges */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;
+  padding:3px 9px;border-radius:20px}
+.badge-pending{background:#faeeda;color:var(--amber);border:1px solid #f0d090}
+.badge-approved{background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.badge-rejected{background:#fcebeb;color:var(--red);border:1px solid #f7c1c1}
+
+/* ── Buttons ── */
+.btn{padding:7px 16px;border-radius:var(--radius);font-size:12px;font-weight:600;
+  cursor:pointer;border:1px solid var(--gray-200);background:var(--white);
+  color:var(--gray-700);display:inline-flex;align-items:center;gap:5px;
+  transition:all .15s;font-family:inherit;white-space:nowrap}
+.btn:hover{background:var(--gray-50)}
+.btn:active{transform:scale(.97)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-success{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-success:hover{background:#0f6e56}
+.btn-danger{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-danger:hover{background:#791f1f}
+.btn-warn{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-warn:hover{background:#993c1d}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--gray-400)}
+.btn-ghost:hover{color:var(--gray-700);background:var(--gray-50)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── Forms ── */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;font-weight:500;color:var(--gray-700)}
+.form-group input,.form-group select,.form-group textarea{
+  padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);
+  font-size:13px;color:var(--gray-700);background:var(--white);font-family:inherit;
+  transition:border .15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+  outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(26,95,168,.1)}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--gray-400);border-bottom:1px solid var(--gray-100);padding-bottom:7px;margin-bottom:14px}
+
+/* ── Member edit ── */
+.mem-table{width:100%;border-collapse:collapse}
+.mem-table th{background:var(--gray-50);padding:7px 10px;font-size:11px;font-weight:700;
+  color:var(--gray-400);text-align:left;border-bottom:1px solid var(--gray-100)}
+.mem-table td{padding:5px 6px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+.mem-table tr.cap-row td{background:#fffbf0}
+.mem-in{width:100%;padding:5px 8px;border:1px solid var(--gray-200);border-radius:6px;
+  font-size:12px;color:var(--gray-700);background:var(--white);font-family:inherit}
+.mem-in:focus{outline:none;border-color:var(--blue)}
+.role-badge{display:inline-block;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px}
+.r-cap{background:#faeeda;color:var(--amber);border:1px solid #f0d090}
+.r-mgr{background:var(--blue-light);color:var(--blue)}
+.r-mem{background:var(--gray-100);color:var(--gray-600)}
+
+/* ── Draw ── */
+.chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;
+  font-size:13px;font-weight:600;cursor:pointer;margin:4px;border:1.5px solid var(--gray-200);
+  background:var(--white);color:var(--gray-700);transition:all .2s;user-select:none}
+.chip:hover{border-color:var(--blue);color:var(--blue)}
+.chip.drawn{background:var(--blue-light);border-color:var(--blue);color:var(--blue);cursor:default}
+.chip.spinning{background:var(--accent);border-color:var(--accent);color:#fff}
+@keyframes pop{0%{transform:scale(.9)}60%{transform:scale(1.07)}100%{transform:scale(1)}}
+.chip.pop{animation:pop .35s ease-out}
+.draw-display{background:var(--white);border:1.5px solid var(--gray-200);
+  border-radius:var(--radius-lg);padding:20px;text-align:center;min-height:80px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;margin:14px 0}
+.draw-num{font-size:42px;font-weight:900;color:var(--blue);line-height:1}
+.draw-name{font-size:14px;font-weight:500;color:var(--gray-700);margin-bottom:6px}
+.draw-hint{font-size:13px;color:var(--gray-400)}
+@keyframes numSpin{0%{opacity:.3;transform:translateY(-3px)}100%{opacity:1;transform:translateY(0)}}
+.spinning-num{animation:numSpin .08s ease-out}
+
+.bracket-table{width:100%;border-collapse:collapse}
+.bracket-table th{background:var(--blue);color:#fff;padding:9px 12px;font-size:12px;text-align:left}
+.bracket-table td{padding:9px 12px;border-bottom:1px solid var(--gray-100);font-size:13px}
+.bracket-table tr:hover td{background:var(--gray-50)}
+.vs-badge{display:inline-block;background:var(--gray-100);color:var(--gray-400);
+  border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700}
+.bye-badge{background:#fffbf0;color:var(--amber);border:1px solid #f0d090;border-radius:4px;padding:2px 8px;font-size:11px}
+
+/* ── News ── */
+.news-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;
+  border-bottom:1px solid var(--gray-100)}
+.news-item:last-child{border-bottom:none}
+.news-badge{flex-shrink:0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:1px}
+.nb-new{background:#fff0e6;color:var(--accent);border:1px solid #fcd5bd}
+.nb-imp{background:#fcebeb;color:var(--red);border:1px solid #f5c1c1}
+.nb-info{background:var(--blue-light);color:var(--blue);border:1px solid #b5d4f4}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;
+  display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--radius-lg);padding:24px;
+  width:100%;max-width:600px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal-title{font-size:16px;font-weight:700;color:var(--gray-900);margin-bottom:18px;
+  display:flex;align-items:center;gap:8px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;
+  border-top:1px solid var(--gray-100)}
+
+/* ── Alert / Toast ── */
+.alert{padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-top:10px;display:none}
+.alert.show{display:block}
+.alert-ok{background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.alert-err{background:#fcebeb;color:var(--red);border:1px solid #f7c1c1}
+.toast{position:fixed;bottom:20px;right:20px;z-index:999;background:var(--gray-900);
+  color:#fff;padding:11px 18px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);transform:translateY(60px);opacity:0;
+  transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:var(--green)}.toast.warn{background:var(--accent)}
+
+/* ── Misc ── */
+.divider{height:1px;background:var(--gray-100);margin:16px 0}
+.empty{text-align:center;padding:40px 20px;color:var(--gray-400)}
+.empty-icon{font-size:36px;margin-bottom:8px}
+.tag{display:inline-block;font-size:11px;background:var(--gray-100);
+  color:var(--gray-600);border-radius:4px;padding:2px 7px}
+.spin-loader{display:inline-block;width:16px;height:16px;border:2px solid var(--gray-200);
+  border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.highlight{background:#fffbf0}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-220px)}
+  .sidebar.open{transform:translateX(0)}
+  .content{margin-left:0}
+  .topbar{position:sticky;top:0}
+}
+</style>
+</head>
+<body>
+
+<script>
+// ── 設定：換成您的 Apps Script 網址 ──
+const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0moc322x0N3igfZqWBA-qNiAdLalNOoxjDzl5Go3GJYix/exec';
+</script>
+
+<!-- ══ 登入畫面 ══ -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">🏆</div>
+    <h2>管理員後台</h2>
+    <p>請輸入管理員密碼登入</p>
+    <input type="password" id="pw-input" placeholder="管理員密碼"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-err" id="login-err">密碼錯誤，請再試一次</div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()">
+      登入後台
+    </button>
+    <p style="margin-top:16px;font-size:12px;color:var(--gray-400)">
+      如為離線測試模式，密碼請輸入：<strong>admin1234</strong>
+    </p>
+  </div>
+</div>
+
+<!-- ══ 後台主體 ══ -->
+<div id="admin-app" style="display:none">
+  <div class="admin-wrap">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">🏆 比賽報名系統</div>
+        <div class="sidebar-sub">管理員後台</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" onclick="goPage('dashboard')">
+          <span class="nav-icon">📊</span>總覽
+        </div>
+        <div class="nav-item" onclick="goPage('review')">
+          <span class="nav-icon">📋</span>報名審核
+          <span class="nav-badge" id="badge-pending">0</span>
+        </div>
+        <div class="nav-item" onclick="goPage('players')">
+          <span class="nav-icon">👥</span>球員管理
+        </div>
+        <div class="nav-item" onclick="goPage('news')">
+          <span class="nav-icon">📢</span>最新消息
+        </div>
+        <div class="nav-item" onclick="goPage('draw')">
+          <span class="nav-icon">🎰</span>線上抽籤
+        </div>
+        <div class="nav-item" onclick="goPage('rules')">
+          <span class="nav-icon">📋</span>競賽規程
+        </div>
+        <div class="nav-item" onclick="goPage('payment')">
+          <span class="nav-icon">💰</span>繳費管理
+          <span class="nav-badge" id="badge-payment" style="display:none">0</span>
+        </div>
+        <div class="nav-item" onclick="goPage('output')">
+          <span class="nav-icon">📄</span>輸出文件
+        </div>
+        <div class="nav-item" onclick="goPage('settings')">
+          <span class="nav-icon">⚙️</span>賽事設定
+        </div>
+      </nav>
+      <div class="sidebar-footer">登入中 · 管理員</div>
+    </aside>
+
+    <!-- Content -->
+    <div class="content">
+      <div class="topbar">
+        <div class="topbar-title" id="topbar-title">總覽</div>
+        <div class="topbar-actions">
+          <button class="btn btn-sm" onclick="refreshAll()">↺ 重新整理</button>
+          <button class="btn btn-sm btn-danger" onclick="doLogout()">登出</button>
+        </div>
+      </div>
+
+      <div class="main-content">
+
+        <!-- ── 總覽 ── -->
+        <div id="page-dashboard" class="page active">
+          <div class="stats-row">
+            <div class="stat-box blue"><div class="stat-label">已報名</div><div class="stat-val" id="s-total">—</div><div class="stat-sub">隊</div></div>
+            <div class="stat-box green"><div class="stat-label">已核准</div><div class="stat-val" id="s-approved">—</div><div class="stat-sub">隊</div></div>
+            <div class="stat-box amber"><div class="stat-label">待審核</div><div class="stat-val" id="s-pending">—</div><div class="stat-sub">隊</div></div>
+            <div class="stat-box red"><div class="stat-label">已退件</div><div class="stat-val" id="s-rejected">—</div><div class="stat-sub">隊</div></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📋 近期報名</div>
+              <button class="btn btn-sm" onclick="goPage('review')">查看全部</button>
+            </div>
+            <div class="card-body" style="padding:0">
+              <div class="data-table-wrap">
+                <table class="data-table" id="dash-table">
+                  <thead><tr>
+                    <th>隊伍名稱</th><th>項目</th><th>組別</th><th>領隊</th><th>狀態</th><th>報名時間</th>
+                  </tr></thead>
+                  <tbody id="dash-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 報名審核 ── -->
+        <div id="page-review" class="page">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📋 報名審核</div>
+              <div class="btn-row">
+                <select id="filter-status" class="btn" style="padding:5px 10px" onchange="renderReview()">
+                  <option value="">全部狀態</option>
+                  <option value="pending">待審核</option>
+                  <option value="approved">已核准</option>
+                  <option value="rejected">已退件</option>
+                </select>
+                <button class="btn btn-success btn-sm" onclick="batchApprove()">✔ 批次核准</button>
+              </div>
+            </div>
+            <div class="card-body" style="padding:0">
+              <div class="data-table-wrap">
+                <table class="data-table">
+                  <thead><tr>
+                    <th style="width:36px"><input type="checkbox" id="chk-all" onchange="toggleAll(this)"></th>
+                    <th>隊伍名稱</th><th>項目</th><th>組別</th><th>領隊</th>
+                    <th>信箱</th><th>狀態</th><th>備註</th><th style="width:160px">操作</th>
+                  </tr></thead>
+                  <tbody id="review-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 球員管理 ── -->
+        <div id="page-players" class="page">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">👥 球員管理</div>
+              <div class="btn-row">
+                <input type="text" id="search-player" placeholder="搜尋隊伍或球員姓名…"
+                  style="padding:5px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:12px;width:200px"
+                  oninput="renderPlayers()">
+              </div>
+            </div>
+            <div class="card-body" id="players-body" style="padding:0"></div>
+          </div>
+        </div>
+
+        <!-- ── 最新消息 ── -->
+        <div id="page-news" class="page">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📢 最新消息管理</div>
+              <button class="btn btn-primary btn-sm" onclick="openNewsModal()">＋ 新增公告</button>
+            </div>
+            <div class="card-body">
+              <div id="news-list-admin"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 線上抽籤 ── -->
+        <div id="page-draw" class="page">
+          <!-- 控制列 -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-body" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:12px;color:var(--gray-400);margin-bottom:4px">抽籤開關</div>
+                <select id="draw-open-select" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                  <option value="false">🔒 尚未開放</option>
+                  <option value="true">🔓 開放各隊抽籤</option>
+                </select>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:16px">
+                <button class="btn btn-primary btn-sm" onclick="adminToggleDraw()">儲存開關</button>
+                <button class="btn btn-success btn-sm" onclick="adminAutoDrawAll()">⚡ 全部自動抽</button>
+                <button class="btn btn-sm" onclick="adminResetDraw()">↺ 重置抽籤</button>
+                <button class="btn btn-success btn-sm" onclick="exportBracketExcel()">⬇ 匯出 Excel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 抽籤狀態 -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🎰 抽籤狀態</div>
+              <button class="btn btn-sm" onclick="adminLoadDraw()">↺ 重新整理</button>
+            </div>
+            <div class="card-body">
+              <div id="admin-draw-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+              <div id="admin-draw-progress" style="font-size:13px;color:var(--gray-400);margin-bottom:8px"></div>
+            </div>
+          </div>
+
+          <!-- 對戰時間表 -->
+          <div class="card" id="admin-bracket-card" style="display:none">
+            <div class="card-header"><div class="card-title">🗓 對戰時間表</div></div>
+            <div class="card-body" style="padding:0;overflow-x:auto">
+              <table class="bracket-table" style="width:100%;border-collapse:collapse">
+                <thead><tr>
+                  <th style="width:60px;padding:9px 12px">場次</th>
+                  <th style="padding:9px 12px">組別/階段</th>
+                  <th style="padding:9px 12px">隊伍 A</th>
+                  <th style="width:30px;padding:9px 12px"></th>
+                  <th style="padding:9px 12px">隊伍 B</th>
+                  <th style="width:80px;padding:9px 12px">日期</th>
+                  <th style="width:70px;padding:9px 12px">時間</th>
+                  <th style="width:55px;padding:9px 12px">場地</th>
+                </tr></thead>
+                <tbody id="admin-bracket-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 輸出文件 ── -->
+        <div id="page-output" class="page">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+            <div class="card" style="margin:0">
+              <div class="card-body">
+                <div style="font-size:28px;margin-bottom:10px">📊</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:6px">匯出 Excel 報名表</div>
+                <div style="font-size:12px;color:var(--gray-400);line-height:1.6;margin-bottom:14px">
+                  含所有隊伍名單（報名總表＋各隊分頁），以及抽籤完成後的對戰時間表。
+                </div>
+                <button class="btn btn-success" onclick="exportExcel()" style="width:100%;justify-content:center">⬇ 下載 Excel</button>
+              </div>
+            </div>
+            <div class="card" style="margin:0">
+              <div class="card-body">
+                <div style="font-size:28px;margin-bottom:10px">📖</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:6px">列印秩序冊</div>
+                <div style="font-size:12px;color:var(--gray-400);line-height:1.6;margin-bottom:14px">
+                  產生正式秩序冊（含封面、名單、對戰表），可直接列印或另存 PDF。
+                </div>
+                <button class="btn btn-primary" onclick="printOrderBook()" style="width:100%;justify-content:center">🖨 列印 / 另存 PDF</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">👁 秩序冊預覽</div></div>
+            <div class="card-body" id="order-preview"></div>
+          </div>
+        </div>
+
+        <!-- ── 競賽規程 ── -->
+        <div id="page-rules" class="page">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📋 競賽規程管理</div>
+              <button class="btn btn-primary btn-sm" onclick="openRuleModal()">＋ 新增規程</button>
+            </div>
+            <div class="card-body" id="rules-admin-body">
+              <div class="empty"><div class="empty-icon">📋</div>尚無競賽規程</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 繳費管理 ── -->
+        <div id="page-payment" class="page">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">💰 繳費管理</div>
+              <button class="btn btn-sm" onclick="loadPayments()">↺ 重新整理</button>
+            </div>
+            <div class="card-body" style="padding:0">
+              <div class="data-table-wrap">
+                <table class="data-table">
+                  <thead><tr>
+                    <th>隊伍名稱</th><th>匯款後五碼</th><th>金額</th>
+                    <th>匯款人</th><th>備註</th><th>狀態</th><th>繳費時間</th><th style="width:130px">操作</th>
+                  </tr></thead>
+                  <tbody id="payment-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 賽事設定 ── -->
+        <div id="page-settings" class="page">
+          <div class="card">
+            <div class="card-header"><div class="card-title">⚙️ 賽事設定</div></div>
+            <div class="card-body">
+              <div class="section-label">基本資訊</div>
+              <div class="form-grid" style="margin-bottom:20px">
+                <div class="form-group" style="grid-column:span 2">
+                  <label>賽事名稱</label>
+                  <input type="text" id="cfg-title" placeholder="2026全國大專夏季校際棒球錦標賽">
+                </div>
+                <div class="form-group">
+                  <label>組別說明</label>
+                  <input type="text" id="cfg-subtitle" placeholder="大專男生組">
+                </div>
+                <div class="form-group">
+                  <label>比賽場地</label>
+                  <input type="text" id="cfg-venue" placeholder="雲林科大棒球場">
+                </div>
+              </div>
+              <div class="section-label">日期設定</div>
+              <div class="form-grid" style="margin-bottom:20px">
+                <div class="form-group">
+                  <label>報名截止日</label>
+                  <input type="date" id="cfg-deadline">
+                </div>
+                <div class="form-group">
+                  <label>比賽開始日</label>
+                  <input type="date" id="cfg-gamedate">
+                </div>
+                <div class="form-group">
+                  <label>比賽結束日</label>
+                  <input type="date" id="cfg-gameend">
+                </div>
+                <div class="form-group">
+                  <label>抽籤日期</label>
+                  <input type="date" id="cfg-drawdate">
+                </div>
+                <div class="form-group">
+                  <label>最多隊伍數</label>
+                  <input type="number" id="cfg-maxTeams" min="2" max="64" placeholder="16">
+                </div>
+              </div>
+              <div class="section-label">報名費設定</div>
+              <div class="form-grid" style="margin-bottom:20px">
+                <div class="form-group">
+                  <label>報名費金額（元）</label>
+                  <input type="number" id="cfg-regFee" placeholder="例：3000">
+                </div>
+                <div class="form-group">
+                  <label>費用說明</label>
+                  <input type="text" id="cfg-regFeeNote" placeholder="例：每隊新台幣3,000元">
+                </div>
+                <div class="form-group">
+                  <label>匯款銀行 / 帳戶名稱</label>
+                  <input type="text" id="cfg-bankName" placeholder="例：玉山銀行 雲科大分行">
+                </div>
+                <div class="form-group">
+                  <label>匯款帳號</label>
+                  <input type="text" id="cfg-bankAccount" placeholder="例：808-1234-5678901">
+                </div>
+              </div>
+              <div class="section-label">報名開關</div>
+              <div class="form-group" style="max-width:260px;margin-bottom:20px">
+                <label>報名狀態</label>
+                <select id="cfg-open">
+                  <option value="true">✅ 開放報名中</option>
+                  <option value="false">⛔ 已截止報名</option>
+                </select>
+              </div>
+              <div class="section-label">管理員密碼（修改後請記錄）</div>
+              <div class="form-grid" style="margin-bottom:20px">
+                <div class="form-group">
+                  <label>新密碼</label>
+                  <input type="password" id="cfg-newpw" placeholder="留空則不修改">
+                </div>
+                <div class="form-group">
+                  <label>確認新密碼</label>
+                  <input type="password" id="cfg-confirmpw" placeholder="再輸入一次">
+                </div>
+              </div>
+              <div id="settings-alert" class="alert"></div>
+              <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveSettings()">💾 儲存設定</button>
+                <button class="btn" onclick="loadSettings()">↺ 重新載入</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /main-content -->
+    </div><!-- /content -->
+  </div>
+</div>
+
+<!-- ══ Modals ══ -->
+
+<!-- 競賽規程 Modal -->
+<div class="overlay" id="rule-modal">
+  <div class="modal">
+    <div class="modal-title" id="rule-modal-title">📋 新增競賽規程</div>
+    <input type="hidden" id="rm-ruleId">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>圖示（Emoji）</label>
+        <input type="text" id="rm-icon" placeholder="📋" maxlength="4" style="font-size:20px;text-align:center">
+      </div>
+      <div class="form-group">
+        <label>排列順序</label>
+        <input type="number" id="rm-order" placeholder="1" min="1">
+      </div>
+      <div class="form-group" style="grid-column:span 2">
+        <label>規程標題<span style="color:var(--accent)">*</span></label>
+        <input type="text" id="rm-title" placeholder="例：比賽規則、參賽資格、報名費用">
+      </div>
+      <div class="form-group" style="grid-column:span 2">
+        <label>規程內容</label>
+        <textarea id="rm-content" rows="6" placeholder="在此輸入規程說明文字..." style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit;resize:vertical"></textarea>
+      </div>
+      <div class="form-group" style="grid-column:span 2">
+        <label>PDF 連結（選填）</label>
+        <input type="url" id="rm-pdf" placeholder="https://drive.google.com/...（Google Drive 分享連結）">
+        <div style="font-size:11px;color:var(--gray-400);margin-top:3px">將 PDF 上傳至 Google Drive，設為「任何人可檢視」，貼上連結即可</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('rule-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveRule()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 審核備註 -->
+<div class="overlay" id="review-modal">
+  <div class="modal">
+    <div class="modal-title">📝 審核備註</div>
+    <input type="hidden" id="rv-teamId">
+    <div class="form-group" style="margin-bottom:12px">
+      <label>審核結果</label>
+      <select id="rv-status">
+        <option value="approved">✅ 核准</option>
+        <option value="rejected">❌ 退件</option>
+        <option value="pending">⏳ 待審核</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>備註（退件原因等）</label>
+      <textarea id="rv-note" rows="3" placeholder="可留空"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('review-modal')">取消</button>
+      <button class="btn btn-primary" onclick="submitReview()">確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- 球員編輯 -->
+<div class="overlay" id="member-modal">
+  <div class="modal">
+    <div class="modal-title" id="mm-title">✏️ 編輯球員</div>
+    <input type="hidden" id="mm-teamId">
+    <input type="hidden" id="mm-memberIndex">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>姓名</label>
+        <input type="text" id="mm-name" placeholder="姓名">
+      </div>
+      <div class="form-group">
+        <label>背號</label>
+        <input type="text" id="mm-number" placeholder="背號" maxlength="3">
+      </div>
+      <div class="form-group" style="grid-column:span 2">
+        <label>學號</label>
+        <input type="text" id="mm-sid" placeholder="學號">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('member-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveMember()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新增公告 -->
+<div class="overlay" id="news-modal">
+  <div class="modal">
+    <div class="modal-title">📢 新增公告</div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>公告類型</label>
+      <select id="nm-type">
+        <option value="info">一般公告</option>
+        <option value="imp">重要事項</option>
+        <option value="new">最新消息</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>公告標題</label>
+      <input type="text" id="nm-title" placeholder="公告內容">
+    </div>
+    <div class="form-group">
+      <label>日期</label>
+      <input type="date" id="nm-date">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('news-modal')">取消</button>
+      <button class="btn btn-primary" onclick="submitNews()">新增</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let DB = { settings:{}, teams:[], members:{}, news:[], payments:[], rules:[], drawResults:[], matches:[] };
+let drawSpinning = false;
+const PAGE_TITLES = {
+  dashboard:'總覽', review:'報名審核', players:'球員管理',
+  news:'最新消息', draw:'線上抽籤', output:'輸出文件', rules:'競賽規程', payment:'繳費管理', settings:'賽事設定'
+};
+
+// ═══════════════════════════════════════════
+// API
+// ═══════════════════════════════════════════
+async function api(params) {
+  const r = await fetch(API_URL + '?' + new URLSearchParams(params));
+  return r.json();
+}
+async function apiPost(body) {
+  const r = await fetch(API_URL, {
+    method:'POST', body:JSON.stringify(body),
+    headers:{'Content-Type':'application/json'}
+  });
+  return r.json();
+}
+
+// ── Offline / demo mode ──
+function offlineMode() {
+  DB.settings = {
+    title:'2025年全國中學籃球錦標賽', subtitle:'高中男生組',
+    venue:'台北市立體育館', deadline:'2025-06-30',
+    gamedate:'2025-07-20', drawdate:'2025-07-05', maxTeams:'16', open:'true'
+  };
+  DB.news = [
+    {rowIndex:2, type:'new',  title:'比賽報名正式開始',              date:'2025-06-01'},
+    {rowIndex:3, type:'imp',  title:'報名截止日為 6/30，請及早完成',  date:'2025-06-01'},
+    {rowIndex:4, type:'info', title:'線上抽籤時間：7/5 上午10:00',   date:'2025-05-28'},
+  ];
+  DB.teams = [
+    {teamId:'T001',teamname:'台北市立高中A隊',sport:'籃球',group:'高中男生組',manager:'王大明',managerTel:'0912-111-111',coach:'李教練',coachTel:'0923-222-222',email:'taipei@school.tw',status:'approved',createdAt:'2025-06-01',note:''},
+    {teamId:'T002',teamname:'新北建國中學',   sport:'籃球',group:'高中男生組',manager:'張領隊',managerTel:'0912-333-333',coach:'劉教練',coachTel:'0923-444-444',email:'ntpc@school.tw',  status:'pending', createdAt:'2025-06-02',note:''},
+    {teamId:'T003',teamname:'桃園體育高中',   sport:'籃球',group:'高中男生組',manager:'陳領隊',managerTel:'0912-555-555',coach:'黃教練',coachTel:'0923-666-666',email:'tywn@school.tw',  status:'approved',createdAt:'2025-06-03',note:''},
+    {teamId:'T004',teamname:'台中一中',       sport:'籃球',group:'高中男生組',manager:'林領隊',managerTel:'0912-777-777',coach:'吳教練',coachTel:'0923-888-888',email:'tc1@school.tw',   status:'rejected',createdAt:'2025-06-04',note:'資料不完整'},
+  ];
+  DB.members = {
+    'T001': [
+      {role:'領隊',name:'王大明',number:'',studentId:''},
+      {role:'教練',name:'李教練',number:'',studentId:''},
+      {role:'隊長',name:'陳信宏',number:'10',studentId:'A110001'},
+      {role:'隊員1',name:'林志遠',number:'7',studentId:'A110002'},
+      {role:'隊員2',name:'黃俊豪',number:'5',studentId:'A110003'},
+    ],
+    'T002': [
+      {role:'領隊',name:'張領隊',number:'',studentId:''},
+      {role:'教練',name:'劉教練',number:'',studentId:''},
+      {role:'隊長',name:'吳俊廷',number:'11',studentId:'B109001'},
+    ],
+    'T003': [
+      {role:'領隊',name:'陳領隊',number:'',studentId:''},
+      {role:'教練',name:'黃教練',number:'',studentId:''},
+      {role:'隊長',name:'趙建宏',number:'8',studentId:'C110001'},
+    ],
+  };
+  renderAll();
+  toast('離線示範模式（資料不會儲存）', 'warn');
+}
+
+// ═══════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════
+async function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  document.getElementById('login-err').classList.remove('show');
+  try {
+    const res = await apiPost({ action:'adminLogin', password:pw });
+    if (res.ok) {
+      sessionStorage.setItem('admin_auth', '1');
+      showAdmin();
+    } else { showLoginErr(); }
+  } catch(e) {
+    // offline demo
+    if (pw === 'admin1234') { sessionStorage.setItem('admin_auth','1'); showAdmin(); }
+    else showLoginErr();
+  }
+}
+function showLoginErr() {
+  document.getElementById('login-err').classList.add('show');
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-input').focus();
+}
+function doLogout() {
+  sessionStorage.removeItem('admin_auth');
+  location.reload();
+}
+async function showAdmin() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-app').style.display = 'block';
+  await refreshAll();
+}
+
+// ═══════════════════════════════════════════
+// DATA LOAD
+// ═══════════════════════════════════════════
+async function refreshAll() {
+  try {
+    const res = await api({ action:'getAllData' });
+    if (res.ok) {
+      DB.settings = res.settings || {};
+      DB.news     = res.news    || [];
+      DB.teams    = res.teams   || [];
+      DB.members  = {};
+    } else { offlineMode(); return; }
+  } catch(e) { offlineMode(); return; }
+  renderAll();
+  loadPayments();
+}
+
+async function loadMembers(teamId) {
+  if (DB.members[teamId]) return DB.members[teamId];
+  try {
+    const res = await api({ action:'getMembers', teamId });
+    if (res.ok) DB.members[teamId] = res.data;
+  } catch(e) { DB.members[teamId] = []; }
+  return DB.members[teamId] || [];
+}
+
+function renderAll() {
+  renderStats();
+  renderDashboard();
+  renderReview();
+  renderPlayers();
+  renderNewsAdmin();
+  renderSettings();
+  renderDrawChips();
+  renderBracket();
+  renderOrderPreview();
+}
+
+// ═══════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════
+function renderStats() {
+  const total    = DB.teams.length;
+  const approved = DB.teams.filter(t=>t.status==='approved').length;
+  const pending  = DB.teams.filter(t=>t.status==='pending').length;
+  const rejected = DB.teams.filter(t=>t.status==='rejected').length;
+  document.getElementById('s-total').textContent    = total;
+  document.getElementById('s-approved').textContent = approved;
+  document.getElementById('s-pending').textContent  = pending;
+  document.getElementById('s-rejected').textContent = rejected;
+  document.getElementById('badge-pending').textContent = pending;
+  document.getElementById('badge-pending').style.display = pending>0?'':'none';
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard() {
+  const tbody = document.getElementById('dash-tbody');
+  if (!DB.teams.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📋</div>尚無報名資料</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = DB.teams.slice(0,8).map(t => `
+    <tr>
+      <td><strong>${esc(t.teamname)}</strong></td>
+      <td>${esc(t.sport)}</td><td>${esc(t.group)}</td><td>${esc(t.manager)}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td style="color:var(--gray-400);font-size:12px">${t.createdAt||''}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// REVIEW
+// ═══════════════════════════════════════════
+function renderReview() {
+  const filter = document.getElementById('filter-status').value;
+  const teams = filter ? DB.teams.filter(t=>t.status===filter) : DB.teams;
+  const tbody = document.getElementById('review-tbody');
+  if (!teams.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty"><div class="empty-icon">📋</div>無資料</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = teams.map(t => `
+    <tr class="${t.status==='pending'?'highlight':''}">
+      <td><input type="checkbox" class="row-chk" data-id="${t.teamId}"></td>
+      <td><strong>${esc(t.teamname)}</strong></td>
+      <td>${esc(t.sport)}</td><td>${esc(t.group)}</td>
+      <td>${esc(t.manager)}<br><small style="color:var(--gray-400)">${esc(t.managerTel)}</small></td>
+      <td style="font-size:12px">${esc(t.email)}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td style="font-size:12px;color:var(--gray-400)">${esc(t.note)}</td>
+      <td>
+        <div class="btn-row">
+          <button class="btn btn-sm" onclick="openReviewModal('${t.teamId}','${t.status}','${esc(t.note)}')">審核</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteTeam('${t.teamId}','${esc(t.teamname)}')">刪除</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function toggleAll(cb) {
+  document.querySelectorAll('.row-chk').forEach(c => c.checked = cb.checked);
+}
+
+async function batchApprove() {
+  const ids = [...document.querySelectorAll('.row-chk:checked')].map(c=>c.dataset.id);
+  if (!ids.length) { toast('請先勾選隊伍'); return; }
+  if (!confirm(`確定核准 ${ids.length} 支隊伍？`)) return;
+  for (const id of ids) {
+    DB.teams.find(t=>t.teamId===id).status = 'approved';
+    try { await apiPost({ action:'updateStatus', teamId:id, status:'approved' }); } catch(e){}
+  }
+  renderAll();
+  toast(`已核准 ${ids.length} 隊`, 'ok');
+}
+
+function openReviewModal(teamId, status, note) {
+  document.getElementById('rv-teamId').value  = teamId;
+  document.getElementById('rv-status').value  = status;
+  document.getElementById('rv-note').value    = note;
+  openModal('review-modal');
+}
+
+async function submitReview() {
+  const teamId = document.getElementById('rv-teamId').value;
+  const status = document.getElementById('rv-status').value;
+  const note   = document.getElementById('rv-note').value.trim();
+  const t = DB.teams.find(t=>t.teamId===teamId);
+  if (t) { t.status = status; t.note = note; }
+  try { await apiPost({ action:'updateStatus', teamId, status, note }); } catch(e){}
+  closeModal('review-modal');
+  renderAll();
+  toast('審核狀態已更新', 'ok');
+}
+
+async function deleteTeam(teamId, teamname) {
+  if (!confirm(`確定刪除「${teamname}」的所有報名資料？此操作無法復原。`)) return;
+  DB.teams = DB.teams.filter(t=>t.teamId!==teamId);
+  delete DB.members[teamId];
+  try { await apiPost({ action:'deleteTeam', teamId }); } catch(e){}
+  renderAll();
+  toast('已刪除報名資料');
+}
+
+// ═══════════════════════════════════════════
+// PLAYERS
+// ═══════════════════════════════════════════
+async function renderPlayers() {
+  const q = (document.getElementById('search-player').value||'').toLowerCase();
+  const body = document.getElementById('players-body');
+  const teams = q
+    ? DB.teams.filter(t => t.teamname.toLowerCase().includes(q) ||
+        (DB.members[t.teamId]||[]).some(m=>m.name.toLowerCase().includes(q)))
+    : DB.teams;
+
+  if (!teams.length) {
+    body.innerHTML = '<div class="empty"><div class="empty-icon">👥</div>無符合條件的隊伍</div>';
+    return;
+  }
+
+  let html = '';
+  for (const t of teams) {
+    const members = await loadMembers(t.teamId);
+    const rows = members.map((m, idx) => {
+      const isCap = m.role === '隊長';
+      const isMgr = m.role === '領隊' || m.role === '教練';
+      const roleCls = isCap ? 'r-cap' : isMgr ? 'r-mgr' : 'r-mem';
+      return `<tr class="${isCap?'cap-row':''}">
+        <td><span class="role-badge ${roleCls}">${esc(m.role)}</span></td>
+        <td>${esc(m.name)}</td>
+        <td>${esc(m.number)}</td>
+        <td>${esc(m.studentId)}</td>
+        <td>
+          <button class="btn btn-sm" onclick="openMemberModal('${t.teamId}',${idx},'${esc(m.role)}','${esc(m.name)}','${esc(m.number)}','${esc(m.studentId)}')">編輯</button>
+          ${!isMgr ? `<button class="btn btn-sm btn-danger" onclick="deleteMemberRow('`+t.teamId+`',`+idx+`)">刪除</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+
+    html += `<div style="border-bottom:2px solid var(--gray-100);padding:14px 18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700;color:var(--blue-dark)">
+          ${esc(t.teamname)}
+          <span style="font-weight:400;color:var(--gray-400);font-size:12px;margin-left:6px">${statusBadge(t.status)}</span>
+        </div>
+        <span style="font-size:12px;color:var(--gray-400)">${members.length} 人</span>
+      </div>
+      <table class="mem-table">
+        <thead><tr>
+          <th style="width:80px">角色</th><th>姓名</th>
+          <th style="width:70px">背號</th><th style="width:120px">學號</th>
+          <th style="width:120px">操作</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }
+  body.innerHTML = html;
+}
+
+function openMemberModal(teamId, idx, role, name, number, sid) {
+  document.getElementById('mm-teamId').value      = teamId;
+  document.getElementById('mm-memberIndex').value = idx;
+  document.getElementById('mm-title').textContent = `✏️ 編輯 - ${role}`;
+  document.getElementById('mm-name').value   = name;
+  document.getElementById('mm-number').value = number;
+  document.getElementById('mm-sid').value    = sid;
+  openModal('member-modal');
+}
+
+async function saveMember() {
+  const teamId = document.getElementById('mm-teamId').value;
+  const idx    = parseInt(document.getElementById('mm-memberIndex').value);
+  const name   = document.getElementById('mm-name').value.trim();
+  const number = document.getElementById('mm-number').value.trim();
+  const sid    = document.getElementById('mm-sid').value.trim();
+  if (DB.members[teamId] && DB.members[teamId][idx]) {
+    DB.members[teamId][idx].name = name;
+    DB.members[teamId][idx].number = number;
+    DB.members[teamId][idx].studentId = sid;
+  }
+  try { await apiPost({ action:'updateMember', teamId, memberIndex:idx, name, number, studentId:sid }); } catch(e){}
+  closeModal('member-modal');
+  await renderPlayers();
+  toast('球員資料已儲存', 'ok');
+}
+
+async function deleteMemberRow(teamId, idx) {
+  if (!confirm('確定刪除此球員？')) return;
+  if (DB.members[teamId]) DB.members[teamId].splice(idx, 1);
+  try { await apiPost({ action:'deleteMember', teamId, memberIndex:idx }); } catch(e){}
+  await renderPlayers();
+  toast('球員已刪除');
+}
+
+// ═══════════════════════════════════════════
+// NEWS
+// ═══════════════════════════════════════════
+const NB = {new:'nb-new',imp:'nb-imp',info:'nb-info'};
+const NL = {new:'最新',imp:'重要',info:'公告'};
+function renderNewsAdmin() {
+  const el = document.getElementById('news-list-admin');
+  if (!DB.news.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>尚無公告</div>'; return;
+  }
+  el.innerHTML = DB.news.map(n => `
+    <div class="news-item">
+      <span class="news-badge ${NB[n.type]||'nb-info'}">${NL[n.type]||'公告'}</span>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:500;color:var(--gray-900)">${esc(n.title)}</div>
+        <div style="font-size:12px;color:var(--gray-400)">${n.date||''}</div>
+      </div>
+      <button class="btn btn-sm" style="color:var(--red)" onclick="deleteNews(${n.rowIndex})">✕</button>
+    </div>`).join('');
+}
+
+function openNewsModal() {
+  document.getElementById('nm-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('nm-title').value = '';
+  openModal('news-modal');
+}
+async function submitNews() {
+  const title = document.getElementById('nm-title').value.trim();
+  if (!title) { toast('請輸入公告標題'); return; }
+  const item = { type:document.getElementById('nm-type').value, title, date:document.getElementById('nm-date').value, rowIndex:Date.now() };
+  DB.news.unshift(item);
+  try { await apiPost({ action:'addNews', ...item }); } catch(e){}
+  closeModal('news-modal');
+  renderNewsAdmin();
+  toast('公告已新增', 'ok');
+}
+async function deleteNews(rowIndex) {
+  if (!confirm('確定刪除此公告？')) return;
+  DB.news = DB.news.filter(n=>n.rowIndex!==rowIndex);
+  try { await apiPost({ action:'deleteNews', rowIndex }); } catch(e){}
+  renderNewsAdmin();
+  toast('公告已刪除');
+}
+
+// ═══════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════
+function renderSettings() {
+  const s = DB.settings;
+  ['title','subtitle','venue','deadline','gamedate','gameend','drawdate','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
+    const el = document.getElementById('cfg-'+k);
+    if (el && s[k] !== undefined) el.value = s[k];
+  });
+}
+function loadSettings() { renderSettings(); toast('設定已重新載入'); }
+async function saveSettings() {
+  const newPw  = document.getElementById('cfg-newpw').value;
+  const confPw = document.getElementById('cfg-confirmpw').value;
+  const al = document.getElementById('settings-alert');
+  if (newPw && newPw !== confPw) {
+    al.className='alert alert-err show'; al.textContent='兩次密碼輸入不一致'; return;
+  }
+  al.className = 'alert';
+  const s = {};
+  ['title','subtitle','venue','deadline','gamedate','gameend','drawdate','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
+    const el = document.getElementById('cfg-'+k);
+    if (el) s[k] = el.value;
+  });
+  DB.settings = { ...DB.settings, ...s };
+  try { await apiPost({ action:'updateSettings', settings:s }); } catch(e){}
+  al.className='alert alert-ok show'; al.textContent='✅ 設定已儲存';
+  setTimeout(()=>al.className='alert',3000);
+  toast('設定已儲存', 'ok');
+}
+
+// ═══════════════════════════════════════════
+// DRAW
+// ═══════════════════════════════════════════
+function approvedTeams() {
+  return DB.teams.filter(t=>t.status==='approved');
+}
+function renderDrawChips() {
+  const el = document.getElementById('draw-chips');
+  const teams = approvedTeams();
+  if (!teams.length) {
+    el.innerHTML = '<div style="color:var(--gray-400);font-size:13px">尚無已核准的隊伍</div>'; return;
+  }
+  el.innerHTML = teams.map((t,i) => {
+    const dr = DB.drawResults.find(r=>r.teamId===t.teamId);
+    const cls = dr ? 'chip drawn' : 'chip';
+    const label = dr ? `${esc(t.teamname)} <strong>(第${dr.slot}籤)</strong>` : esc(t.teamname);
+    const onclick = dr ? '' : `startDraw('${t.teamId}')`;
+    return `<div class="${cls}" id="dchip-${t.teamId}" onclick="${onclick}">${label}</div>`;
+  }).join('');
+
+  const done = DB.drawResults.length;
+  const total = teams.length;
+  const prog = document.getElementById('draw-progress');
+  if (done > 0) {
+    prog.style.display = 'block';
+    document.getElementById('dp-done').textContent  = done;
+    document.getElementById('dp-total').textContent = total;
+  }
+}
+
+function startDraw(teamId) {
+  if (drawSpinning) return;
+  const team = approvedTeams().find(t=>t.teamId===teamId);
+  if (!team || DB.drawResults.find(r=>r.teamId===teamId)) return;
+  drawSpinning = true;
+
+  const chip = document.getElementById(`dchip-${teamId}`);
+  if (chip) { chip.className='chip spinning'; chip.onclick=null; }
+
+  const disp = document.getElementById('draw-display');
+  disp.innerHTML = `<div class="draw-name">${esc(team.teamname)}</div><div class="draw-num" id="dnNum">-</div>`;
+
+  const taken = new Set(DB.drawResults.map(r=>r.slot));
+  const avail = [];
+  const total = approvedTeams().length;
+  for (let i=1;i<=total;i++) { if(!taken.has(i)) avail.push(i); }
+
+  let frame = 0;
+  const frames = 20 + Math.floor(Math.random()*16);
+  const timer = setInterval(() => {
+    const r = avail[Math.floor(Math.random()*avail.length)];
+    const el = document.getElementById('dnNum');
+    if (el) { el.textContent=`第 ${r} 籤`; el.className='draw-num spinning-num'; }
+    frame++;
+    if (frame >= frames) {
+      clearInterval(timer);
+      const picked = avail[Math.floor(Math.random()*avail.length)];
+      const el2 = document.getElementById('dnNum');
+      if (el2) { el2.textContent=`第 ${picked} 籤 ✓`; el2.className='draw-num'; }
+      DB.drawResults.push({ teamId, slot:picked });
+      drawSpinning = false;
+      const c = document.getElementById(`dchip-${teamId}`);
+      if (c) { c.className='chip drawn pop'; c.innerHTML=`${esc(team.teamname)} <strong>(第${picked}籤)</strong>`; }
+      document.getElementById('dp-done').textContent = DB.drawResults.length;
+      document.getElementById('dp-total').textContent = approvedTeams().length;
+      document.getElementById('draw-progress').style.display = 'block';
+      if (DB.drawResults.length === approvedTeams().length) {
+        buildBracket(); toast('全部抽籤完成！', 'ok');
+      }
+    }
+  }, 80);
+}
+
+function autoDrawAll() {
+  if (!approvedTeams().length) { toast('尚無已核准隊伍'); return; }
+  if (drawSpinning) return;
+  const teams = approvedTeams();
+  const taken = new Set(DB.drawResults.map(r=>r.slot));
+  const avail = [];
+  for (let i=1;i<=teams.length;i++) { if(!taken.has(i)) avail.push(i); }
+  for (let i=avail.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [avail[i],avail[j]]=[avail[j],avail[i]];
+  }
+  let k=0;
+  teams.forEach(t => {
+    if (!DB.drawResults.find(r=>r.teamId===t.teamId))
+      DB.drawResults.push({ teamId:t.teamId, slot:avail[k++] });
+  });
+  buildBracket();
+  renderDrawChips();
+  document.getElementById('draw-display').innerHTML='<div class="draw-hint">✅ 全部抽籤完成</div>';
+  toast('全部抽籤完成！', 'ok');
+}
+
+function resetDraw() {
+  if (!confirm('確定重置抽籤？已產生的對戰表將清除。')) return;
+  DB.drawResults=[]; DB.matches=[];
+  drawSpinning=false;
+  renderDrawChips();
+  document.getElementById('draw-display').innerHTML='<div class="draw-hint">選擇隊伍開始抽籤</div>';
+  document.getElementById('bracket-section').style.display='none';
+  document.getElementById('draw-progress').style.display='none';
+  toast('抽籤已重置');
+}
+
+function buildBracket() {
+  const sorted = [...DB.drawResults].sort((a,b)=>a.slot-b.slot);
+  const teams  = approvedTeams();
+  const baseDate = new Date(DB.settings.gamedate || '2025-07-20');
+  const times  = ['08:00','09:30','11:00','13:30','15:00','16:30'];
+  const courts = ['A場','B場','C場'];
+  DB.matches = [];
+  for (let i=0; i<Math.floor(sorted.length/2); i++) {
+    const a = teams.find(t=>t.teamId===sorted[i*2].teamId);
+    const b = teams.find(t=>t.teamId===sorted[i*2+1].teamId);
+    const d = new Date(baseDate);
+    d.setDate(d.getDate() + Math.floor(i/times.length));
+    DB.matches.push({
+      gameNum:`G${i+1}`, teamA:a?.teamname||'&#8212;', teamB:b?.teamname||'&#8212;',
+      date:`${d.getMonth()+1}/${d.getDate()}`,
+      time:times[i%times.length], court:courts[i%courts.length],
+    });
+  }
+  if (sorted.length%2!==0) {
+    const byeTeam = teams.find(t=>t.teamId===sorted[sorted.length-1].teamId);
+    DB.matches.push({ gameNum:'&#8212;', teamA:byeTeam?.teamname||'&#8212;', teamB:'(輪空)', date:'&#8212;', time:'&#8212;', court:'&#8212;' });
+  }
+  renderBracket();
+}
+
+function renderBracket() {
+  const sec = document.getElementById('bracket-section');
+  if (!DB.matches.length) { sec.style.display='none'; return; }
+  sec.style.display='block';
+  document.getElementById('bracket-tbody').innerHTML = DB.matches.map(m => `
+    <tr>
+      <td><strong>${m.gameNum}</strong></td>
+      <td style="font-weight:600;color:var(--blue-dark)">${esc(m.teamA)}</td>
+      <td><span class="vs-badge">VS</span></td>
+      <td style="font-weight:600;color:var(--blue-dark)">${m.teamB==='（輪空）'?'<span class="bye-badge">輪空</span>':esc(m.teamB)}</td>
+      <td>${m.date}</td><td>${m.time}</td><td>${m.court}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// OUTPUT
+// ═══════════════════════════════════════════
+function renderOrderPreview() {
+  const el = document.getElementById('order-preview');
+  const s  = DB.settings;
+  const teams = DB.teams.filter(t=>t.status==='approved');
+  if (!teams.length) {
+    el.innerHTML='<div class="empty"><div class="empty-icon">📄</div>尚無核准隊伍資料</div>'; return;
+  }
+  let html = `<div style="border:1px solid var(--gray-200);border-radius:var(--radius-lg);overflow:hidden">
+    <div style="background:var(--blue);color:#fff;text-align:center;padding:14px 20px">
+      <div style="font-size:16px;font-weight:700">${esc(s.title||'')}</div>
+      <div style="font-size:12px;opacity:.8;margin-top:3px">${esc(s.subtitle||'')} · ${esc(s.venue||'')} · ${s.gamedate||''}</div>
+    </div>
+    <div style="padding:16px 20px">`;
+  teams.forEach((t,i) => {
+    const mems = DB.members[t.teamId] || [];
+    const rows = mems.map(m => `<tr>
+      <td style="padding:5px 8px">${esc(m.role)}</td>
+      <td style="padding:5px 8px">${esc(m.name)}</td>
+      <td style="padding:5px 8px">${esc(m.number)}</td>
+      <td style="padding:5px 8px">${esc(m.studentId)}</td>
+    </tr>`).join('');
+    html += `${i>0?'<hr style="border:none;border-top:1px dashed var(--gray-200);margin:14px 0">':''}
+      <div style="font-size:13px;font-weight:700;color:var(--blue);border-left:3px solid var(--blue);padding-left:10px;margin-bottom:8px">${esc(t.teamname)}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--gray-50)">
+          <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--gray-100)">角色</th>
+          <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--gray-100)">姓名</th>
+          <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--gray-100)">背號</th>
+          <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--gray-100)">學號</th>
+        </tr></thead>
+        <tbody>${rows||'<tr><td colspan="4" style="padding:8px;color:var(--gray-400);text-align:center">球員資料載入中…</td></tr>'}</tbody>
+      </table>`;
+  });
+  html += '</div></div>';
+  el.innerHTML = html;
+}
+
+function exportExcel() {
+  const teams = DB.teams;
+  if (!teams.length) { toast('尚無報名資料'); return; }
+  const wb = XLSX.utils.book_new();
+  const s  = DB.settings;
+
+  // Summary
+  const sumData = [[s.title||'比賽報名總表'],[''],
+    ['#','隊伍名稱','項目','組別','領隊','領隊電話','教練','教練電話','信箱','狀態','報名時間']];
+  teams.forEach((t,i) => sumData.push([i+1,t.teamname,t.sport,t.group,t.manager,t.managerTel,t.coach,t.coachTel,t.email,statusText(t.status),t.createdAt||'']));
+  const ws0 = XLSX.utils.aoa_to_sheet(sumData);
+  ws0['!cols']=[4,20,8,12,10,14,10,14,22,8,16].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws0, '報名總表');
+
+  // Per team
+  teams.forEach(t => {
+    const mems = DB.members[t.teamId] || [];
+    const data = [[t.teamname],['領隊',t.manager,'教練',t.coach],['信箱',t.email,'狀態',statusText(t.status)],[''],
+      ['角色','姓名','背號','學號']];
+    mems.forEach(m => data.push([m.role,m.name,m.number,m.studentId]));
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[8,14,6,14].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, t.teamname.slice(0,28));
+  });
+
+  // Bracket
+  if (DB.matches.length) {
+    const bd = [['對戰時間表'],[''],['場次','隊伍A','','隊伍B','日期','時間','場地']];
+    DB.matches.forEach(m => bd.push([m.gameNum,m.teamA,'VS',m.teamB,m.date,m.time,m.court]));
+    const wb2 = XLSX.utils.aoa_to_sheet(bd);
+    wb2['!cols']=[6,18,4,18,8,6,6].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, wb2, '對戰時間表');
+  }
+
+  XLSX.writeFile(wb, `${s.title||'比賽'}_報名表_${today()}.xlsx`);
+  toast('Excel 已下載', 'ok');
+}
+
+function exportBracketExcel() {
+  if (!DB.matches.length) { toast('尚未完成抽籤'); return; }
+  const wb = XLSX.utils.book_new();
+  const data=[['對戰時間表'],[''],['場次','隊伍A','','隊伍B','日期','時間','場地']];
+  DB.matches.forEach(m=>data.push([m.gameNum,m.teamA,'VS',m.teamB,m.date,m.time,m.court]));
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[6,18,4,18,8,6,6].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'對戰時間表');
+  XLSX.writeFile(wb,`對戰時間表_${today()}.xlsx`);
+  toast('賽程 Excel 已下載','ok');
+}
+
+function printOrderBook() {
+  const s = DB.settings;
+  const teams = DB.teams.filter(t=>t.status==='approved');
+  if (!teams.length) { toast('尚無核准隊伍'); return; }
+  let teamsHTML = teams.map(t => {
+    const mems = DB.members[t.teamId] || [];
+    const rows = mems.map(m=>`<tr>
+      <td style="padding:6px 8px;border:1px solid #ddd">${esc(m.role)}</td>
+      <td style="padding:6px 8px;border:1px solid #ddd">${esc(m.name)}</td>
+      <td style="padding:6px 8px;border:1px solid #ddd">${esc(m.number)}</td>
+      <td style="padding:6px 8px;border:1px solid #ddd">${esc(m.studentId)}</td>
+    </tr>`).join('');
+    return `<div style="margin-bottom:24px">
+      <h3 style="color:#0d3b6e;border-left:4px solid #1a5fa8;padding-left:10px;margin-bottom:8px">${esc(t.teamname)}</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#1a5fa8;color:white">
+          <th style="padding:7px 8px;border:1px solid #1a5fa8">角色</th>
+          <th style="padding:7px 8px;border:1px solid #1a5fa8">姓名</th>
+          <th style="padding:7px 8px;border:1px solid #1a5fa8">背號</th>
+          <th style="padding:7px 8px;border:1px solid #1a5fa8">學號</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  let matchHTML = '';
+  if (DB.matches.length) {
+    const rows = DB.matches.map(m=>`<tr>
+      <td style="padding:7px 10px;border:1px solid #ddd">${m.gameNum}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd;font-weight:600">${esc(m.teamA)}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd;text-align:center">VS</td>
+      <td style="padding:7px 10px;border:1px solid #ddd;font-weight:600">${esc(m.teamB)}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd">${m.date}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd">${m.time}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd">${m.court}</td>
+    </tr>`).join('');
+    matchHTML = `<div style="page-break-before:always">
+      <h2 style="color:#0d3b6e;margin-bottom:16px">對戰時間表</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#1a5fa8;color:white">
+          <th style="padding:8px 10px">場次</th><th style="padding:8px 10px">隊伍A</th>
+          <th style="padding:8px 10px"></th><th style="padding:8px 10px">隊伍B</th>
+          <th style="padding:8px 10px">日期</th><th style="padding:8px 10px">時間</th><th style="padding:8px 10px">場地</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }
+
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
+    <title>${s.title||'比賽'} 秩序冊</title>
+    <style>body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;padding:32px;color:#333;max-width:900px;margin:0 auto}
+    @media print{@page{margin:1.5cm}.no-print{display:none}}<\/style>
+    <\/head><body>
+    <div style="text-align:center;padding:40px 0 28px;border-bottom:2px solid #0d3b6e;margin-bottom:32px">
+      <h1 style="font-size:26px;color:#0d3b6e;margin-bottom:8px">${esc(s.title||'')}</h1>
+      <h2 style="font-size:16px;font-weight:400;color:#555">秩序冊</h2>
+      <p style="color:#888;font-size:13px;margin-top:8px">${esc(s.subtitle||'')} ｜ ${esc(s.venue||'')} ｜ 比賽日期：${s.gamedate||''}</p>
+    </div>
+    <h2 style="color:#0d3b6e;margin-bottom:20px">參賽隊伍名單</h2>
+    ${teamsHTML}${matchHTML}
+    <p style="text-align:right;font-size:11px;color:#aaa;margin-top:32px">列印日期：${new Date().toLocaleDateString('zh-TW')}</p>
+    <script>window.onload=()=>window.print()<\/script>
+    <\/body><\/html>`);
+}
+
+// ═══════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════
+function goPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const pages=['dashboard','review','players','news','draw','output','rules','payment','settings'];
+  document.querySelectorAll('.nav-item')[pages.indexOf(name)].classList.add('active');
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[name]||name;
+  if (name==='output') { renderOrderPreview(); }
+  if (name==='payment') { loadPayments(); }
+  if (name==='draw') { adminLoadDraw(); }
+  if (name==='rules') { loadRules(); }
+  if (name==='players') renderPlayers();
+}
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function esc(s) {
+  if (s===undefined||s===null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function today() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
+function statusBadge(s) {
+  const m={approved:'badge-approved ✅ 核准',pending:'badge-pending ⏳ 待審核',rejected:'badge-rejected ❌ 退件'};
+  const [cls,...rest]=(m[s]||'badge-pending ⏳ 待審核').split(' ');
+  return `<span class="badge ${cls}">${rest.join(' ')}</span>`;
+}
+function statusText(s) { return {approved:'核准',pending:'待審核',rejected:'退件'}[s]||s; }
+function toast(msg, type='') {
+  const e=document.getElementById('toast');
+  e.textContent=msg; e.className='toast show'+(type?' '+type:'');
+  setTimeout(()=>e.className='toast',3000);
+}
+
+
+
+
+// ═══════════════════════════════════════════
+// ADMIN DRAW
+// ═══════════════════════════════════════════
+async function adminLoadDraw() {
+  try {
+    const res = await api({ action:'getDrawData' });
+    if (res.ok) {
+      DB.drawResults = res.draws   || [];
+      DB.matches     = res.matches || [];
+      const sel = document.getElementById('draw-open-select');
+      if (sel) sel.value = res.drawOpen ? 'true' : 'false';
+    }
+  } catch(e) {}
+  renderAdminDraw();
+  renderAdminBracket();
+}
+
+function renderAdminDraw() {
+  const chips = document.getElementById('admin-draw-chips');
+  const prog  = document.getElementById('admin-draw-progress');
+  if (!chips) return;
+
+  const approved = DB.teams.filter(t => t.status === 'approved');
+  if (!approved.length) {
+    chips.innerHTML = '<div style="color:var(--gray-400);font-size:13px">尚無已核准隊伍</div>';
+    return;
+  }
+
+  chips.innerHTML = approved.map(t => {
+    const dr = DB.drawResults.find(r => r.teamId === t.teamId);
+    if (dr) {
+      return `<span style="padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;background:var(--blue-light);border:1.5px solid var(--blue);color:var(--blue)">${esc(t.teamname)} (第${dr.slot}籤)</span>`;
+    }
+    return `<span style="padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--gray-50);border:1px solid var(--gray-200);color:var(--gray-400)">${esc(t.teamname)} 未抽</span>`;
+  }).join('');
+
+  const done = DB.drawResults.length;
+  prog.textContent = `已抽籤 ${done} / ${approved.length} 隊` + (done === approved.length ? ' ✅ 全部完成' : '');
+}
+
+function renderAdminBracket() {
+  const card = document.getElementById('admin-bracket-card');
+  const tbody = document.getElementById('admin-bracket-tbody');
+  if (!card || !tbody) return;
+  if (!DB.matches.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  tbody.innerHTML = DB.matches.map(m => `
+    <tr>
+      <td style="padding:9px 12px"><strong>${esc(m.matchNum)}</strong></td>
+      <td style="padding:9px 12px;font-size:12px;color:var(--gray-400)">${esc(m.phase)}</td>
+      <td style="padding:9px 12px;font-weight:600;color:var(--blue-dark)">${esc(m.teamA)}</td>
+      <td style="padding:9px 12px"><span class="vs-badge">VS</span></td>
+      <td style="padding:9px 12px;font-weight:600;color:var(--blue-dark)">${esc(m.teamB)}</td>
+      <td style="padding:9px 12px">${esc(m.date)}</td>
+      <td style="padding:9px 12px">${esc(m.time)}</td>
+      <td style="padding:9px 12px">${esc(m.court)}</td>
+    </tr>`).join('');
+}
+
+async function adminToggleDraw() {
+  const val = document.getElementById('draw-open-select').value;
+  try { await apiPost({ action:'toggleDraw', open: val === 'true' }); } catch(e){}
+  toast(val === 'true' ? '抽籤已開放，各隊可至主頁抽籤' : '抽籤已關閉', 'ok');
+}
+
+async function adminAutoDrawAll() {
+  if (!confirm('確定要自動完成所有隊伍的抽籤？')) return;
+  const approved = DB.teams.filter(t => t.status === 'approved');
+  if (!approved.length) { toast('尚無已核准隊伍'); return; }
+
+  const taken = new Set(DB.drawResults.map(r => r.slot));
+  const total = approved.length;
+  const avail = [];
+  for (let i = 1; i <= total; i++) { if (!taken.has(i)) avail.push(i); }
+  // Shuffle
+  for (let i = avail.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [avail[i],avail[j]] = [avail[j],avail[i]];
+  }
+  let k = 0;
+  for (const t of approved) {
+    if (!DB.drawResults.find(r => r.teamId === t.teamId)) {
+      const slot = avail[k++];
+      DB.drawResults.push({ teamId:t.teamId, teamname:t.teamname, slot });
+      try { await apiPost({ action:'saveDraw', teamId:t.teamId, teamname:t.teamname, slot }); } catch(e){}
+    }
+  }
+  // Build and save matches
+  adminBuildMatches();
+  renderAdminDraw();
+  renderAdminBracket();
+  toast('全部抽籤完成！', 'ok');
+}
+
+function adminBuildMatches() {
+  const sorted = [...DB.drawResults].sort((a,b) => a.slot - b.slot);
+  const s = DB.settings;
+  const startDate = new Date(s.gamedate || '2026-08-17');
+  const maxPerDay = 4;
+  const timeSlots = ['09:00','11:00','13:30','15:30'];
+  const courts = ['A場','B場'];
+
+  const n = sorted.length;
+  let groups = [];
+  if (n <= 4)       groups = [sorted];
+  else if (n <= 8)  groups = [sorted.slice(0,Math.ceil(n/2)), sorted.slice(Math.ceil(n/2))];
+  else if (n <= 12) groups = [sorted.slice(0,4), sorted.slice(4,8), sorted.slice(8)];
+  else              groups = [sorted.slice(0,4), sorted.slice(4,8), sorted.slice(8,12), sorted.slice(12)];
+
+  DB.matches = [];
+  let matchNum = 1;
+  let dayOffset = 0;
+  let slotIdx = 0;
+  const groupLabels = ['A','B','C','D'];
+
+  groups.forEach((group, gi) => {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i+1; j < group.length; j++) {
+        if (slotIdx >= maxPerDay) { slotIdx = 0; dayOffset++; }
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + dayOffset);
+        DB.matches.push({
+          matchNum: 'G'+matchNum++,
+          phase: '分組賽 '+groupLabels[gi]+'組',
+          teamA: group[i].teamname,
+          teamB: group[j].teamname,
+          date: `${d.getMonth()+1}/${d.getDate()}`,
+          time: timeSlots[slotIdx % timeSlots.length],
+          court: courts[slotIdx % courts.length],
+        });
+        slotIdx++;
+      }
+    }
+  });
+  try { apiPost({ action:'saveMatches', matches:DB.matches }); } catch(e){}
+}
+
+async function adminResetDraw() {
+  if (!confirm('確定重置所有抽籤資料？對戰表將一併清除。')) return;
+  DB.drawResults = []; DB.matches = [];
+  try { await apiPost({ action:'resetDraw' }); } catch(e){}
+  renderAdminDraw();
+  renderAdminBracket();
+  toast('抽籤已重置');
+}
+
+// ═══════════════════════════════════════════
+// RULES (競賽規程)
+// ═══════════════════════════════════════════
+async function loadRules() {
+  try {
+    const res = await api({ action:'getRules' });
+    if (res.ok) { DB.rules = res.data || []; }
+  } catch(e) {}
+  renderRulesAdmin();
+}
+
+function renderRulesAdmin() {
+  const el = document.getElementById('rules-admin-body');
+  if (!el) return;
+  if (!DB.rules.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>尚無競賽規程，請點右上角新增</div>';
+    return;
+  }
+  el.innerHTML = DB.rules.map(r => `
+    <div style="border:1px solid var(--gray-100);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:12px;background:var(--white)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:22px">${esc(r.icon||'📄')}</span>
+          <strong style="font-size:14px;color:var(--gray-900)">${esc(r.title)}</strong>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-sm" onclick="openRuleModal('${r.ruleId}')">編輯</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteRule('${r.ruleId}')">刪除</button>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap;margin-bottom:8px">${esc(r.content)}</div>
+      ${r.pdfUrl ? `<a href="${esc(r.pdfUrl)}" target="_blank" class="btn btn-sm" style="color:var(--blue)">⬇ PDF 連結</a>` : '<span style="font-size:12px;color:var(--gray-400)">尚無 PDF</span>'}
+    </div>`).join('');
+}
+
+function openRuleModal(ruleId) {
+  const modal = document.getElementById('rule-modal');
+  if (ruleId) {
+    const r = DB.rules.find(x => x.ruleId === ruleId);
+    if (!r) return;
+    document.getElementById('rule-modal-title').textContent = '📋 編輯競賽規程';
+    document.getElementById('rm-ruleId').value   = r.ruleId;
+    document.getElementById('rm-icon').value     = r.icon || '📄';
+    document.getElementById('rm-order').value    = r.order || '';
+    document.getElementById('rm-title').value    = r.title || '';
+    document.getElementById('rm-content').value  = r.content || '';
+    document.getElementById('rm-pdf').value      = r.pdfUrl || '';
+  } else {
+    document.getElementById('rule-modal-title').textContent = '📋 新增競賽規程';
+    document.getElementById('rm-ruleId').value  = '';
+    document.getElementById('rm-icon').value    = '📋';
+    document.getElementById('rm-order').value   = DB.rules.length + 1;
+    document.getElementById('rm-title').value   = '';
+    document.getElementById('rm-content').value = '';
+    document.getElementById('rm-pdf').value     = '';
+  }
+  openModal('rule-modal');
+}
+
+async function saveRule() {
+  const title = document.getElementById('rm-title').value.trim();
+  if (!title) { toast('請輸入規程標題'); return; }
+  const body = {
+    action:  'saveRule',
+    ruleId:  document.getElementById('rm-ruleId').value,
+    icon:    document.getElementById('rm-icon').value.trim() || '📄',
+    order:   parseInt(document.getElementById('rm-order').value) || 0,
+    title,
+    content: document.getElementById('rm-content').value.trim(),
+    pdfUrl:  document.getElementById('rm-pdf').value.trim(),
+  };
+  try { await apiPost(body); } catch(e){}
+  // Update local DB
+  const idx = DB.rules.findIndex(r => r.ruleId === body.ruleId);
+  if (idx >= 0) Object.assign(DB.rules[idx], body);
+  else DB.rules.push({ ...body, ruleId: 'R'+Date.now() });
+  DB.rules.sort((a,b) => a.order - b.order);
+  closeModal('rule-modal');
+  renderRulesAdmin();
+  toast('競賽規程已儲存', 'ok');
+}
+
+async function deleteRule(ruleId) {
+  if (!confirm('確定刪除此競賽規程？')) return;
+  DB.rules = DB.rules.filter(r => r.ruleId !== ruleId);
+  try { await apiPost({ action:'deleteRule', ruleId }); } catch(e){}
+  renderRulesAdmin();
+  toast('已刪除');
+}
+
+// ═══════════════════════════════════════════
+// PAYMENTS
+// ═══════════════════════════════════════════
+async function loadPayments() {
+  try {
+    const res = await api({ action:'getPayments' });
+    if (res.ok) { DB.payments = res.data || []; renderPayments(); updatePaymentBadge(); }
+  } catch(e) { renderPayments(); }
+}
+
+function updatePaymentBadge() {
+  const pending = (DB.payments||[]).filter(p=>p.status==='pending').length;
+  const badge = document.getElementById('badge-payment');
+  badge.style.display = pending>0?'':'none';
+  badge.textContent = pending;
+}
+
+function renderPayments() {
+  const tbody = document.getElementById('payment-tbody');
+  if (!tbody) return;
+  const payments = DB.payments || [];
+  if (!payments.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">💰</div>尚無繳費紀錄</div></td></tr>';
+    return;
+  }
+  const statusMap = {
+    pending:  '<span class="badge badge-pending">⏳ 待確認</span>',
+    confirmed:'<span class="badge badge-approved">✅ 已確認</span>',
+    rejected: '<span class="badge badge-rejected">❌ 有問題</span>',
+  };
+  tbody.innerHTML = payments.map(p => `
+    <tr>
+      <td><strong>${esc(p.teamname)}</strong></td>
+      <td style="font-size:16px;font-weight:700;letter-spacing:.1em;color:var(--blue-dark)">${esc(p.code)}</td>
+      <td>NT$ ${Number(p.amount||0).toLocaleString()}</td>
+      <td>${esc(p.payerName)||'&#8212;'}</td>
+      <td style="font-size:12px;color:var(--gray-400)">${esc(p.note)||'&#8212;'}</td>
+      <td>${statusMap[p.status]||statusMap['pending']}</td>
+      <td style="font-size:12px;color:var(--gray-400)">${p.createdAt||''}</td>
+      <td>
+        <div class="btn-row">
+          <button class="btn btn-sm btn-success" onclick="setPayStatus('${p.payId}','confirmed')">✔ 確認</button>
+          <button class="btn btn-sm" style="color:var(--red)" onclick="setPayStatus('${p.payId}','rejected')">✕</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+async function setPayStatus(payId, status) {
+  const p = (DB.payments||[]).find(x=>x.payId===payId);
+  if (p) p.status = status;
+  try { await apiPost({ action:'updatePaymentStatus', payId, status }); } catch(e){}
+  renderPayments(); updatePaymentBadge();
+  toast(status==='confirmed'?'已確認繳費':'已標記為有問題');
+}
+
+// Auto-login if session exists
+if (sessionStorage.getItem('admin_auth')==='1') showAdmin();
+</script>
+</body>
+</html>

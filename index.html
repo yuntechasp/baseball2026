@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>比賽主頁</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1a5fa8;--blue-dark:#0d3b6e;--blue-light:#e6f1fb;
+  --green:#1d9e75;--accent:#e85d24;--amber:#ba7517;
+  --gray-50:#f7f6f3;--gray-100:#ededea;--gray-200:#d5d4ce;
+  --gray-400:#888780;--gray-600:#5f5e5a;--gray-700:#3d3d3a;--gray-900:#1c1c1a;
+  --white:#fff;--radius:8px;--radius-lg:12px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.07);--shadow:0 2px 8px rgba(0,0,0,.10);
+}
+body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
+  background:var(--gray-50);color:var(--gray-700);font-size:14px;line-height:1.7;min-height:100vh}
+
+/* ── Nav ── */
+.nav{background:var(--blue-dark);color:#fff;position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.nav-inner{max-width:1000px;margin:0 auto;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;height:52px}
+.nav-logo{font-size:15px;font-weight:700;letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:6px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;
+  color:rgba(255,255,255,.8);cursor:pointer;border:none;background:none;
+  text-decoration:none;transition:all .15s;font-family:inherit}
+.nav-link:hover{background:rgba(255,255,255,.12);color:#fff}
+.nav-link.active{background:rgba(255,255,255,.18);color:#fff}
+.nav-link.cta{background:var(--accent);color:#fff;margin-left:8px}
+.nav-link.cta:hover{background:#c54d1d}
+
+/* ── Hero ── */
+.hero{background:linear-gradient(135deg,var(--blue-dark) 0%,var(--blue) 60%,#2d7dd2 100%);
+  color:#fff;padding:52px 20px 48px;text-align:center}
+.hero-tag{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  border-radius:20px;padding:4px 14px;font-size:12px;margin-bottom:14px}
+.hero h1{font-size:28px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.hero p{font-size:14px;opacity:.85;margin-bottom:24px}
+.hero-meta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:28px}
+.hero-badge{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);
+  border-radius:20px;padding:6px 16px;font-size:12px}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero-btn{padding:11px 28px;border-radius:var(--radius);font-size:14px;font-weight:700;
+  cursor:pointer;border:none;text-decoration:none;transition:all .15s;font-family:inherit;
+  display:inline-flex;align-items:center;gap:6px}
+.hero-btn-primary{background:#fff;color:var(--blue-dark)}
+.hero-btn-primary:hover{background:#f0f4ff}
+.hero-btn-outline{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.6)}
+.hero-btn-outline:hover{background:rgba(255,255,255,.1);border-color:#fff}
+
+/* ── Status bar ── */
+.status-bar{background:var(--white);border-bottom:1px solid var(--gray-100);padding:10px 20px}
+.status-inner{max-width:1000px;margin:0 auto;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;flex-wrap:wrap}
+.status-open{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#3b6d11}
+.status-closed{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#a32d2d}
+.status-dot{width:8px;height:8px;border-radius:50%;background:currentColor;
+  animation:pulse-dot 1.5s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+.countdown{font-size:12px;color:var(--gray-400)}
+
+/* ── Main ── */
+.main{max-width:1000px;margin:0 auto;padding:32px 20px 60px}
+.section{margin-bottom:36px}
+.section-title{font-size:17px;font-weight:700;color:var(--gray-900);
+  display:flex;align-items:center;gap:8px;margin-bottom:16px;
+  padding-bottom:10px;border-bottom:2px solid var(--gray-100)}
+.section-title-icon{font-size:20px}
+
+/* ── Card ── */
+.card{background:var(--white);border-radius:var(--radius-lg);
+  border:1px solid var(--gray-100);box-shadow:var(--shadow-sm);overflow:hidden}
+.card-body{padding:20px}
+
+/* ── 最新消息 ── */
+.news-item{display:flex;gap:12px;align-items:flex-start;
+  padding:13px 0;border-bottom:1px solid var(--gray-100)}
+.news-item:last-child{border-bottom:none}
+.news-badge{flex-shrink:0;font-size:11px;font-weight:700;padding:3px 9px;
+  border-radius:20px;margin-top:1px;white-space:nowrap}
+.nb-new{background:#fff0e6;color:var(--accent);border:1px solid #fcd5bd}
+.nb-imp{background:#fcebeb;color:#a32d2d;border:1px solid #f5c1c1}
+.nb-info{background:var(--blue-light);color:var(--blue);border:1px solid #b5d4f4}
+.news-title{font-size:14px;font-weight:500;color:var(--gray-900);margin-bottom:2px}
+.news-date{font-size:12px;color:var(--gray-400)}
+.news-empty{padding:24px;text-align:center;color:var(--gray-400);font-size:13px}
+
+/* ── 競賽規程 ── */
+.rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.rules-grid{grid-template-columns:1fr}}
+.rule-card{background:var(--white);border:1px solid var(--gray-100);
+  border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow-sm)}
+.rule-card-icon{font-size:28px;margin-bottom:10px}
+.rule-card-title{font-size:14px;font-weight:700;color:var(--gray-900);margin-bottom:6px}
+.rule-card-content{font-size:13px;color:var(--gray-600);line-height:1.8;margin-bottom:14px;
+  white-space:pre-wrap}
+.rule-pdf-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+  background:var(--blue-light);color:var(--blue);border:1px solid #b5d4f4;
+  border-radius:var(--radius);font-size:12px;font-weight:600;text-decoration:none;
+  cursor:pointer;transition:all .15s;font-family:inherit}
+.rule-pdf-btn:hover{background:#d0e6f8}
+.rule-pdf-empty{font-size:12px;color:var(--gray-400);font-style:italic}
+
+/* ── 報名統計 ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat-box{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);
+  padding:16px 18px;box-shadow:var(--shadow-sm);text-align:center}
+.stat-val{font-size:36px;font-weight:700;line-height:1;margin-bottom:4px}
+.stat-label{font-size:12px;color:var(--gray-400);font-weight:500}
+.stat-blue .stat-val{color:var(--blue)}
+.stat-green .stat-val{color:var(--green)}
+.stat-amber .stat-val{color:var(--amber)}
+
+.teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.team-chip{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius);
+  padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-sm)}
+.team-chip-num{width:26px;height:26px;border-radius:50%;background:var(--blue-light);
+  color:var(--blue);font-size:11px;font-weight:700;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.team-chip-name{font-size:13px;font-weight:500;color:var(--gray-900)}
+.team-chip-status{margin-left:auto;font-size:10px;font-weight:700;padding:2px 6px;
+  border-radius:10px;flex-shrink:0}
+.ts-approved{background:#eaf3de;color:#3b6d11}
+.ts-pending{background:#faeeda;color:var(--amber)}
+.teams-empty{padding:24px;text-align:center;color:var(--gray-400);font-size:13px}
+
+
+/* ── 抽籤 ── */
+.draw-teams{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.draw-chip{padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;
+  cursor:pointer;border:1.5px solid var(--gray-200);background:var(--white);
+  color:var(--gray-700);transition:all .2s;user-select:none}
+.draw-chip:hover{border-color:var(--blue);color:var(--blue)}
+.draw-chip.drawn{background:var(--blue-light);border-color:var(--blue);color:var(--blue);cursor:default}
+.draw-chip.spinning{background:var(--accent);border-color:var(--accent);color:#fff}
+.draw-chip.disabled{opacity:.4;cursor:not-allowed}
+@keyframes chipPop{0%{transform:scale(.9)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+.draw-chip.pop{animation:chipPop .35s ease-out}
+
+.draw-display{background:var(--gray-50);border:1.5px solid var(--gray-200);
+  border-radius:var(--radius-lg);padding:18px;text-align:center;
+  min-height:80px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;margin-bottom:14px}
+.draw-num{font-size:44px;font-weight:900;color:var(--blue);line-height:1}
+.draw-team-label{font-size:14px;font-weight:500;color:var(--gray-700);margin-bottom:6px}
+.draw-hint{font-size:13px;color:var(--gray-400)}
+@keyframes numFlash{0%{opacity:.3;transform:translateY(-3px)}100%{opacity:1;transform:translateY(0)}}
+.num-flash{animation:numFlash .08s ease-out}
+
+/* ── 對戰表 ── */
+.group-title{font-size:14px;font-weight:700;color:var(--blue-dark);
+  padding:10px 16px;background:var(--blue-light);border-radius:var(--radius) var(--radius) 0 0;
+  border:1px solid #b5d4f4}
+.match-table{width:100%;border-collapse:collapse}
+.match-table th{background:var(--blue-dark);color:#fff;padding:9px 12px;
+  font-size:12px;text-align:left}
+.match-table td{padding:9px 12px;border-bottom:1px solid var(--gray-100);font-size:13px}
+.match-table tr:last-child td{border-bottom:none}
+.match-table tr:hover td{background:var(--gray-50)}
+.vs-tag{display:inline-block;background:var(--gray-100);color:var(--gray-400);
+  border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700}
+.bye-tag{background:#fffbf0;color:var(--amber);border:1px solid #f0d090;
+  border-radius:4px;padding:2px 8px;font-size:11px}
+.schedule-wrap{overflow-x:auto;border:1px solid var(--gray-100);border-radius:var(--radius-lg);margin-bottom:16px}
+
+/* ── Draw progress ── */
+.draw-progress{font-size:12px;color:var(--gray-400);text-align:center;margin-bottom:12px}
+.draw-done-all{background:#eaf3de;border:1px solid #c0dd97;border-radius:var(--radius);
+  padding:12px 16px;text-align:center;font-size:13px;font-weight:500;color:#3b6d11;margin-bottom:14px}
+
+/* ── Footer ── */
+.footer{background:var(--blue-dark);color:rgba(255,255,255,.6);
+  text-align:center;padding:20px;font-size:12px}
+.footer a{color:rgba(255,255,255,.8);text-decoration:none}
+.footer a:hover{color:#fff}
+
+/* ── Loading ── */
+.loading{text-align:center;padding:32px;color:var(--gray-400)}
+.spinner{display:inline-block;width:28px;height:28px;border:2px solid var(--gray-200);
+  border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--gray-900);color:#fff;
+  padding:10px 16px;border-radius:var(--radius-lg);font-size:13px;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);transform:translateY(60px);opacity:0;
+  transition:all .3s;pointer-events:none;z-index:999}
+.toast.show{transform:translateY(0);opacity:1}
+
+@media(max-width:640px){
+  .hero h1{font-size:22px}
+  .nav-links .nav-link:not(.cta){display:none}
+}
+</style>
+</head>
+<body>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0moc322x0N3igfZqWBA-qNiAdLalNOoxjDzl5Go3GJYix/exec';
+const REGISTER_URL = 'register.html';
+</script>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">⚾ <span id="nav-title">比賽報名系統</span></div>
+    <div class="nav-links">
+      <a class="nav-link active" href="#news">最新消息</a>
+      <a class="nav-link" href="#rules">競賽規程</a>
+      <a class="nav-link" href="#draw">線上抽籤</a>
+      <a class="nav-link" href="#stats">報名統計</a>
+      <a class="nav-link cta" id="nav-reg-btn" href="register.html">✏️ 立即報名</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-tag" id="hero-tag">棒球錦標賽</div>
+  <h1 id="hero-title">比賽報名系統</h1>
+  <p id="hero-sub"></p>
+  <div class="hero-meta">
+    <span class="hero-badge">📅 報名截止：<span id="hero-deadline">載入中…</span></span>
+    <span class="hero-badge">🏟 <span id="hero-venue">載入中…</span></span>
+    <span class="hero-badge">🗓 比賽：<span id="hero-gamedate">載入中…</span> ～ <span id="hero-gameend">—</span></span>
+  </div>
+  <div class="hero-btns">
+    <a class="hero-btn hero-btn-primary" href="register.html" id="hero-reg-btn">✏️ 前往報名</a>
+    <a class="hero-btn hero-btn-outline" href="#rules">📋 競賽規程</a>
+  </div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <div class="status-inner">
+    <div class="status-open" id="status-indicator">
+      <span class="status-dot"></span>
+      <span id="status-text">載入中…</span>
+    </div>
+    <div class="countdown" id="countdown-text"></div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <div id="loading-main" class="loading">
+    <div class="spinner"></div>
+    <div>載入資料中…</div>
+  </div>
+
+  <div id="main-content" style="display:none">
+
+    <!-- 最新消息 -->
+    <div class="section" id="news">
+      <div class="section-title">
+        <span class="section-title-icon">📢</span> 最新消息
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:0 20px">
+          <div id="news-list"><div class="news-empty">目前沒有公告</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 競賽規程 -->
+    <div class="section" id="rules">
+      <div class="section-title">
+        <span class="section-title-icon">📋</span> 競賽規程
+      </div>
+      <div class="rules-grid" id="rules-grid">
+        <div class="loading">載入中…</div>
+      </div>
+    </div>
+
+
+    <!-- 抽籤 -->
+    <div class="section" id="draw">
+      <div class="section-title">
+        <span class="section-title-icon">🎰</span> 線上抽籤
+        <span id="draw-status-tag" style="margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--blue-light);color:var(--blue)">載入中</span>
+      </div>
+      <div class="card">
+        <div class="card-body" id="draw-body">
+          <div class="loading">載入中…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 對戰時間表 -->
+    <div class="section" id="schedule">
+      <div class="section-title">
+        <span class="section-title-icon">🗓</span> 對戰時間表
+      </div>
+      <div id="schedule-body">
+        <div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">抽籤完成後將公布對戰時間表</div></div>
+      </div>
+    </div>
+
+    <!-- 報名統計 -->
+    <div class="section" id="stats">
+      <div class="section-title">
+        <span class="section-title-icon">📊</span> 報名統計
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box stat-blue">
+          <div class="stat-val" id="stat-total">0</div>
+          <div class="stat-label">已報名隊數</div>
+        </div>
+        <div class="stat-box stat-green">
+          <div class="stat-val" id="stat-approved">0</div>
+          <div class="stat-label">已核准隊數</div>
+        </div>
+        <div class="stat-box stat-amber">
+          <div class="stat-val" id="stat-max">0</div>
+          <div class="stat-label">最多收隊數</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div style="font-size:13px;font-weight:500;color:var(--gray-600);margin-bottom:12px">
+            已核准隊伍名單
+          </div>
+          <div class="teams-grid" id="teams-grid">
+            <div class="teams-empty">尚無已核准隊伍</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <div id="footer-title">比賽報名系統</div>
+  <div style="margin-top:6px">
+    <a href="register.html">報名頁面</a> ·
+    <a href="register.html#pay">繳費回報</a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let settings = {}, newsData = [], teamsData = [], rulesData = [];
+
+async function api(params) {
+  const r = await fetch(API_URL + '?' + new URLSearchParams(params));
+  return r.json();
+}
+
+// ── 初始化 ──────────────────────────────────
+(async () => {
+  try {
+    const res = await api({ action:'getAllData' });
+    if (res.ok) {
+      settings  = res.settings || {};
+      newsData  = res.news    || [];
+      teamsData = res.teams   || [];
+      applySettings();
+      renderNews();
+      renderStats();
+    }
+    // 載入抽籤資料
+    await loadDraw();
+    // 載入競賽規程
+    const rulesRes = await api({ action:'getRules' });
+    if (rulesRes.ok) rulesData = rulesRes.data || [];
+    renderRules();
+  } catch(e) {
+    console.error(e);
+  }
+  document.getElementById('loading-main').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+})();
+
+// ── 套用設定 ────────────────────────────────
+function applySettings() {
+  const s = settings;
+  const title = s.title || '比賽報名系統';
+  document.title = title;
+  document.getElementById('nav-title').textContent   = title;
+  document.getElementById('hero-title').textContent  = title;
+  document.getElementById('hero-sub').textContent    = s.subtitle || '';
+  document.getElementById('hero-tag').textContent    = '棒球';
+  document.getElementById('hero-deadline').textContent = s.deadline || '—';
+  document.getElementById('hero-venue').textContent    = s.venue    || '—';
+  document.getElementById('hero-gamedate').textContent = s.gamedate || '—';
+  document.getElementById('hero-gameend').textContent  = s.gameend  || '—';
+  document.getElementById('footer-title').textContent  = title;
+  document.getElementById('stat-max').textContent = s.maxTeams || '—';
+
+  // 報名狀態
+  const isOpen = s.open !== 'false';
+  const indicator = document.getElementById('status-indicator');
+  const statusText = document.getElementById('status-text');
+  if (isOpen) {
+    indicator.className = 'status-open';
+    statusText.textContent = '報名開放中，歡迎各隊踴躍報名';
+  } else {
+    indicator.className = 'status-closed';
+    statusText.textContent = '報名已截止';
+    document.getElementById('hero-reg-btn').style.opacity = '.5';
+    document.getElementById('nav-reg-btn').style.opacity = '.5';
+  }
+
+  // 倒數計時
+  if (s.deadline) {
+    const diff = new Date(s.deadline) - new Date();
+    if (diff > 0) {
+      const days = Math.ceil(diff / 86400000);
+      document.getElementById('countdown-text').textContent = `距報名截止還有 ${days} 天`;
+    } else if (!isOpen) {
+      document.getElementById('countdown-text').textContent = '報名已結束';
+    }
+  }
+}
+
+// ── 最新消息 ────────────────────────────────
+const NB = { new:'nb-new', imp:'nb-imp', info:'nb-info' };
+const NL = { new:'最新', imp:'重要', info:'公告' };
+function renderNews() {
+  const el = document.getElementById('news-list');
+  if (!newsData.length) { el.innerHTML = '<div class="news-empty">目前沒有公告</div>'; return; }
+  el.innerHTML = newsData.map(n => `
+    <div class="news-item">
+      <span class="news-badge ${NB[n.type]||'nb-info'}">${NL[n.type]||'公告'}</span>
+      <div>
+        <div class="news-title">${esc(n.title)}</div>
+        <div class="news-date">${n.date||''}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── 競賽規程 ────────────────────────────────
+function renderRules() {
+  const el = document.getElementById('rules-grid');
+  if (!rulesData.length) {
+    el.innerHTML = `<div class="rule-card" style="grid-column:span 2">
+      <div class="rule-card-icon">📋</div>
+      <div class="rule-card-title">競賽規程尚未發布</div>
+      <div class="rule-card-content" style="color:var(--gray-400)">請待主辦單位公告後查閱。</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = rulesData.map(r => `
+    <div class="rule-card">
+      <div class="rule-card-icon">${r.icon || '📄'}</div>
+      <div class="rule-card-title">${esc(r.title)}</div>
+      <div class="rule-card-content">${esc(r.content)}</div>
+      ${r.pdfUrl
+        ? `<a class="rule-pdf-btn" href="${esc(r.pdfUrl)}" target="_blank">⬇ 下載 PDF</a>`
+        : `<div class="rule-pdf-empty">PDF 尚未上傳</div>`}
+    </div>`).join('');
+}
+
+// ── 報名統計 ────────────────────────────────
+function renderStats() {
+  const approved = teamsData.filter(t => t.status === 'approved');
+  document.getElementById('stat-total').textContent    = teamsData.length;
+  document.getElementById('stat-approved').textContent = approved.length;
+
+  const grid = document.getElementById('teams-grid');
+  if (!approved.length) {
+    grid.innerHTML = '<div class="teams-empty">尚無已核准隊伍</div>';
+    return;
+  }
+  grid.innerHTML = approved.map((t, i) => `
+    <div class="team-chip">
+      <div class="team-chip-num">${i+1}</div>
+      <div class="team-chip-name">${esc(t.teamname)}</div>
+    </div>`).join('');
+}
+
+
+// ═══════════════════════════════════════════
+// DRAW SYSTEM
+// ═══════════════════════════════════════════
+let drawData   = [];   // [{teamId, teamname, slot}]
+let matchData  = [];   // generated matches
+let drawState  = { spinning: false, open: false, done: false };
+
+async function loadDraw() {
+  try {
+    const res = await api({ action:'getDrawData' });
+    if (res.ok) {
+      drawData  = res.draws   || [];
+      matchData = res.matches || [];
+      drawState.open = res.drawOpen === true;
+      drawState.done = drawData.length > 0 && drawData.length === teamsData.filter(t=>t.status==='approved').length;
+    }
+  } catch(e) {}
+  renderDraw();
+  renderSchedule();
+}
+
+function renderDraw() {
+  const body = document.getElementById('draw-body');
+  const tag  = document.getElementById('draw-status-tag');
+  const approved = teamsData.filter(t => t.status === 'approved');
+
+  if (!drawState.open && !drawState.done) {
+    tag.textContent = '抽籤未開放';
+    tag.style.background = 'var(--gray-100)'; tag.style.color = 'var(--gray-400)';
+    body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray-400)">抽籤尚未開放，請待主辦單位公告。</div>';
+    return;
+  }
+
+  if (drawState.done) {
+    tag.textContent = '抽籤已完成'; tag.style.background = '#eaf3de'; tag.style.color = '#3b6d11';
+  } else {
+    tag.textContent = '抽籤進行中'; tag.style.background = '#fff0e6'; tag.style.color = 'var(--accent)';
+  }
+
+  if (!approved.length) {
+    body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray-400)">尚無已核准隊伍</div>';
+    return;
+  }
+
+  const done = drawData.length;
+  const total = approved.length;
+
+  let html = '';
+
+  // Done banner
+  if (drawState.done) {
+    html += '<div class="draw-done-all">✅ 所有隊伍抽籤完成！請查看下方對戰時間表。</div>';
+  }
+
+  // Display box
+  html += '<div class="draw-display" id="draw-display"><div class="draw-hint" id="draw-hint">點選您的隊伍進行抽籤</div></div>';
+
+  // Progress
+  if (done > 0 && !drawState.done) {
+    html += `<div class="draw-progress">已完成 <strong>${done}</strong> / <strong>${total}</strong> 隊</div>`;
+  }
+
+  // Team chips
+  html += '<div class="draw-teams">';
+  approved.forEach(t => {
+    const dr = drawData.find(d => d.teamId === t.teamId);
+    if (dr) {
+      html += `<div class="draw-chip drawn pop">${esc(t.teamname)} (第${dr.slot}籤)</div>`;
+    } else if (drawState.done) {
+      html += `<div class="draw-chip disabled">${esc(t.teamname)}</div>`;
+    } else {
+      html += `<div class="draw-chip" onclick="startDraw('${t.teamId}','${esc(t.teamname)}')">${esc(t.teamname)}</div>`;
+    }
+  });
+  html += '</div>';
+
+  body.innerHTML = html;
+}
+
+let spinTimer = null;
+function startDraw(teamId, teamname) {
+  if (drawState.spinning) return;
+  if (drawData.find(d => d.teamId === teamId)) return;
+
+  drawState.spinning = true;
+
+  // Update chip
+  const chips = document.querySelectorAll('.draw-chip');
+  chips.forEach(c => {
+    if (c.textContent === teamname) {
+      c.className = 'draw-chip spinning';
+      c.onclick = null;
+    }
+  });
+
+  const disp = document.getElementById('draw-display');
+  disp.innerHTML = `<div class="draw-team-label">${esc(teamname)}</div><div class="draw-num" id="spin-num">-</div>`;
+
+  const taken = new Set(drawData.map(d => d.slot));
+  const total = teamsData.filter(t => t.status === 'approved').length;
+  const avail = [];
+  for (let i = 1; i <= total; i++) { if (!taken.has(i)) avail.push(i); }
+
+  let frame = 0;
+  const frames = 20 + Math.floor(Math.random() * 16);
+
+  spinTimer = setInterval(async () => {
+    const rand = avail[Math.floor(Math.random() * avail.length)];
+    const el = document.getElementById('spin-num');
+    if (el) { el.textContent = '第 ' + rand + ' 籤'; el.className = 'draw-num num-flash'; }
+    frame++;
+
+    if (frame >= frames) {
+      clearInterval(spinTimer);
+      const picked = avail[Math.floor(Math.random() * avail.length)];
+      const el2 = document.getElementById('spin-num');
+      if (el2) { el2.textContent = '第 ' + picked + ' 籤 ✓'; el2.className = 'draw-num'; }
+
+      const entry = { teamId, teamname, slot: picked };
+      drawData.push(entry);
+
+      // Save to backend
+      try {
+        await apiPost({ action: 'saveDraw', teamId, teamname, slot: picked });
+      } catch(e) {}
+
+      drawState.spinning = false;
+
+      const approved = teamsData.filter(t => t.status === 'approved');
+      if (drawData.length >= approved.length) {
+        drawState.done = true;
+        buildMatches();
+        renderSchedule();
+      }
+      renderDraw();
+    }
+  }, 80);
+}
+
+// ── 自動產生對戰表 ──────────────────────────
+function buildMatches() {
+  const sorted = [...drawData].sort((a, b) => a.slot - b.slot);
+  const s = settings;
+  const startDate = new Date(s.gamedate || '2026-08-17');
+  const endDate   = new Date(s.gameend  || '2026-08-28');
+  const maxPerDay = 4;
+  const timeSlots = ['09:00', '11:00', '13:30', '15:30'];
+  const courts    = ['A場', 'B場'];
+
+  // Determine groups based on team count
+  const n = sorted.length;
+  let groups = [];
+  if (n <= 4)       groups = [sorted];
+  else if (n <= 8)  groups = [sorted.slice(0, Math.ceil(n/2)), sorted.slice(Math.ceil(n/2))];
+  else if (n <= 12) groups = [sorted.slice(0,4), sorted.slice(4,8), sorted.slice(8)];
+  else              groups = [sorted.slice(0,4), sorted.slice(4,8), sorted.slice(8,12), sorted.slice(12)];
+
+  matchData = [];
+  let matchNum = 1;
+  let dayOffset = 0;
+  let slotIdx = 0;
+
+  const groupLabels = ['A', 'B', 'C', 'D'];
+
+  groups.forEach((group, gi) => {
+    // Round-robin within group
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        if (slotIdx >= maxPerDay) { slotIdx = 0; dayOffset++; }
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + dayOffset);
+        matchData.push({
+          matchNum: 'G' + matchNum++,
+          phase: '分組賽 ' + groupLabels[gi] + '組',
+          teamA: group[i].teamname,
+          teamB: group[j].teamname,
+          date: `${d.getMonth()+1}/${d.getDate()}`,
+          time: timeSlots[slotIdx % timeSlots.length],
+          court: courts[slotIdx % courts.length],
+        });
+        slotIdx++;
+      }
+    }
+  });
+
+  // Save matches
+  try { apiPost({ action: 'saveMatches', matches: matchData }); } catch(e) {}
+}
+
+function renderSchedule() {
+  const body = document.getElementById('schedule-body');
+  if (!matchData.length) {
+    body.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">抽籤完成後將公布對戰時間表</div></div>';
+    return;
+  }
+
+  // Group by phase
+  const phases = [...new Set(matchData.map(m => m.phase))];
+  let html = '';
+
+  phases.forEach(phase => {
+    const matches = matchData.filter(m => m.phase === phase);
+    html += `<div class="schedule-wrap">
+      <div class="group-title">⚾ ${esc(phase)}</div>
+      <table class="match-table">
+        <thead><tr>
+          <th style="width:60px">場次</th>
+          <th>隊伍 A</th><th style="width:30px"></th><th>隊伍 B</th>
+          <th style="width:80px">日期</th>
+          <th style="width:70px">時間</th>
+          <th style="width:50px">場地</th>
+        </tr></thead>
+        <tbody>`;
+    matches.forEach(m => {
+      html += `<tr>
+        <td><strong>${esc(m.matchNum)}</strong></td>
+        <td style="font-weight:600;color:var(--blue-dark)">${esc(m.teamA)}</td>
+        <td><span class="vs-tag">VS</span></td>
+        <td style="font-weight:600;color:var(--blue-dark)">${m.teamB==='(輪空)' ? '<span class="bye-tag">輪空</span>' : esc(m.teamB)}</td>
+        <td>${esc(m.date)}</td>
+        <td>${esc(m.time)}</td>
+        <td>${esc(m.court)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+  });
+  body.innerHTML = html;
+}
+
+// ── 錨點平滑滾動 ────────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const id = a.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if (el) { e.preventDefault(); el.scrollIntoView({ behavior:'smooth', block:'start' }); }
+  });
+});
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg) {
+  const e = document.getElementById('toast');
+  e.textContent = msg; e.className = 'toast show';
+  setTimeout(() => e.className = 'toast', 2500);
+}
+</script>
+</body>
+</html>

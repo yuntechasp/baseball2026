@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>比賽報名</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1a5fa8;--blue-dark:#0d3b6e;--blue-light:#e6f1fb;
+  --green:#1d9e75;--accent:#e85d24;--amber:#ba7517;
+  --gray-50:#f7f6f3;--gray-100:#ededea;--gray-200:#d5d4ce;
+  --gray-400:#888780;--gray-700:#3d3d3a;--gray-900:#1c1c1a;
+  --white:#fff;--radius:8px;--radius-lg:12px;
+  --shadow:0 2px 8px rgba(0,0,0,.10);
+}
+body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
+  background:var(--gray-50);color:var(--gray-700);font-size:14px;line-height:1.6;min-height:100vh}
+
+/* Header */
+.header{background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:#fff;padding:28px 20px;text-align:center}
+.header h1{font-size:22px;font-weight:700;margin-bottom:6px}
+.header p{font-size:13px;opacity:.8}
+.header-meta{display:flex;justify-content:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.header-badge{background:rgba(255,255,255,.15);border-radius:20px;padding:5px 14px;font-size:12px}
+
+/* Tab 切換按鈕 */
+.tab-bar{display:flex;gap:0;background:var(--white);border-bottom:2px solid var(--gray-100);
+  position:sticky;top:0;z-index:50;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.tab-btn{flex:1;padding:14px 10px;font-size:14px;font-weight:600;cursor:pointer;
+  border:none;background:none;color:var(--gray-400);border-bottom:3px solid transparent;
+  margin-bottom:-2px;transition:all .15s;font-family:inherit;display:flex;
+  align-items:center;justify-content:center;gap:6px}
+.tab-btn:hover{color:var(--gray-700);background:var(--gray-50)}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-btn.active.green{color:var(--green);border-bottom-color:var(--green)}
+
+/* Main */
+.main{max-width:720px;margin:0 auto;padding:24px 16px 60px}
+.status-banner{padding:12px 16px;border-radius:var(--radius);margin-bottom:20px;font-size:13px;font-weight:500;text-align:center}
+.status-open{background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.status-closed{background:#fcebeb;color:#a32d2d;border:1px solid #f7c1c1}
+
+/* Card */
+.card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);box-shadow:var(--shadow);margin-bottom:20px}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--gray-100)}
+.card-title{font-size:15px;font-weight:700;color:var(--gray-900);display:flex;align-items:center;gap:8px}
+.card-body{padding:20px}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--gray-400);border-bottom:1px solid var(--gray-100);padding-bottom:7px;margin-bottom:14px}
+
+/* Form */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:12px;font-weight:500;color:var(--gray-700)}
+.req{color:var(--accent)}
+.form-group input,.form-group select{
+  padding:9px 11px;border:1px solid var(--gray-200);border-radius:var(--radius);
+  font-size:13px;color:var(--gray-700);background:var(--white);font-family:inherit;
+  transition:border .15s,box-shadow .15s}
+.form-group input:focus,.form-group select:focus{
+  outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,95,168,.12)}
+
+/* Member table */
+.mem-table{width:100%;border-collapse:collapse}
+.mem-table th{background:var(--gray-50);padding:8px 10px;font-size:11px;font-weight:700;
+  color:var(--gray-400);text-align:left;border-bottom:1px solid var(--gray-100)}
+.mem-table td{padding:5px 6px;border-bottom:1px solid var(--gray-100)}
+.mem-table tr.cap td{background:#fffbf0}
+.mem-in{width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:6px;
+  font-size:13px;color:var(--gray-700);background:transparent;font-family:inherit}
+.mem-in:focus{outline:none;border-color:var(--blue);background:var(--white)}
+.role-cap{display:inline-block;font-size:11px;font-weight:700;background:#faeeda;
+  color:var(--amber);border-radius:4px;padding:2px 7px;border:1px solid #f0d090}
+.role-mem{display:inline-block;font-size:11px;background:var(--gray-100);
+  color:var(--gray-700);border-radius:4px;padding:2px 7px}
+
+/* Buttons */
+.btn{padding:10px 22px;border-radius:var(--radius);font-size:14px;font-weight:600;
+  cursor:pointer;border:1px solid var(--gray-200);background:var(--white);
+  color:var(--gray-700);display:inline-flex;align-items:center;gap:6px;
+  transition:all .15s;font-family:inherit}
+.btn:hover{background:var(--gray-50)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-primary:disabled{background:var(--gray-200);border-color:var(--gray-200);cursor:not-allowed}
+.btn-success{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-success:hover{background:#0f6e56}
+.btn-success:disabled{background:var(--gray-200);border-color:var(--gray-200);cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--gray-400)}
+.btn-ghost:hover{color:var(--gray-700);background:var(--gray-50)}
+
+/* Alert */
+.alert{padding:12px 16px;border-radius:var(--radius);font-size:13px;margin-top:16px;display:none}
+.alert.show{display:block}
+.alert-ok{background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.alert-err{background:#fcebeb;color:#a32d2d;border:1px solid #f7c1c1}
+
+/* 繳費區塊 */
+.payment-info-box{background:var(--blue-light);border:1px solid #b5d4f4;
+  border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:20px}
+.payment-account{font-size:24px;font-weight:700;color:var(--blue-dark);
+  letter-spacing:.12em;text-align:center;padding:10px 0}
+.code-input{font-size:22px;font-weight:700;letter-spacing:.2em;text-align:center;
+  padding:10px;border:2px solid var(--gray-200);border-radius:var(--radius)}
+.code-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12)}
+
+/* Tab panels */
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Success */
+.success-box{text-align:center;padding:40px 20px;background:var(--white);
+  border-radius:var(--radius-lg);border:1px solid var(--gray-100);box-shadow:var(--shadow)}
+.success-icon{font-size:56px;margin-bottom:14px}
+.success-box h2{font-size:20px;font-weight:700;color:var(--gray-900);margin-bottom:8px}
+.success-box p{color:var(--gray-400);font-size:14px;line-height:1.8}
+
+/* Loading */
+.loading{display:none;text-align:center;padding:40px;color:var(--gray-400)}
+.loading.show{display:block}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--gray-100);
+  border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--gray-900);color:#fff;
+  padding:11px 18px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);transform:translateY(60px);opacity:0;
+  transition:all .3s;pointer-events:none;z-index:999}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:var(--green)}
+</style>
+</head>
+<body>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0moc322x0N3igfZqWBA-qNiAdLalNOoxjDzl5Go3GJYix/exec';
+</script>
+
+<div id="loading-init" class="loading show">
+  <div class="spinner"></div>
+  <div>載入賽事資訊中…</div>
+</div>
+
+<div id="app" style="display:none">
+
+  <!-- Header -->
+  <div class="header">
+    <h1 id="hd-title">比賽報名系統</h1>
+    <p id="hd-sub"></p>
+    <div class="header-meta">
+      <span class="header-badge">📅 報名截止：<span id="hd-deadline">—</span></span>
+      <span class="header-badge">🏟 <span id="hd-venue">—</span></span>
+      <span class="header-badge">🗓 比賽：<span id="hd-gamedate">—</span> ～ <span id="hd-gameend">—</span></span>
+    </div>
+  </div>
+
+  <!-- Tab 切換 -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-reg-btn" onclick="switchTab('reg')">
+      ✏️ 隊伍報名
+    </button>
+    <button class="tab-btn green" id="tab-pay-btn" onclick="switchTab('pay')">
+      💰 繳費回報
+    </button>
+  </div>
+
+  <div class="main">
+    <div id="status-banner" class="status-banner status-open">✅ 報名開放中，歡迎各隊填寫報名表</div>
+
+    <!-- ══ Tab 一：報名表 ══ -->
+    <div id="tab-reg" class="tab-panel active">
+
+      <!-- 報名成功畫面 -->
+      <div id="reg-success" style="display:none">
+        <div class="success-box">
+          <div class="success-icon">🎉</div>
+          <h2>報名成功！</h2>
+          <p id="reg-success-msg"></p>
+          <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-success" onclick="switchTab('pay')">💰 前往繳費回報</button>
+            <button class="btn btn-ghost" onclick="resetReg()">繼續報名其他隊伍</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 報名表單 -->
+      <div id="reg-form">
+        <div class="card">
+          <div class="card-header"><div class="card-title">🏫 隊伍基本資料</div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group" style="grid-column:span 2">
+                <label>學校 / 隊伍名稱<span class="req">*</span></label>
+                <input type="text" id="f-teamname" placeholder="例：國立雲林科技大學">
+              </div>
+            </div>
+            <input type="hidden" id="f-sport" value="棒球">
+            <input type="hidden" id="f-group" value="大專男生組">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">👔 領隊 / 教練資料</div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>領隊姓名</label>
+                <input type="text" id="f-manager" placeholder="姓名（選填）">
+              </div>
+              <div class="form-group">
+                <label>教練姓名<span class="req">*</span></label>
+                <input type="text" id="f-coach" placeholder="姓名">
+              </div>
+              <div class="form-group">
+                <label>教練聯絡電話</label>
+                <input type="tel" id="f-coach-tel" placeholder="0912-345-678">
+              </div>
+              <div class="form-group">
+                <label>聯絡信箱</label>
+                <input type="email" id="f-email" placeholder="school@example.edu.tw">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚾ 隊長 &amp; 球員名單</div></div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--gray-400);margin-bottom:14px">
+              隊長1名 + 隊員19名，共20人。隊長及隊員均需填寫背號與學號。
+            </p>
+            <div style="overflow-x:auto">
+              <table class="mem-table">
+                <thead>
+                  <tr>
+                    <th style="width:50px">序號</th>
+                    <th style="width:80px">角色</th>
+                    <th>姓名<span class="req">*</span></th>
+                    <th style="width:90px">背號<span class="req">*</span></th>
+                    <th style="width:130px">學號<span class="req">*</span></th>
+                  </tr>
+                </thead>
+                <tbody id="mem-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="reg-alert" class="alert"></div>
+        <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="submit-btn" onclick="submitReg()">📨 送出報名</button>
+          <button class="btn btn-ghost" onclick="clearReg()">清除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Tab 二：繳費回報 ══ -->
+    <div id="tab-pay" class="tab-panel">
+
+      <!-- 繳費成功畫面 -->
+      <div id="pay-success" style="display:none">
+        <div class="success-box">
+          <div class="success-icon">✅</div>
+          <h2>繳費資訊已送出！</h2>
+          <p id="pay-success-msg"></p>
+          <div style="margin-top:20px">
+            <button class="btn btn-ghost" onclick="resetPay()">再次填寫</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 繳費表單 -->
+      <div id="pay-form">
+
+        <!-- 匯款資訊提示 -->
+        <div class="payment-info-box" id="pay-info-box">
+          <div style="font-size:12px;color:var(--blue);font-weight:600;margin-bottom:6px;text-align:center">
+            報名費匯款資訊
+          </div>
+          <div style="font-size:13px;color:var(--blue-dark);text-align:center;margin-bottom:4px" id="pi-bank">—</div>
+          <div class="payment-account" id="pi-account">—</div>
+          <div style="text-align:center;margin-top:4px">
+            <span style="background:#fff;border:1px solid #b5d4f4;border-radius:20px;
+              padding:4px 14px;font-size:13px;font-weight:700;color:var(--amber)" id="pi-fee">—</span>
+          </div>
+          <div style="font-size:11px;color:var(--blue);text-align:center;margin-top:6px" id="pi-note"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">💰 填寫匯款資訊</div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group" style="grid-column:span 2">
+                <label>隊伍名稱<span class="req">*</span></label>
+                <input type="text" id="p-teamname" placeholder="請填寫與報名時相同的隊伍名稱">
+              </div>
+              <div class="form-group">
+                <label>繳款人姓名<span class="req">*</span></label>
+                <input type="text" id="p-payer" placeholder="匯款人姓名">
+              </div>
+              <div class="form-group">
+                <label>匯款帳號後五碼<span class="req">*</span></label>
+                <input type="text" id="p-code" class="code-input"
+                  placeholder="12345" maxlength="5" inputmode="numeric">
+              </div>
+              <div class="form-group">
+                <label>匯款金額</label>
+                <input type="number" id="p-amount" placeholder="例：3000">
+              </div>
+              <div class="form-group">
+                <label>備註</label>
+                <input type="text" id="p-note" placeholder="如有特殊說明（選填）">
+              </div>
+            </div>
+            <div id="pay-alert" class="alert"></div>
+            <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
+              <button class="btn btn-success" id="pay-btn" onclick="submitPay()">✔ 送出匯款資訊</button>
+              <button class="btn btn-ghost" onclick="clearPay()">清除</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px 16px;
+          font-size:12px;color:var(--gray-400);line-height:1.8">
+          📌 請在報名截止日前完成匯款並填寫此表。如有問題請聯絡主辦單位。
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let settings = {};
+
+async function api(params) {
+  const url = API_URL + '?' + new URLSearchParams(params);
+  const r = await fetch(url);
+  return r.json();
+}
+async function apiPost(body) {
+  const r = await fetch(API_URL, {
+    method:'POST', body:JSON.stringify(body),
+    headers:{'Content-Type':'application/json'}
+  });
+  return r.json();
+}
+
+// ── 初始化 ──────────────────────────────────
+(async () => {
+  try {
+    const res = await api({ action:'getAllData' });
+    if (res.ok) {
+      settings = res.settings || {};
+      applySettings();
+      document.getElementById('loading-init').classList.remove('show');
+      document.getElementById('app').style.display = 'block';
+      buildMemberRows();
+      // 從 URL 參數決定預設 tab
+      if (location.hash === '#pay') switchTab('pay');
+    }
+  } catch(e) {
+    document.getElementById('loading-init').innerHTML =
+      '<p style="color:#a32d2d">無法連線，請確認 API_URL 設定正確。</p>';
+  }
+})();
+
+function applySettings() {
+  const s = settings;
+  document.title = (s.title || '比賽報名') + ' — 報名';
+  document.getElementById('hd-title').textContent    = s.title    || '比賽報名系統';
+  document.getElementById('hd-sub').textContent      = s.subtitle || '';
+  document.getElementById('hd-deadline').textContent = s.deadline || '—';
+  document.getElementById('hd-venue').textContent    = s.venue    || '—';
+  document.getElementById('hd-gamedate').textContent = s.gamedate || '—';
+  document.getElementById('hd-gameend').textContent  = s.gameend  || '—';
+  // 繳費資訊
+  document.getElementById('pi-bank').textContent    = s.bankName    || '請洽主辦單位';
+  document.getElementById('pi-account').textContent = s.bankAccount || '—';
+  document.getElementById('pi-fee').textContent     = s.regFee ? 'NT$ ' + Number(s.regFee).toLocaleString() : '請洽主辦單位';
+  document.getElementById('pi-note').textContent    = s.regFeeNote || '';
+  if (s.open === 'false') {
+    document.getElementById('status-banner').className = 'status-banner status-closed';
+    document.getElementById('status-banner').textContent = '⛔ 報名已截止，感謝各隊踴躍參與';
+    document.getElementById('submit-btn').disabled = true;
+  }
+}
+
+// ── Tab 切換 ─────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab+'-btn').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ── 報名表單 ─────────────────────────────────
+function buildMemberRows() {
+  const tb = document.getElementById('mem-tbody');
+  let html = `<tr class="cap">
+    <td style="text-align:center;color:var(--gray-400);font-size:12px">—</td>
+    <td><span class="role-cap">隊長</span></td>
+    <td><input class="mem-in" id="m0-name" placeholder="隊長姓名"></td>
+    <td><input class="mem-in" id="m0-num"  placeholder="背號" maxlength="3"></td>
+    <td><input class="mem-in" id="m0-sid"  placeholder="學號"></td>
+  </tr>`;
+  for (let i = 1; i <= 19; i++) {
+    html += `<tr>
+      <td style="text-align:center;font-size:12px;color:var(--gray-400)">${i}</td>
+      <td><span class="role-mem">隊員</span></td>
+      <td><input class="mem-in" id="m${i}-name" placeholder="姓名"></td>
+      <td><input class="mem-in" id="m${i}-num"  placeholder="背號" maxlength="3"></td>
+      <td><input class="mem-in" id="m${i}-sid"  placeholder="學號"></td>
+    </tr>`;
+  }
+  tb.innerHTML = html;
+}
+
+function v(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+
+async function submitReg() {
+  const errors = [];
+  if (!v('f-teamname')) errors.push('隊伍名稱');
+  if (!v('f-coach'))    errors.push('教練姓名');
+  if (!v('m0-name'))    errors.push('隊長姓名');
+  if (!v('m0-num'))     errors.push('隊長背號');
+  if (!v('m0-sid'))     errors.push('隊長學號');
+  const al = document.getElementById('reg-alert');
+  if (errors.length) {
+    al.className = 'alert alert-err show';
+    al.textContent = '請填寫必填欄位：' + errors.join('、');
+    return;
+  }
+  al.className = 'alert';
+  const members = [];
+  for (let i = 1; i <= 19; i++)
+    members.push({ name:v(`m${i}-name`), num:v(`m${i}-num`), sid:v(`m${i}-sid`) });
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = '送出中…';
+  try {
+    const res = await apiPost({
+      action:'submitTeam',
+      teamname:v('f-teamname'), sport:v('f-sport'), group:v('f-group'),
+      manager:v('f-manager'), managerTel:'',
+      coach:v('f-coach'), coachTel:v('f-coach-tel'), email:v('f-email'),
+      captain:{ name:v('m0-name'), num:v('m0-num'), sid:v('m0-sid') },
+      members,
+    });
+    if (res.ok) {
+      document.getElementById('reg-form').style.display = 'none';
+      document.getElementById('reg-success').style.display = 'block';
+      // 預填隊名到繳費頁
+      document.getElementById('p-teamname').value = v('f-teamname');
+      document.getElementById('reg-success-msg').innerHTML =
+        `「${v('f-teamname')}」報名資料已送出！<br>請記得至「繳費回報」頁面填寫匯款資訊。`;
+    } else {
+      al.className = 'alert alert-err show';
+      al.textContent = res.error || '送出失敗，請稍後再試';
+    }
+  } catch(e) {
+    al.className = 'alert alert-err show';
+    al.textContent = '網路錯誤，請稍後再試';
+  }
+  btn.disabled = false; btn.textContent = '📨 送出報名';
+}
+
+function clearReg() {
+  document.querySelectorAll('#reg-form input[type=text],#reg-form input[type=tel],#reg-form input[type=email]')
+    .forEach(e => e.value = '');
+  document.getElementById('reg-alert').className = 'alert';
+}
+function resetReg() {
+  document.getElementById('reg-success').style.display = 'none';
+  document.getElementById('reg-form').style.display = 'block';
+  clearReg();
+}
+
+// ── 繳費回報 ─────────────────────────────────
+async function submitPay() {
+  const teamname = v('p-teamname');
+  const payer    = v('p-payer');
+  const code     = v('p-code');
+  const al = document.getElementById('pay-alert');
+
+  if (!teamname) { al.className='alert alert-err show'; al.textContent='請填寫隊伍名稱'; return; }
+  if (!payer)    { al.className='alert alert-err show'; al.textContent='請填寫繳款人姓名'; return; }
+  if (!code || code.length !== 5 || !/^\d+$/.test(code)) {
+    al.className='alert alert-err show';
+    al.textContent='請填寫正確的匯款帳號後五碼（5位數字）';
+    return;
+  }
+  al.className = 'alert';
+
+  const btn = document.getElementById('pay-btn');
+  btn.disabled = true; btn.textContent = '送出中…';
+  try {
+    await apiPost({
+      action:'submitPayment',
+      teamId:'', teamname, payerName:payer,
+      code, amount:v('p-amount'), note:v('p-note'),
+    });
+    document.getElementById('pay-form').style.display = 'none';
+    document.getElementById('pay-success').style.display = 'block';
+    document.getElementById('pay-success-msg').innerHTML =
+      `「${teamname}」的匯款資訊已收到。<br>主辦單位確認後若有問題將與您聯繫。`;
+    toast('繳費資訊已送出', 'ok');
+  } catch(e) {
+    al.className = 'alert alert-err show';
+    al.textContent = '網路錯誤，請稍後再試';
+  }
+  btn.disabled = false; btn.textContent = '✔ 送出匯款資訊';
+}
+
+function clearPay() {
+  ['p-teamname','p-payer','p-code','p-amount','p-note'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('pay-alert').className = 'alert';
+}
+function resetPay() {
+  document.getElementById('pay-success').style.display = 'none';
+  document.getElementById('pay-form').style.display = 'block';
+  clearPay();
+}
+
+function toast(msg, type='') {
+  const e = document.getElementById('toast');
+  e.textContent = msg;
+  e.className = 'toast show' + (type ? ' '+type : '');
+  setTimeout(() => e.className = 'toast', 2500);
+}
+</script>
+</body>
+</html>
