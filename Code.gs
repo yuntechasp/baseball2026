@@ -24,8 +24,20 @@ function resp(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// ── CORS Preflight ─────────────────────────────────────────
+function doOptions(e) {
+  return ContentService
+    .createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
 // ── 路由 ───────────────────────────────────────────────────
 function doGet(e) {
+  // Handle POST-like requests via GET payload (CORS workaround)
+  if (e.parameter.payload) {
+    const body = JSON.parse(decodeURIComponent(e.parameter.payload));
+    return doPostInternal(body);
+  }
   const action = e.parameter.action || '';
   try {
     switch(action) {
@@ -46,6 +58,10 @@ function doGet(e) {
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
+  return doPostInternal(body);
+}
+
+function doPostInternal(body) {
   const action = body.action || '';
   try {
     switch(action) {
@@ -213,7 +229,95 @@ function submitTeam(body) {
   (body.members||[]).forEach((m,i) => {
     if (m.name) memSh.appendRow([teamId,`隊員${i+1}`,m.name,m.num,m.sid]);
   });
+  // 寄送報名確認信
+  if (body.email) {
+    try { sendConfirmEmail(body, teamId); } catch(e) { Logger.log('Email error: ' + e); }
+  }
+
   return { ok: true, teamId };
+}
+
+// ── 寄送報名確認信 ─────────────────────────────────────────
+function sendConfirmEmail(body, teamId) {
+  const settings = getSettings().data;
+  const title    = settings.title || '比賽報名系統';
+  const deadline = settings.deadline || '';
+  const venue    = settings.venue    || '';
+  const gamedate = settings.gamedate || '';
+  const gameend  = settings.gameend  || '';
+  const bankName = settings.bankName || '';
+  const bankAcc  = settings.bankAccount || '';
+  const fee      = settings.regFee   || '';
+  const feeNote  = settings.regFeeNote || '';
+
+  // 組合名單純文字
+  let memberList = '';
+  memberList += '【領隊】' + (body.manager || '未填') + '
+';
+  memberList += '【教練】' + body.coach + '
+';
+  memberList += '【隊長】' + body.captain.name
+    + '  背號：' + body.captain.num
+    + '  學號：' + body.captain.sid + '
+';
+  (body.members || []).forEach((m, i) => {
+    if (m.name) {
+      memberList += `【隊員${i+1}】${m.name}  背號：${m.num}  學號：${m.sid}
+`;
+    }
+  });
+
+  const subject = `【${title}】${body.teamname} 報名確認通知`;
+
+  const textBody =
+`${title}
+
+親愛的 ${body.teamname} 領隊/教練您好，
+
+感謝貴隊完成報名，以下為您的報名資料，請確認是否正確。
+如有任何問題，請聯絡主辦單位。
+
+═══════════════════════════
+報名資料確認
+═══════════════════════════
+隊伍名稱：${body.teamname}
+運動種類：${body.sport || '棒球'}
+報名組別：${body.group || '大專男生組'}
+教練姓名：${body.coach}
+聯絡信箱：${body.email}
+
+比賽資訊：
+・比賽日期：${gamedate}${gameend ? ' ～ ' + gameend : ''}
+・比賽場地：${venue}
+・報名截止：${deadline}
+
+───────────────────────────
+球員名單
+───────────────────────────
+${memberList}
+═══════════════════════════
+${fee ? '保證金資訊
+・金額：NT$ ' + Number(fee).toLocaleString() + '
+' + (feeNote ? '・說明：' + feeNote + '
+' : '') + (bankName ? '・匯款銀行：' + bankName + '
+' : '') + (bankAcc ? '・匯款帳號：' + bankAcc + '
+' : '') + '
+請至報名頁面「繳費回報」填寫匯款資訊。
+═══════════════════════════
+' : ''}
+主辦單位：雲科大體育室
+聯絡人：蔡小姐
+電話：05-5342601#2704
+Email：wanjan@yuntech.edu.tw
+
+此為系統自動發送郵件，請勿直接回覆。
+`;
+
+  MailApp.sendEmail({
+    to:      body.email,
+    subject: subject,
+    body:    textBody,
+  });
 }
 
 function updateTeamStatus(body) {
