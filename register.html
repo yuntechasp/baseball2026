@@ -363,10 +363,9 @@ async function api(params) {
   return r.json();
 }
 async function apiPost(body) {
-  const r = await fetch(API_URL, {
-    method:'POST', body:JSON.stringify(body),
-    headers:{'Content-Type':'application/json'}
-  });
+  // Apps Script CORS workaround: use GET with encoded payload
+  const url = API_URL + '?payload=' + encodeURIComponent(JSON.stringify(body));
+  const r = await fetch(url);
   return r.json();
 }
 
