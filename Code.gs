@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 
 const SHEET_ID   = '17RHesPHN6OfHAJ48_yFOzurbFWN-QAVcEyFAZQeRVtQ';          // ← 貼上您的 Google Sheets ID
-const ADMIN_PASS = 'admin1234'; // ← 修改為您的管理員密碼
+const ADMIN_PASS = 147258369'; // ← 修改為您的管理員密碼
 
 const SH_SETTINGS = '賽事設定';
 const SH_TEAMS    = '隊伍報名';
@@ -252,66 +252,63 @@ function sendConfirmEmail(body, teamId) {
 
   // 組合名單純文字
   let memberList = '';
-  memberList += '【領隊】' + (body.manager || '未填') + '
-';
-  memberList += '【教練】' + body.coach + '
-';
+  memberList += '【領隊】' + (body.manager || '未填') + '\n';
+  memberList += '【教練】' + body.coach + '\n';
   memberList += '【隊長】' + body.captain.name
     + '  背號：' + body.captain.num
-    + '  學號：' + body.captain.sid + '
-';
+    + '  學號：' + body.captain.sid + '\n';
   (body.members || []).forEach((m, i) => {
     if (m.name) {
-      memberList += `【隊員${i+1}】${m.name}  背號：${m.num}  學號：${m.sid}
-`;
+      memberList += '【隊員' + (i+1) + '】' + m.name + '  背號：' + m.num + '  學號：' + m.sid + '\n';
     }
   });
 
   const subject = `【${title}】${body.teamname} 報名確認通知`;
 
-  const textBody =
-`${title}
-
-親愛的 ${body.teamname} 領隊/教練您好，
-
-感謝貴隊完成報名，以下為您的報名資料，請確認是否正確。
-如有任何問題，請聯絡主辦單位。
-
-═══════════════════════════
-報名資料確認
-═══════════════════════════
-隊伍名稱：${body.teamname}
-運動種類：${body.sport || '棒球'}
-報名組別：${body.group || '大專男生組'}
-教練姓名：${body.coach}
-聯絡信箱：${body.email}
-
-比賽資訊：
-・比賽日期：${gamedate}${gameend ? ' ～ ' + gameend : ''}
-・比賽場地：${venue}
-・報名截止：${deadline}
-
-───────────────────────────
-球員名單
-───────────────────────────
-${memberList}
-═══════════════════════════
-${fee ? '保證金資訊
-・金額：NT$ ' + Number(fee).toLocaleString() + '
-' + (feeNote ? '・說明：' + feeNote + '
-' : '') + (bankName ? '・匯款銀行：' + bankName + '
-' : '') + (bankAcc ? '・匯款帳號：' + bankAcc + '
-' : '') + '
-請至報名頁面「繳費回報」填寫匯款資訊。
-═══════════════════════════
-' : ''}
-主辦單位：雲科大體育室
-聯絡人：蔡小姐
-電話：05-5342601#2704
-Email：wanjan@yuntech.edu.tw
-
-此為系統自動發送郵件，請勿直接回覆。
-`;
+  var lines = [];
+  lines.push(title);
+  lines.push('');
+  lines.push('親愛的 ' + body.teamname + ' 領隊/教練您好，');
+  lines.push('');
+  lines.push('感謝貴隊完成報名，以下為您的報名資料，請確認是否正確。');
+  lines.push('如有任何問題，請聯絡主辦單位。');
+  lines.push('');
+  lines.push('===========================');
+  lines.push('報名資料確認');
+  lines.push('===========================');
+  lines.push('隊伍名稱：' + body.teamname);
+  lines.push('運動種類：' + (body.sport || '棒球'));
+  lines.push('報名組別：' + (body.group || '大專男生組'));
+  lines.push('教練姓名：' + body.coach);
+  lines.push('聯絡信箱：' + body.email);
+  lines.push('');
+  lines.push('比賽資訊：');
+  lines.push('・比賽日期：' + gamedate + (gameend ? ' ~ ' + gameend : ''));
+  lines.push('・比賽場地：' + venue);
+  lines.push('・報名截止：' + deadline);
+  lines.push('');
+  lines.push('---------------------------');
+  lines.push('球員名單');
+  lines.push('---------------------------');
+  lines.push(memberList);
+  lines.push('===========================');
+  if (fee) {
+    lines.push('保證金資訊');
+    lines.push('・金額：NT$ ' + Number(fee).toLocaleString());
+    if (feeNote)  lines.push('・說明：' + feeNote);
+    if (bankName) lines.push('・匯款銀行：' + bankName);
+    if (bankAcc)  lines.push('・匯款帳號：' + bankAcc);
+    lines.push('');
+    lines.push('請至報名頁面「繳費回報」填寫匯款資訊。');
+    lines.push('===========================');
+  }
+  lines.push('主辦單位：雲科大體育室');
+  lines.push('聯絡人：蔡小姐');
+  lines.push('電話：05-5342601#2704');
+  lines.push('Email：wanjan@yuntech.edu.tw');
+  lines.push('');
+  lines.push('此為系統自動發送郵件，請勿直接回覆。');
+  var textBody = lines.join('\n');
 
   MailApp.sendEmail({
     to:      body.email,
