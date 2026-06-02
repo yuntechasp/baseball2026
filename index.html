@@ -473,31 +473,35 @@ function renderNews() {
   if (!newsData.length) { el.innerHTML = '<div class="news-empty">目前沒有公告</div>'; return; }
   el.innerHTML = newsData.map((n, i) => {
     const hasMore = !!(n.body || n.imageData);
-    return `
-    <div class="news-item${hasMore ? ' expandable' : ''}" ${hasMore ? `onclick="toggleNews(this)"` : ''}>
-      <div style="display:flex;gap:12px;align-items:center">
-        <span class="news-badge ${NB[n.type]||'nb-info'}">${NL[n.type]||'公告'}</span>
-        <div style="flex:1">
-          <div class="news-title">${esc(n.title)}</div>
-          <div class="news-date">${n.date||''}${hasMore ? ' · 點擊展開' : ''}</div>
-        </div>
-        ${hasMore ? '<span class="news-chevron">▼</span>' : ''}
-      </div>
-      ${hasMore ? `
-      <div class="news-expand-body">
-        ${n.body ? `<div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap;line-height:1.7">${esc(n.body)}</div>` : ''}
-        ${n.imageData ? `<img src="${n.imageData}" style="margin-top:10px;max-width:100%;border-radius:var(--radius);border:1px solid var(--gray-100)">` : ''}
-      </div>` : ''}
-    </div>`;
+    const bodyHtml = hasMore ? (
+      (n.body ? '<div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap;line-height:1.7">' + esc(n.body) + '</div>' : '') +
+      (n.imageData ? '<img src="' + n.imageData + '" style="margin-top:10px;max-width:100%;border-radius:var(--radius);border:1px solid var(--gray-100)">' : '')
+    ) : '';
+    return '<div class="news-item' + (hasMore ? ' expandable' : '') + '" data-idx="' + i + '">' +
+      '<div style="display:flex;gap:12px;align-items:center">' +
+        '<span class="news-badge ' + (NB[n.type]||'nb-info') + '">' + (NL[n.type]||'公告') + '</span>' +
+        '<div style="flex:1">' +
+          '<div class="news-title">' + esc(n.title) + '</div>' +
+          '<div class="news-date">' + (n.date||'') + (hasMore ? ' &nbsp;▼' : '') + '</div>' +
+        '</div>' +
+      '</div>' +
+      (hasMore ? '<div class="news-expand-body">' + bodyHtml + '</div>' : '') +
+    '</div>';
   }).join('');
-}
 
-function toggleNews(el) {
-  const body    = el.querySelector('.news-expand-body');
-  const chevron = el.querySelector('.news-chevron');
-  if (!body) return;
-  body.classList.toggle('open');
-  chevron.classList.toggle('open');
+  // Bind click events after render
+  el.querySelectorAll('.news-item.expandable').forEach(item => {
+    item.addEventListener('click', function() {
+      const body = this.querySelector('.news-expand-body');
+      if (!body) return;
+      const isOpen = body.classList.contains('open');
+      body.classList.toggle('open');
+      const dateEl = this.querySelector('.news-date');
+      if (dateEl) {
+        dateEl.innerHTML = dateEl.innerHTML.replace(/ &nbsp;[▼▲]/, '') + ' &nbsp;' + (isOpen ? '▼' : '▲');
+      }
+    });
+  });
 }
 
 // ── 競賽規程 ────────────────────────────────
