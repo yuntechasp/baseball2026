@@ -1206,32 +1206,75 @@ async function submitNews() {
   btn.disabled = true; btn.textContent = '處理中…';
 
   const existingRowIndex = document.getElementById('nm-rowindex').value;
-  const isEdit = !!existingRowIndex;
+  const isEdit   = !!existingRowIndex;
   const rowIndex = isEdit ? Number(existingRowIndex) : Date.now();
+  const imageData = document.getElementById('nm-image-data').value;
 
+  // 若有圖片，先上傳到 Google Drive 取得 URL
+  let imageUrl = '';
+  if (imageData && imageData.startsWith('data:')) {
+    btn.textContent = '上傳圖片中…';
+    try {
+      // 用 fetch POST 傳圖片（繞過 URL 長度限制）
+      const upRes = await fetch(API_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'uploadImage', imageData, filename: 'news_' + Date.now() + '.jpg' }),
+      }).then(r => r.json());
+      if (upRes.ok && upRes.url) {
+        imageUrl = upRes.url;
+      } else {
+        toast('⚠️ 圖片上傳失敗：' + (upRes.error||''), 'warn');
+        btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
+        return;
+      }
+    } catch(e) {
+      toast('⚠️ 圖片上傳失敗，請稍後再試', 'warn');
+      btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
+      return;
+    }
+  } else if (imageData && !imageData.startsWith('data:')) {
+    // Already a URL (editing existing)
+    imageUrl = imageData;
+  }
+
+  btn.textContent = '儲存中…';
   const item = {
     type:      document.getElementById('nm-type').value,
     title,
     body:      document.getElementById('nm-body').value.trim(),
     date:      document.getElementById('nm-date').value,
-    imageData: document.getElementById('nm-image-data').value,
+    imageData: imageUrl,   // store URL not base64
     rowIndex,
   };
+
+  let saved = false;
+  try {
+    const params = new URLSearchParams({
+      action:   isEdit ? 'updateNewsDirect' : 'addNewsDirect',
+      type:     item.type,
+      title:    item.title,
+      body:     item.body,
+      date:     item.date,
+      imageUrl: imageUrl,
+      rowIndex: rowIndex,
+    });
+    const res = await (await fetch(API_URL + '?' + params.toString())).json();
+    saved = res && res.ok;
+    if (!saved) console.error('submitNews error:', res);
+  } catch(e) { console.error(e); }
 
   if (isEdit) {
     const idx = DB.news.findIndex(n => n.rowIndex === rowIndex);
     if (idx >= 0) DB.news[idx] = item;
-    try { await apiPost({ action:'updateNews', ...item }); } catch(e){}
-    toast('公告已更新', 'ok');
   } else {
     DB.news.unshift(item);
-    try { await apiPost({ action:'addNews', ...item }); } catch(e){}
-    toast('公告已新增', 'ok');
   }
 
   btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
   closeModal('news-modal');
   renderNewsAdmin();
+  toast(saved ? (isEdit ? '✅ 公告已更新' : '✅ 公告已新增') : '⚠️ 儲存異常，請重新部署 Code.gs', saved ? 'ok' : 'warn');
 }
 
 async function deleteNews(rowIndex) {
