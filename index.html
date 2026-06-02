@@ -247,8 +247,7 @@ const REGISTER_URL = 'register.html';
     <div class="nav-links">
       <a class="nav-link active" href="#news">最新消息</a>
       <a class="nav-link" href="#rules">競賽規程</a>
-      <a class="nav-link" href="#draw">線上抽籤</a>
-      <a class="nav-link" href="schedule.html">🗓 賽程資訊</a>
+      <a class="nav-link" href="draw-schedule.html">🎰 抽籤 &amp; 賽程</a>
       <a class="nav-link" href="#stats">報名統計</a>
       <a class="nav-link" href="register.html#pay" style="color:rgba(255,255,255,.9)">💰 繳費回報</a>
       <a class="nav-link cta" id="nav-reg-btn" href="register.html">✏️ 立即報名</a>
@@ -313,53 +312,6 @@ const REGISTER_URL = 'register.html';
     </div>
 
 
-    <!-- 抽籤 -->
-    <div class="section" id="draw">
-      <div class="section-title">
-        <span class="section-title-icon">🎰</span> 線上抽籤
-        <span id="draw-status-tag" style="margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--blue-light);color:var(--blue)">載入中</span>
-      </div>
-      <div class="card">
-        <div class="card-body">
-
-          <!-- 驗證區塊 -->
-          <div id="verify-area" style="display:none">
-            <div class="verify-box">
-              <div class="verify-title">🔐 請輸入您的隊伍資料以進行抽籤</div>
-              <div class="verify-grid">
-                <div>
-                  <div style="font-size:12px;font-weight:500;color:var(--gray-700);margin-bottom:5px">隊伍名稱<span style="color:var(--accent)">*</span></div>
-                  <input class="verify-input" type="text" id="v-teamname" placeholder="請輸入與報名相同的隊伍名稱">
-                </div>
-                <div>
-                  <div style="font-size:12px;font-weight:500;color:var(--gray-700);margin-bottom:5px">隊長學號<span style="color:var(--accent)">*</span></div>
-                  <input class="verify-input" type="text" id="v-sid" placeholder="請輸入隊長學號">
-                </div>
-              </div>
-              <button class="verify-btn" onclick="verifyAndDraw()">確認身份並抽籤</button>
-              <div class="verify-err" id="verify-err"></div>
-            </div>
-          </div>
-
-          <!-- 抽籤主體 -->
-          <div id="draw-body">
-            <div class="loading">載入中…</div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <!-- 對戰圖 & 時間表 -->
-    <div class="section" id="schedule">
-      <div class="section-title">
-        <span class="section-title-icon">🏆</span> 對戰圖 &amp; 時間表
-      </div>
-      <div id="bracket-area">
-        <div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">管理員設定分組後將顯示對戰圖</div></div>
-      </div>
-      <div id="schedule-body" style="margin-top:16px"></div>
-    </div>
 
     <!-- 報名統計 -->
     <div class="section" id="stats">
@@ -437,25 +389,27 @@ async function api(params) {
       settings  = res.settings || {};
       newsData  = res.news    || [];
       teamsData = res.teams   || [];
+      // rules 直接從 getAllData 回應取得，不需額外呼叫
+      if (Array.isArray(res.rules) && res.rules.length > 0) {
+        rulesData = res.rules;
+      }
       applySettings();
       renderNews();
       renderStats();
+      renderRules();
     }
   } catch(e) { console.error('getAllData error:', e); }
 
-  // 載入競賽規程（獨立載入，避免被其他請求干擾）
-  try {
-    const rulesRes = await api({ action:'getRules' });
-    if (rulesRes && Array.isArray(rulesRes.data) && rulesRes.data.length > 0) {
-      rulesData = rulesRes.data;
-    } else if (rulesRes && rulesRes.ok && rulesRes.data) {
-      rulesData = rulesRes.data;
-    }
-  } catch(e) { console.error('getRules error:', e); }
-  renderRules();
-
-  // 載入抽籤資料
-  try { await loadDraw(); } catch(e) { console.error('loadDraw error:', e); }
+  // 若 getAllData 沒帶回 rules，再單獨嘗試一次
+  if (!rulesData.length) {
+    try {
+      const rulesRes = await api({ action:'getRules' });
+      if (rulesRes && Array.isArray(rulesRes.data) && rulesRes.data.length > 0) {
+        rulesData = rulesRes.data;
+        renderRules();
+      }
+    } catch(e) { console.error('getRules fallback error:', e); }
+  }
 
   document.getElementById('loading-main').style.display = 'none';
   document.getElementById('main-content').style.display = 'block';
@@ -612,314 +566,6 @@ function renderStats() {
 }
 
 
-// ═══════════════════════════════════════════
-// DRAW SYSTEM
-// ═══════════════════════════════════════════
-let drawData   = [];
-let matchData  = [];
-let drawState  = { spinning: false, open: false, done: false, approvedCount: 0, groupCount: 2, groupSize: 4 };
-let verifiedTeam = null; // { teamId, teamname }
-
-async function loadDraw() {
-  try {
-    const res = await api({ action:'getDrawData' });
-    if (res.ok) {
-      drawData  = res.draws   || [];
-      drawState.open          = res.drawOpen === true;
-      drawState.approvedCount = res.approvedCount || 0;
-      drawState.groupCount    = res.groupCount  || 2;
-      drawState.groupSize     = res.groupSize   || 4;
-      drawState.done = drawData.length > 0 && drawData.length >= drawState.approvedCount && drawState.approvedCount > 0;
-    }
-    // 載入賽程（含成績）
-    const mres = await api({ action:'getMatches' });
-    if (mres.ok && mres.data && mres.data.length) {
-      matchData = mres.data;
-    } else if (res.ok) {
-      matchData = res.matches || [];
-    }
-    // 若開放抽籤但還沒賽程 → 用目前已抽的資料建立空白賽程圖
-    if ((drawState.open || drawState.done) && !matchData.length && drawState.approvedCount > 0) {
-      buildMatches();
-    }
-  } catch(e) {}
-  renderDraw();
-  renderBracket();
-  renderSchedule();
-}
-
-function renderDraw() {
-  const body = document.getElementById('draw-body');
-  const tag  = document.getElementById('draw-status-tag');
-  const verifyArea = document.getElementById('verify-area');
-
-  if (!drawState.open && !drawState.done) {
-    tag.textContent = '抽籤未開放';
-    tag.style.background = 'var(--gray-100)'; tag.style.color = 'var(--gray-400)';
-    verifyArea.style.display = 'none';
-    body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray-400)">抽籤尚未開放，請待主辦單位公告。</div>';
-    return;
-  }
-
-  if (drawState.done) {
-    tag.textContent = '抽籤已完成'; tag.style.background = '#eaf3de'; tag.style.color = '#3b6d11';
-    verifyArea.style.display = 'none';
-    let html = '<div class="draw-done-all">✅ 所有隊伍抽籤完成！請查看下方對戰圖及時間表。</div>';
-    html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
-    const sorted = [...drawData].sort((a,b) => a.slot - b.slot);
-    sorted.forEach(d => {
-      html += '<span style="padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;background:var(--blue-light);border:1.5px solid var(--blue);color:var(--blue)">' + esc(d.teamname) + ' — 第' + d.slot + '籤</span>';
-    });
-    html += '</div>';
-    body.innerHTML = html;
-    return;
-  }
-
-  tag.textContent = '抽籤進行中'; tag.style.background = '#fff0e6'; tag.style.color = 'var(--accent)';
-
-  // Show verify area if not verified yet
-  if (!verifiedTeam) {
-    verifyArea.style.display = 'block';
-    body.innerHTML = '<div style="text-align:center;color:var(--gray-400);font-size:13px;padding:12px">請先驗證隊伍身份後進行抽籤</div>';
-    return;
-  }
-
-  // Show draw button for verified team
-  const alreadyDrawn = drawData.find(d => d.teamId === verifiedTeam.teamId);
-  verifyArea.style.display = 'none';
-
-  if (alreadyDrawn) {
-    body.innerHTML = '<div class="draw-done-all">✅ 「' + esc(verifiedTeam.teamname) + '」已完成抽籤，籤號為第 <strong>' + alreadyDrawn.slot + '</strong> 籤。</div>';
-    return;
-  }
-
-  const done = drawData.length;
-  const total = drawState.approvedCount;
-  body.innerHTML = '<div style="background:var(--blue-light);border:1px solid #b5d4f4;border-radius:var(--radius-lg);padding:16px;text-align:center;margin-bottom:14px">' +
-    '<div style="font-size:14px;font-weight:600;color:var(--blue-dark);margin-bottom:4px">👋 歡迎，' + esc(verifiedTeam.teamname) + '</div>' +
-    '<div style="font-size:12px;color:var(--blue)">身份驗證成功，請點擊下方按鈕進行抽籤</div>' +
-    '</div>' +
-    '<div class="draw-display" id="draw-display"><div class="draw-hint" id="draw-hint">點擊按鈕開始抽籤</div></div>' +
-    '<div style="font-size:12px;color:var(--gray-400);text-align:center;margin-bottom:14px">已完成 ' + done + ' / ' + total + ' 隊</div>' +
-    '<div style="text-align:center">' +
-    '<button onclick="startDraw()" style="padding:12px 36px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">🎰 開始抽籤</button>' +
-    '</div>';
-}
-
-// ── 驗證身份 ─────────────────────────────────
-async function verifyAndDraw() {
-  const teamname = document.getElementById('v-teamname').value.trim();
-  const sid      = document.getElementById('v-sid').value.trim();
-  const errEl    = document.getElementById('verify-err');
-  errEl.className = 'verify-err';
-
-  if (!teamname || !sid) {
-    errEl.textContent = '請填寫隊伍名稱與隊長學號';
-    errEl.className = 'verify-err show';
-    return;
-  }
-
-  const btn = document.querySelector('.verify-btn');
-  btn.disabled = true; btn.textContent = '驗證中…';
-
-  try {
-    const res = await api({ action:'verifyTeam', payload: encodeURIComponent(JSON.stringify({ teamname, captainSid: sid })) });
-    if (res.ok) {
-      verifiedTeam = { teamId: res.teamId, teamname: res.teamname };
-      renderDraw();
-    } else if (res.alreadyDrawn) {
-      verifiedTeam = { teamId: '', teamname };
-      drawData.push({ teamId: '', teamname, slot: res.slot });
-      renderDraw();
-    } else {
-      errEl.textContent = res.error || '驗證失敗';
-      errEl.className = 'verify-err show';
-    }
-  } catch(e) {
-    errEl.textContent = '網路錯誤，請稍後再試';
-    errEl.className = 'verify-err show';
-  }
-  btn.disabled = false; btn.textContent = '確認身份並抽籤';
-}
-
-// ── 抽籤動畫 ─────────────────────────────────
-let spinTimer = null;
-function startDraw() {
-  if (drawState.spinning || !verifiedTeam) return;
-  drawState.spinning = true;
-
-  const disp = document.getElementById('draw-display');
-  if (disp) disp.innerHTML = '<div class="draw-team-label">' + esc(verifiedTeam.teamname) + '</div><div class="draw-num" id="spin-num">-</div>';
-
-  const taken = new Set(drawData.map(d => d.slot));
-  const total = drawState.approvedCount;
-  const avail = [];
-  for (let i = 1; i <= total; i++) { if (!taken.has(i)) avail.push(i); }
-
-  if (!avail.length) { drawState.spinning = false; return; }
-
-  let frame = 0;
-  const frames = 22 + Math.floor(Math.random() * 16);
-
-  spinTimer = setInterval(async () => {
-    const rand = avail[Math.floor(Math.random() * avail.length)];
-    const el = document.getElementById('spin-num');
-    if (el) { el.textContent = '第 ' + rand + ' 籤'; el.className = 'draw-num num-flash'; }
-    frame++;
-    if (frame >= frames) {
-      clearInterval(spinTimer);
-      const picked = avail[Math.floor(Math.random() * avail.length)];
-      const el2 = document.getElementById('spin-num');
-      if (el2) { el2.textContent = '第 ' + picked + ' 籤 ✓'; el2.className = 'draw-num'; }
-      const entry = { teamId: verifiedTeam.teamId, teamname: verifiedTeam.teamname, slot: picked };
-      drawData.push(entry);
-      try { await api({ action:'saveDraw', payload: encodeURIComponent(JSON.stringify({ action:'saveDraw', teamId: verifiedTeam.teamId, teamname: verifiedTeam.teamname, slot: picked })) }); } catch(e) {}
-      drawState.spinning = false;
-      if (drawData.length >= drawState.approvedCount && drawState.approvedCount > 0) {
-        drawState.done = true;
-        buildMatches();
-      }
-      setTimeout(() => { renderDraw(); renderBracket(); renderSchedule(); }, 1200);
-    }
-  }, 80);
-}
-
-// ── 對戰圖（空白架構 + 填入隊名）──────────────
-function renderBracket() {
-  const area = document.getElementById('bracket-area');
-  if (!area) return;
-  const n = drawState.approvedCount;
-
-  // 未開放且未完成 → 不顯示
-  if (!drawState.open && !drawState.done) {
-    area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">主辦單位開放抽籤後將顯示對戰圖</div></div>';
-    return;
-  }
-
-  if (!n) {
-    area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">尚無已核准隊伍</div></div>';
-    return;
-  }
-
-  // Build slot map from drawData
-  const slotMap = {};
-  drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
-
-  // Determine groups - distribute evenly
-  const groupCount = drawState.groupCount || 2;
-  const groupLabels = ['A','B','C','D','E','F'];
-  const base2  = Math.floor(n / groupCount);
-  const extra2 = n % groupCount;
-
-  let html = '';
-  let slotStart = 1;
-  for (let g = 0; g < groupCount; g++) {
-    const groupSize = base2 + (g < extra2 ? 1 : 0);
-    const startSlot = slotStart;
-    const endSlot   = slotStart + groupSize - 1;
-    slotStart = endSlot + 1;
-    if (startSlot > n) break;
-
-    html += '<div style="margin-bottom:16px"><div class="bracket-title">⚾ ' + groupLabels[g] + ' 組（第 ' + startSlot + ' ～ ' + endSlot + ' 籤）</div>';
-    html += '<div class="bracket-grid">';
-    // Header
-    html += '<div class="bracket-row">' +
-      '<div class="bracket-cell header" style="justify-content:center">籤號</div>' +
-      '<div class="bracket-cell header">隊伍名稱</div>' +
-      '<div class="bracket-cell header" style="justify-content:center">狀態</div>' +
-      '</div>';
-
-    for (let slot = startSlot; slot <= endSlot; slot++) {
-      const team = slotMap[slot];
-      const rowStyle = team ? 'background:var(--blue-light)' : '';
-      html += '<div class="bracket-row" style="' + rowStyle + '">' +
-        '<div class="bracket-cell" style="justify-content:center"><span class="bracket-num">第 ' + slot + ' 籤</span></div>' +
-        '<div class="bracket-cell"><span class="bracket-slot' + (team ? '' : ' empty') + '">' + (team ? esc(team) : '待抽籤') + '</span></div>' +
-        '<div class="bracket-cell" style="justify-content:center">' + (team ? '<span style="color:#3b6d11;font-size:12px">✅ 已抽</span>' : '<span style="color:var(--gray-400);font-size:12px">—</span>') + '</div>' +
-        '</div>';
-    }
-    html += '</div></div>';
-  }
-  area.innerHTML = '<div class="bracket-wrap">' + html + '</div>';
-}
-
-// ── 自動產生對戰表 ────────────────────────────
-function buildMatches() {
-  const sorted = [...drawData].sort((a, b) => a.slot - b.slot);
-  const s = settings;
-  const startDate = new Date(s.gamedate || '2026-08-17');
-  const maxPerDay = 4;
-  const timeSlots = ['09:00','11:00','13:30','15:30'];
-  const courts    = ['A場','B場'];
-  const groupCount = drawState.groupCount || 2;
-  const perGroup   = Math.ceil(sorted.length / groupCount);
-  const groupLabels = ['A','B','C','D'];
-
-  let groups = [];
-  for (let g = 0; g < groupCount; g++) {
-    groups.push(sorted.slice(g * perGroup, (g+1) * perGroup));
-  }
-
-  matchData = [];
-  let matchNum = 1;
-  let dayOffset = 0;
-  let slotIdx   = 0;
-
-  groups.forEach((group, gi) => {
-    for (let i = 0; i < group.length; i++) {
-      for (let j = i+1; j < group.length; j++) {
-        if (slotIdx >= maxPerDay) { slotIdx = 0; dayOffset++; }
-        const d = new Date(startDate);
-        d.setDate(d.getDate() + dayOffset);
-        matchData.push({
-          matchNum: 'G'+matchNum++,
-          phase:    '分組賽 ' + groupLabels[gi] + '組',
-          teamA:    group[i].teamname,
-          teamB:    group[j].teamname,
-          date:     (d.getMonth()+1) + '/' + d.getDate(),
-          time:     timeSlots[slotIdx % timeSlots.length],
-          court:    courts[slotIdx % courts.length],
-        });
-        slotIdx++;
-      }
-    }
-  });
-  try { api({ action:'saveMatches', payload: encodeURIComponent(JSON.stringify({ action:'saveMatches', matches:matchData })) }); } catch(e) {}
-}
-
-function renderSchedule() {
-  const body = document.getElementById('schedule-body');
-  if (!body) return;
-  if (!matchData.length) { body.innerHTML = ''; return; }
-  const phases = [...new Set(matchData.map(m => m.phase))];
-  let html = '';
-  phases.forEach(phase => {
-    const matches = matchData.filter(m => m.phase === phase);
-    html += '<div class="schedule-wrap"><div class="group-title">📅 ' + esc(phase) + ' 賽程</div>' +
-      '<table class="match-table"><thead><tr>' +
-      '<th style="width:55px">場次</th><th>隊伍 A</th><th style="width:90px;text-align:center">比分</th><th>隊伍 B</th>' +
-      '<th style="width:70px">日期</th><th style="width:60px">時間</th><th style="width:50px">場地</th>' +
-      '</tr></thead><tbody>';
-    matches.forEach(m => {
-      const hasScore = m.scoreA !== undefined && m.scoreA !== '' && m.scoreB !== undefined && m.scoreB !== '';
-      const isWinA   = hasScore && Number(m.scoreA) > Number(m.scoreB);
-      const isWinB   = hasScore && Number(m.scoreB) > Number(m.scoreA);
-      const scoreCell = hasScore
-        ? '<span style="font-weight:700;color:var(--blue-dark);font-size:15px">'+m.scoreA+' : '+m.scoreB+'</span>' +
-          (m.winner && m.winner !== '平局' ? '<br><span style="font-size:11px;color:var(--green)">✅ '+esc(m.winner)+'</span>' : '<br><span style="font-size:11px;color:var(--gray-400)">平局</span>')
-        : '<span style="color:var(--gray-400);font-size:12px">待賽</span>';
-      const rowBg = hasScore ? 'background:#f0fff4' : '';
-      html += '<tr style="'+rowBg+'">' +
-        '<td><strong>' + esc(m.matchNum) + '</strong></td>' +
-        '<td style="font-weight:'+(isWinA?'700':'500')+';color:'+(isWinA?'var(--green)':'var(--blue-dark)')+'">' + esc(m.teamA) + '</td>' +
-        '<td style="text-align:center">' + scoreCell + '</td>' +
-        '<td style="font-weight:'+(isWinB?'700':'500')+';color:'+(isWinB?'var(--green)':'var(--blue-dark)')+'">' + esc(m.teamB) + '</td>' +
-        '<td>' + esc(m.date) + '</td><td>' + esc(m.time) + '</td><td>' + esc(m.court) + '</td></tr>';
-    });
-    html += '</tbody></table></div>';
-  });
-  body.innerHTML = html;
-}
 
 // ── 錨點平滑滾動 ────────────────────────────
 document.querySelectorAll('a[href^="#"]').forEach(a => {

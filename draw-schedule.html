@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>線上抽籤 & 賽程資訊</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --yt-teal:#00A88F;--yt-teal-dark:#00695C;--yt-teal-mid:#00876f;
+  --yt-teal-light:#E0F5F2;--yt-teal-border:#9FD9CE;
+  --yt-orange:#F47920;--yt-orange-light:#FEF0E6;--yt-orange-border:#FBCFA4;
+  --blue:#00A88F;--blue-dark:#00695C;--blue-light:#E0F5F2;
+  --green:#1d9e75;--accent:#F47920;--amber:#ba7517;
+  --gray-50:#f7f6f3;--gray-100:#ededea;--gray-200:#d5d4ce;
+  --gray-400:#888780;--gray-600:#5f5e5a;--gray-700:#3d3d3a;--gray-900:#1c1c1a;
+  --white:#fff;--radius:8px;--radius-lg:12px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.07);--shadow:0 2px 8px rgba(0,0,0,.10);
+}
+body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
+  background:var(--gray-50);color:var(--gray-700);font-size:14px;line-height:1.7;min-height:100vh}
+
+/* ── Nav ── */
+.nav{background:var(--yt-teal-dark);color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.nav-inner{max-width:1000px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px}
+.nav-logo{font-size:15px;font-weight:700;letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:6px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;
+  color:rgba(255,255,255,.8);cursor:pointer;border:none;background:none;
+  text-decoration:none;transition:all .15s;font-family:inherit}
+.nav-link:hover{background:rgba(255,255,255,.12);color:#fff}
+.nav-link.active{background:rgba(255,255,255,.18);color:#fff}
+.nav-link.cta{background:var(--yt-orange);color:#fff;margin-left:8px;font-weight:600}
+.nav-link.cta:hover{background:#c4601a}
+
+/* ── Tab Bar ── */
+.tab-bar{background:var(--white);border-bottom:2px solid var(--gray-100);
+  position:sticky;top:52px;z-index:90;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.tab-bar-inner{max-width:1000px;margin:0 auto;display:flex}
+.tab-btn{flex:1;padding:14px 10px;font-size:14px;font-weight:600;cursor:pointer;
+  border:none;background:none;color:var(--gray-400);border-bottom:3px solid transparent;
+  margin-bottom:-2px;transition:all .15s;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.tab-btn:hover{color:var(--gray-700);background:var(--gray-50)}
+.tab-btn.active{color:var(--yt-teal);border-bottom-color:var(--yt-teal)}
+.tab-badge{background:var(--yt-orange);color:#fff;border-radius:10px;
+  font-size:10px;font-weight:700;padding:1px 7px}
+
+/* ── Hero ── */
+.page-hero{background:linear-gradient(135deg,var(--yt-teal-dark) 0%,var(--yt-teal) 60%,#00BFA5 100%);
+  color:#fff;padding:28px 20px 24px;text-align:center}
+.page-hero h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.page-hero p{font-size:13px;opacity:.8}
+
+/* ── Main ── */
+.main{max-width:1000px;margin:0 auto;padding:28px 20px 60px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── Section ── */
+.section{margin-bottom:32px}
+.section-title{font-size:17px;font-weight:700;color:var(--gray-900);
+  display:flex;align-items:center;gap:8px;margin-bottom:16px;
+  padding-bottom:10px;border-bottom:2px solid var(--yt-teal-light)}
+
+/* ── Card ── */
+.card{background:var(--white);border-radius:var(--radius-lg);
+  border:1px solid var(--gray-100);box-shadow:var(--shadow-sm);overflow:hidden}
+.card-body{padding:20px}
+
+/* ── 抽籤 ── */
+.verify-box{background:var(--gray-50);border:1px solid var(--gray-100);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.verify-title{font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:12px}
+.verify-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+@media(max-width:500px){.verify-grid{grid-template-columns:1fr}}
+.verify-input{width:100%;padding:9px 11px;border:1px solid var(--gray-200);
+  border-radius:var(--radius);font-size:13px;font-family:inherit;transition:border .15s}
+.verify-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,168,143,.1)}
+.verify-btn{padding:10px 20px;background:var(--blue);color:#fff;border:none;
+  border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;width:100%}
+.verify-btn:hover{background:var(--blue-dark)}
+.verify-err{font-size:12px;color:#a32d2d;margin-top:6px;display:none}
+.verify-err.show{display:block}
+.draw-display{background:var(--gray-50);border:1.5px solid var(--gray-200);
+  border-radius:var(--radius-lg);padding:20px;text-align:center;
+  min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:14px 0}
+.draw-num{font-size:48px;font-weight:900;color:var(--blue);line-height:1}
+.draw-team-label{font-size:14px;font-weight:600;color:var(--gray-700);margin-bottom:6px}
+.draw-hint{font-size:13px;color:var(--gray-400)}
+@keyframes numFlash{0%{opacity:.3;transform:translateY(-3px)}100%{opacity:1;transform:translateY(0)}}
+.num-flash{animation:numFlash .08s ease-out}
+.draw-done-all{background:#eaf3de;border:1px solid #c0dd97;border-radius:var(--radius);
+  padding:12px 16px;text-align:center;font-size:13px;font-weight:500;color:#3b6d11;margin-bottom:14px}
+
+/* ── 對戰圖 ── */
+.bracket-title{font-size:13px;font-weight:700;color:var(--yt-teal-dark);
+  padding:8px 14px;background:var(--yt-teal-light);border-radius:var(--radius) var(--radius) 0 0;
+  border:1px solid var(--yt-teal-border);border-bottom:none}
+.bracket-grid{border:1px solid var(--gray-200);border-radius:0 0 var(--radius) var(--radius);overflow:hidden}
+.bracket-row{display:grid;grid-template-columns:80px 1fr 60px;border-bottom:1px solid var(--gray-100)}
+.bracket-row:last-child{border-bottom:none}
+.bracket-row:hover{background:var(--gray-50)}
+.bracket-cell{padding:10px;font-size:13px;display:flex;align-items:center}
+.bracket-cell.header{background:var(--blue-dark);color:#fff;font-size:11px;font-weight:700;padding:8px 10px}
+.bracket-slot{font-weight:600;color:var(--blue-dark)}
+.bracket-slot.empty{color:var(--gray-200);font-style:italic;font-weight:400}
+.bracket-num{font-size:11px;color:var(--gray-400);background:var(--gray-100);
+  border-radius:4px;padding:2px 6px;font-weight:600}
+
+/* ── 賽程表 ── */
+.group-title{font-size:14px;font-weight:700;color:var(--yt-teal-dark);
+  padding:10px 16px;background:var(--yt-teal-light);border-radius:var(--radius) var(--radius) 0 0;
+  border:1px solid var(--yt-teal-border)}
+.match-table{width:100%;border-collapse:collapse}
+.match-table th{background:var(--yt-teal-dark);color:#fff;padding:9px 12px;font-size:12px;text-align:left}
+.match-table td{padding:9px 12px;border-bottom:1px solid var(--gray-100);font-size:13px}
+.match-table tr:last-child td{border-bottom:none}
+.match-table tr:hover td{background:var(--gray-50)}
+.schedule-wrap{overflow-x:auto;border:1px solid var(--gray-100);border-radius:var(--radius-lg);margin-bottom:16px}
+
+/* ── schedule.html 的 SVG 賽程 ── */
+.group-section{margin-bottom:40px}
+.group-label{font-size:16px;font-weight:700;color:var(--yt-teal-dark);
+  display:flex;align-items:center;gap:8px;margin-bottom:16px;
+  padding-bottom:10px;border-bottom:2px solid var(--yt-teal-light)}
+.bracket-box{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+.bracket-svg-wrap{position:relative;width:100%;max-width:500px;margin:0 auto;padding:16px}
+.match-table-wrap{overflow-x:auto}
+.status-tag{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px}
+.st-open{background:var(--yt-orange-light);color:#c4601a;border:1px solid var(--yt-orange-border)}
+.st-done{background:var(--yt-teal-light);color:var(--yt-teal-dark);border:1px solid var(--yt-teal-border)}
+.st-closed{background:var(--gray-100);color:var(--gray-400);border:1px solid var(--gray-200)}
+.win-team{color:var(--green);font-weight:700}
+.score-cell{font-weight:700;color:var(--blue-dark);font-size:15px;text-align:center}
+.pending-tag{color:var(--gray-400);font-size:12px}
+
+/* ── Loading ── */
+.loading{text-align:center;padding:40px;color:var(--gray-400)}
+.spinner{display:inline-block;width:28px;height:28px;border:2px solid var(--gray-200);
+  border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--gray-900);color:#fff;
+  padding:10px 16px;border-radius:var(--radius-lg);font-size:13px;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);transform:translateY(60px);opacity:0;
+  transition:all .3s;pointer-events:none;z-index:999}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── Footer ── */
+.footer{background:var(--yt-teal-dark);color:rgba(255,255,255,.6);text-align:center;padding:20px;font-size:12px}
+.footer a{color:rgba(255,255,255,.8);text-decoration:none}
+
+@media(max-width:640px){
+  .nav-links .nav-link:not(.cta){display:none}
+  .tab-btn{font-size:13px;padding:12px 8px}
+}
+</style>
+</head>
+<body>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0moc322x0N3igfZqWBA-qNiAdLalNOoxjDzl5Go3GJYix/exec';
+</script>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">⚾ <span id="nav-title">比賽報名系統</span></div>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">🏠 首頁</a>
+      <a class="nav-link" href="index.html#news">最新消息</a>
+      <a class="nav-link" href="index.html#rules">競賽規程</a>
+      <a class="nav-link active" href="draw-schedule.html">🎰 抽籤 &amp; 賽程</a>
+      <a class="nav-link" href="index.html#stats">報名統計</a>
+      <a class="nav-link" href="register.html#pay">💰 繳費回報</a>
+      <a class="nav-link cta" href="register.html">✏️ 立即報名</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <div class="tab-bar-inner">
+    <button class="tab-btn active" id="tab-draw-btn" onclick="switchTab('draw')">
+      🎰 線上抽籤
+      <span class="tab-badge" id="draw-tab-badge" style="display:none">進行中</span>
+    </button>
+    <button class="tab-btn" id="tab-schedule-btn" onclick="switchTab('schedule')">
+      🗓 賽程資訊
+    </button>
+  </div>
+</div>
+
+<!-- Page Hero -->
+<div class="page-hero">
+  <h1 id="page-title">線上抽籤 &amp; 賽程資訊</h1>
+  <p id="page-sub"></p>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div id="loading-main" class="loading">
+    <div class="spinner"></div>
+    <div>載入資料中…</div>
+  </div>
+
+  <div id="main-content" style="display:none">
+
+    <!-- ══ Tab 一：線上抽籤 ══ -->
+    <div id="tab-draw" class="tab-panel active">
+
+      <!-- 抽籤狀態 -->
+      <div class="section">
+        <div class="section-title">
+          <span>🎰</span> 線上抽籤
+          <span id="draw-status-tag" style="margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--blue-light);color:var(--blue)">載入中</span>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <!-- 驗證區塊 -->
+            <div id="verify-area" style="display:none">
+              <div class="verify-box">
+                <div class="verify-title">🔐 請輸入您的隊伍資料以進行抽籤</div>
+                <div class="verify-grid">
+                  <div>
+                    <div style="font-size:12px;font-weight:500;color:var(--gray-700);margin-bottom:5px">隊伍名稱<span style="color:var(--accent)">*</span></div>
+                    <input class="verify-input" type="text" id="v-teamname" placeholder="請輸入與報名相同的隊伍名稱">
+                  </div>
+                  <div>
+                    <div style="font-size:12px;font-weight:500;color:var(--gray-700);margin-bottom:5px">隊長學號<span style="color:var(--accent)">*</span></div>
+                    <input class="verify-input" type="text" id="v-sid" placeholder="請輸入隊長學號">
+                  </div>
+                </div>
+                <button class="verify-btn" onclick="verifyAndDraw()">確認身份並抽籤</button>
+                <div class="verify-err" id="verify-err"></div>
+              </div>
+            </div>
+            <!-- 抽籤主體 -->
+            <div id="draw-body"><div class="loading">載入中…</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 對戰圖 -->
+      <div class="section" id="bracket-section" style="display:none">
+        <div class="section-title"><span>🏆</span> 分組對戰圖</div>
+        <div id="bracket-area"></div>
+      </div>
+
+    </div>
+
+    <!-- ══ Tab 二：賽程資訊 ══ -->
+    <div id="tab-schedule" class="tab-panel">
+      <div style="text-align:center;margin-bottom:20px">
+        <span class="status-tag" id="sched-status-tag">載入中</span>
+      </div>
+      <div id="groups-area">
+        <div class="loading"><div class="spinner"></div><div>載入賽程中…</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <div id="footer-title" style="font-size:14px;font-weight:500;color:white;margin-bottom:10px"></div>
+  <div>雲科大體育室 · 蔡小姐 · 05-5342601#2704 ·
+    <a href="mailto:wanjan@yuntech.edu.tw">wanjan@yuntech.edu.tw</a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let settings = {}, drawData = [], matchData = [], approvedTeams = [];
+let drawState = { spinning:false, open:false, done:false, approvedCount:0, groupCount:2 };
+let verifiedTeam = null;
+let spinTimer = null;
+let groupCount = 2, approvedCount = 0;
+
+async function api(params) {
+  const r = await fetch(API_URL + '?' + new URLSearchParams(params));
+  return r.json();
+}
+
+// ── 初始化 ──
+(async () => {
+  try {
+    const [allRes, drawRes, matchRes] = await Promise.all([
+      api({ action:'getAllData' }),
+      api({ action:'getDrawData' }),
+      api({ action:'getMatches' }),
+    ]);
+    if (allRes.ok) {
+      settings      = allRes.settings || {};
+      approvedTeams = (allRes.teams||[]).filter(t=>t.status==='approved');
+      applySettings();
+    }
+    if (drawRes.ok) {
+      drawData              = drawRes.draws || [];
+      drawState.open        = drawRes.drawOpen === true;
+      drawState.approvedCount = drawRes.approvedCount || approvedTeams.length;
+      drawState.groupCount  = drawRes.groupCount || 2;
+      groupCount            = drawState.groupCount;
+      approvedCount         = drawState.approvedCount;
+      drawState.done = drawData.length > 0 && drawData.length >= drawState.approvedCount && drawState.approvedCount > 0;
+    }
+    if (matchRes.ok && matchRes.data) {
+      matchData = matchRes.data;
+    } else if (drawRes.ok && drawRes.matches) {
+      matchData = drawRes.matches;
+    }
+    if ((drawState.open || drawState.done) && !matchData.length && drawState.approvedCount > 0) {
+      buildMatches();
+    }
+  } catch(e) { console.error(e); }
+
+  document.getElementById('loading-main').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+  renderDraw();
+  renderBracket();
+  renderScheduleTab();
+
+  // 若 URL 帶 #schedule 則切到賽程頁
+  if (location.hash === '#schedule') switchTab('schedule');
+})();
+
+function applySettings() {
+  const s = settings;
+  const title = s.title || '比賽報名系統';
+  document.getElementById('nav-title').textContent   = title;
+  document.getElementById('footer-title').textContent = title;
+  document.getElementById('page-sub').textContent =
+    (s.gamedate ? '比賽日期：'+s.gamedate+(s.gameend?' ～ '+s.gameend:'') : '') +
+    (s.venue ? '  ·  '+s.venue : '');
+}
+
+// ── Tab 切換 ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab+'-btn').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ════════════════════════════════
+// DRAW
+// ════════════════════════════════
+function renderDraw() {
+  const body = document.getElementById('draw-body');
+  const tag  = document.getElementById('draw-status-tag');
+  const verifyArea = document.getElementById('verify-area');
+  const tabBadge = document.getElementById('draw-tab-badge');
+
+  if (!drawState.open && !drawState.done) {
+    tag.textContent = '抽籤未開放';
+    tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--gray-100);color:var(--gray-400)';
+    tabBadge.style.display = 'none';
+    verifyArea.style.display = 'none';
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)"><div style="font-size:36px;margin-bottom:12px">🔒</div>抽籤尚未開放，請待主辦單位公告。</div>';
+    return;
+  }
+
+  if (drawState.done) {
+    tag.textContent = '抽籤已完成';
+    tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#eaf3de;color:#3b6d11';
+    tabBadge.style.display = 'none';
+    verifyArea.style.display = 'none';
+    let html = '<div class="draw-done-all">✅ 所有隊伍抽籤完成！請點上方「賽程資訊」查看對戰表。</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    [...drawData].sort((a,b)=>a.slot-b.slot).forEach(d => {
+      html += `<span style="padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;background:var(--blue-light);border:1.5px solid var(--blue);color:var(--blue)">${esc(d.teamname)} — 第${d.slot}籤</span>`;
+    });
+    html += '</div>';
+    body.innerHTML = html;
+    return;
+  }
+
+  // 進行中
+  tag.textContent = '抽籤進行中';
+  tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#fff0e6;color:var(--accent)';
+  tabBadge.style.display = '';
+
+  if (!verifiedTeam) {
+    verifyArea.style.display = 'block';
+    body.innerHTML = '<div style="text-align:center;color:var(--gray-400);font-size:13px;padding:12px">請先驗證隊伍身份後進行抽籤</div>';
+    return;
+  }
+
+  const alreadyDrawn = drawData.find(d => d.teamId === verifiedTeam.teamId);
+  verifyArea.style.display = 'none';
+
+  if (alreadyDrawn) {
+    body.innerHTML = '<div class="draw-done-all">✅ 「'+esc(verifiedTeam.teamname)+'」已完成抽籤，籤號為第 <strong>'+alreadyDrawn.slot+'</strong> 籤。</div>';
+    return;
+  }
+
+  const done = drawData.length, total = drawState.approvedCount;
+  body.innerHTML =
+    '<div style="background:var(--blue-light);border:1px solid var(--yt-teal-border);border-radius:var(--radius-lg);padding:16px;text-align:center;margin-bottom:14px">' +
+    '<div style="font-size:14px;font-weight:600;color:var(--blue-dark);margin-bottom:4px">👋 歡迎，'+esc(verifiedTeam.teamname)+'</div>' +
+    '<div style="font-size:12px;color:var(--blue)">身份驗證成功，請點擊下方按鈕進行抽籤</div></div>' +
+    '<div class="draw-display" id="draw-display"><div class="draw-hint">點擊按鈕開始抽籤</div></div>' +
+    '<div style="font-size:12px;color:var(--gray-400);text-align:center;margin-bottom:14px">已完成 '+done+' / '+total+' 隊</div>' +
+    '<div style="text-align:center"><button onclick="startDraw()" style="padding:12px 40px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">🎰 開始抽籤</button></div>';
+}
+
+async function verifyAndDraw() {
+  const teamname = document.getElementById('v-teamname').value.trim();
+  const sid      = document.getElementById('v-sid').value.trim();
+  const errEl    = document.getElementById('verify-err');
+  errEl.className = 'verify-err';
+  if (!teamname || !sid) { errEl.textContent='請填寫隊伍名稱與隊長學號'; errEl.className='verify-err show'; return; }
+  const btn = document.querySelector('.verify-btn');
+  btn.disabled=true; btn.textContent='驗證中…';
+  try {
+    const res = await api({ action:'verifyTeam', payload:encodeURIComponent(JSON.stringify({teamname,captainSid:sid})) });
+    if (res.ok) {
+      verifiedTeam = { teamId:res.teamId, teamname:res.teamname };
+      renderDraw();
+    } else if (res.alreadyDrawn) {
+      verifiedTeam = { teamId:'', teamname };
+      drawData.push({ teamId:'', teamname, slot:res.slot });
+      renderDraw();
+    } else {
+      errEl.textContent = res.error||'驗證失敗'; errEl.className='verify-err show';
+    }
+  } catch(e) { errEl.textContent='網路錯誤，請稍後再試'; errEl.className='verify-err show'; }
+  btn.disabled=false; btn.textContent='確認身份並抽籤';
+}
+
+function startDraw() {
+  if (drawState.spinning || !verifiedTeam) return;
+  drawState.spinning = true;
+  const disp = document.getElementById('draw-display');
+  if (disp) disp.innerHTML = '<div class="draw-team-label">'+esc(verifiedTeam.teamname)+'</div><div class="draw-num" id="spin-num">-</div>';
+  const taken = new Set(drawData.map(d=>d.slot));
+  const avail = [];
+  for (let i=1;i<=drawState.approvedCount;i++) { if(!taken.has(i)) avail.push(i); }
+  if (!avail.length) { drawState.spinning=false; return; }
+  let frame=0, frames=22+Math.floor(Math.random()*16);
+  spinTimer = setInterval(async()=>{
+    const rand=avail[Math.floor(Math.random()*avail.length)];
+    const el=document.getElementById('spin-num');
+    if(el){el.textContent='第 '+rand+' 籤';el.className='draw-num num-flash';}
+    frame++;
+    if(frame>=frames){
+      clearInterval(spinTimer);
+      const picked=avail[Math.floor(Math.random()*avail.length)];
+      const el2=document.getElementById('spin-num');
+      if(el2){el2.textContent='第 '+picked+' 籤 ✓';el2.className='draw-num';}
+      const entry={teamId:verifiedTeam.teamId,teamname:verifiedTeam.teamname,slot:picked};
+      drawData.push(entry);
+      try{await api({action:'saveDraw',payload:encodeURIComponent(JSON.stringify({action:'saveDraw',teamId:verifiedTeam.teamId,teamname:verifiedTeam.teamname,slot:picked}))});}catch(e){}
+      drawState.spinning=false;
+      if(drawData.length>=drawState.approvedCount&&drawState.approvedCount>0){drawState.done=true;buildMatches();}
+      setTimeout(()=>{renderDraw();renderBracket();renderScheduleTab();},1200);
+    }
+  },80);
+}
+
+function renderBracket() {
+  const area = document.getElementById('bracket-area');
+  const sec  = document.getElementById('bracket-section');
+  if (!area||!sec) return;
+  if (!drawState.open && !drawState.done) { sec.style.display='none'; return; }
+  if (!drawState.approvedCount) { sec.style.display='none'; return; }
+  sec.style.display='block';
+  const n=drawState.approvedCount, slotMap={};
+  drawData.forEach(d=>{ slotMap[d.slot]=d.teamname; });
+  const gc=drawState.groupCount||2;
+  const labels=['A','B','C','D','E','F'];
+  const base=Math.floor(n/gc), extra=n%gc;
+  let html='', slotStart=1;
+  for(let g=0;g<gc;g++){
+    const gsz=base+(g<extra?1:0), end=slotStart+gsz-1;
+    html+='<div style="margin-bottom:16px"><div class="bracket-title">⚾ '+labels[g]+' 組（第 '+slotStart+' ～ '+end+' 籤）</div>';
+    html+='<div class="bracket-grid">';
+    html+='<div class="bracket-row"><div class="bracket-cell header" style="justify-content:center">籤號</div><div class="bracket-cell header">隊伍名稱</div><div class="bracket-cell header" style="justify-content:center">狀態</div></div>';
+    for(let s=slotStart;s<=end;s++){
+      const team=slotMap[s];
+      html+='<div class="bracket-row"'+(team?' style="background:var(--blue-light)"':'')+'>'+
+        '<div class="bracket-cell" style="justify-content:center"><span class="bracket-num">第 '+s+' 籤</span></div>'+
+        '<div class="bracket-cell"><span class="bracket-slot'+(team?'':' empty')+'">'+(team?esc(team):'待抽籤')+'</span></div>'+
+        '<div class="bracket-cell" style="justify-content:center">'+(team?'<span style="color:#3b6d11;font-size:12px">✅ 已抽</span>':'<span style="color:var(--gray-400);font-size:12px">—</span>')+'</div>'+
+        '</div>';
+    }
+    html+='</div></div>';
+    slotStart=end+1;
+  }
+  area.innerHTML='<div style="overflow-x:auto">'+html+'</div>';
+}
+
+function buildMatches() {
+  const sorted=[...drawData].sort((a,b)=>a.slot-b.slot);
+  const s=settings;
+  const startDate=new Date(s.gamedate||'2026-08-17');
+  const timeSlots=['09:00','11:00','13:30','15:30'], courts=['A場','B場'];
+  const gc=drawState.groupCount||2, labels=['A','B','C','D'];
+  const base=Math.floor(sorted.length/gc), extra=sorted.length%gc;
+  let groups=[],aidx=0;
+  for(let g=0;g<gc;g++){const sz=base+(g<extra?1:0);groups.push(sorted.slice(aidx,aidx+sz));aidx+=sz;}
+  matchData=[];let mn=1,dayOffset=0,si=0;
+  groups.forEach((grp,gi)=>{
+    for(let i=0;i<grp.length;i++){
+      for(let j=i+1;j<grp.length;j++){
+        if(si>=4){si=0;dayOffset++;}
+        const d=new Date(startDate);d.setDate(d.getDate()+dayOffset);
+        matchData.push({matchNum:'G'+mn++,phase:'分組賽 '+labels[gi]+'組',teamA:grp[i].teamname,teamB:grp[j].teamname,date:(d.getMonth()+1)+'/'+d.getDate(),time:timeSlots[si%4],court:courts[si%2]});
+        si++;
+      }
+    }
+  });
+  try{api({action:'saveMatches',payload:encodeURIComponent(JSON.stringify({action:'saveMatches',matches:matchData}))});}catch(e){}
+}
+
+// ════════════════════════════════
+// SCHEDULE TAB (SVG 版)
+// ════════════════════════════════
+function renderScheduleTab() {
+  const tag  = document.getElementById('sched-status-tag');
+  const area = document.getElementById('groups-area');
+  const done = drawData.length>=approvedCount&&approvedCount>0;
+  const open = drawState.open;
+
+  if(done){tag.className='status-tag st-done';tag.textContent='✅ 抽籤已完成';}
+  else if(open){tag.className='status-tag st-open';tag.textContent='🎰 抽籤進行中（'+drawData.length+' / '+approvedCount+' 隊）';}
+  else{tag.className='status-tag st-closed';tag.textContent='⏳ 抽籤尚未開放';}
+
+  if(!approvedCount&&!open){
+    area.innerHTML='<div style="text-align:center;padding:48px;color:var(--gray-400)">賽程尚未公布，請待抽籤完成後查看。</div>';
+    return;
+  }
+  const slotMap={};
+  drawData.forEach(d=>{slotMap[d.slot]=d.teamname;});
+  const n=approvedCount||drawData.length;
+  const gc=drawState.groupCount||2;
+  const base=Math.floor(n/gc),extra=n%gc;
+  const labels=['A','B','C','D','E','F'];
+  let groups=[],slotStart=1;
+  for(let g=0;g<gc;g++){
+    const size=base+(g<extra?1:0),slots=[];
+    for(let s=slotStart;s<slotStart+size;s++) slots.push({slot:s,teamname:slotMap[s]||null});
+    groups.push({label:labels[g],slots});
+    slotStart+=size;
+  }
+  area.innerHTML=groups.map(g=>renderGroup(g)).join('');
+}
+
+function renderGroup(group) {
+  const slots=group.slots, n=slots.length;
+  const groupMatches=matchData.filter(m=>m.phase&&m.phase.includes(group.label+'組'));
+  let html='<div class="group-section">';
+  html+='<div class="group-label">⚾ '+group.label+' 組 <span style="font-size:12px;font-weight:400;color:var(--gray-400)">（'+n+' 隊循環賽）</span></div>';
+  html+='<div class="bracket-box"><div class="bracket-svg-wrap">'+buildSVG(group,groupMatches)+'</div></div>';
+  if(groupMatches.length){
+    html+='<div class="match-table-wrap"><table class="match-table"><thead><tr>'+
+      '<th style="width:55px">場次</th><th>隊伍 A</th><th style="width:100px;text-align:center">比分</th>'+
+      '<th>隊伍 B</th><th style="width:80px">日期</th><th style="width:65px">時間</th><th style="width:50px">場地</th>'+
+      '</tr></thead><tbody>';
+    groupMatches.forEach(m=>{
+      const hasScore=m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==undefined&&m.scoreB!=='';
+      const isWinA=hasScore&&Number(m.scoreA)>Number(m.scoreB);
+      const isWinB=hasScore&&Number(m.scoreB)>Number(m.scoreA);
+      const scoreCell=hasScore
+        ?'<span class="score-cell">'+m.scoreA+' : '+m.scoreB+'</span>'+(m.winner&&m.winner!=='平局'?'<br><span style="font-size:11px;color:var(--green)">✅ '+esc(m.winner)+'</span>':'<br><span style="font-size:11px;color:var(--gray-400)">平局</span>')
+        :'<span class="pending-tag">待賽</span>';
+      html+='<tr class="'+(hasScore?'done-row':'')+'">'+'<td><strong>'+esc(m.matchNum)+'</strong></td>'+
+        '<td class="'+(isWinA?'win-team':'')+'">'+esc(m.teamA)+'</td>'+
+        '<td style="text-align:center">'+scoreCell+'</td>'+
+        '<td class="'+(isWinB?'win-team':'')+'">'+esc(m.teamB)+'</td>'+
+        '<td>'+fmtDate(m.date)+'</td><td>'+fmtTime(m.time)+'</td><td>'+esc(m.court)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+  html+='</div>';
+  return html;
+}
+
+function buildSVG(group,matches){
+  const slots=group.slots,n=slots.length,size=420,pad=70,cx=size/2,cy=size/2;
+  let positions=[];
+  if(n===3){positions=[{x:cx,y:pad-20},{x:pad-10,y:size-pad+20},{x:size-pad+10,y:size-pad+20}];}
+  else{positions=[{x:pad,y:pad},{x:size-pad,y:pad},{x:size-pad,y:size-pad},{x:pad,y:size-pad}];
+    if(n>4)positions.push({x:cx,y:pad-20});}
+  const matchLabels=[];let mIdx=0;
+  for(let i=0;i<n;i++){for(let j=i+1;j<n;j++){
+    const pi=positions[i]||{x:cx,y:cy},pj=positions[j]||{x:cx,y:cy};
+    matchLabels.push({mx:(pi.x+pj.x)/2,my:(pi.y+pj.y)/2,match:matches[mIdx]||null});mIdx++;
+  }}
+  let svg='<svg viewBox="0 0 '+size+' '+size+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:440px;display:block;margin:0 auto">';
+  svg+='<rect width="'+size+'" height="'+size+'" fill="#f7f6f3" rx="12"/>';
+  for(let i=0;i<n;i++){for(let j=i+1;j<n;j++){
+    const pi=positions[i]||{x:cx,y:cy},pj=positions[j]||{x:cx,y:cy};
+    svg+='<line x1="'+pi.x+'" y1="'+pi.y+'" x2="'+pj.x+'" y2="'+pj.y+'" stroke="#d5d4ce" stroke-width="1.5" stroke-dasharray="4,3"/>';
+  }}
+  matchLabels.forEach(({mx,my,match})=>{
+    const hasScore=match&&match.scoreA!==undefined&&match.scoreA!==''&&match.scoreB!==undefined&&match.scoreB!=='';
+    svg+='<rect x="'+(mx-28)+'" y="'+(my-22)+'" width="56" height="44" rx="6" fill="'+(hasScore?'#eaf3de':'#fff')+'" stroke="'+(hasScore?'#c0dd97':'#d5d4ce')+'" stroke-width="1"/>';
+    if(match){
+      svg+='<text x="'+mx+'" y="'+(my-8)+'" text-anchor="middle" font-size="11" font-weight="700" fill="#1a5fa8">'+esc(match.matchNum)+'</text>';
+      if(hasScore)svg+='<text x="'+mx+'" y="'+(my+6)+'" text-anchor="middle" font-size="11" font-weight="700" fill="#1d9e75">'+match.scoreA+':'+match.scoreB+'</text>';
+      else{svg+='<text x="'+mx+'" y="'+(my+5)+'" text-anchor="middle" font-size="10" fill="#888">'+fmtDate(match.date)+'</text>';
+        svg+='<text x="'+mx+'" y="'+(my+17)+'" text-anchor="middle" font-size="10" fill="#888">'+fmtTime(match.time)+'</text>';}
+    }else svg+='<text x="'+mx+'" y="'+(my+4)+'" text-anchor="middle" font-size="10" fill="#aaa">待定</text>';
+  });
+  slots.forEach((slot,i)=>{
+    const pos=positions[i]||{x:cx,y:cy};
+    const name=slot.teamname||('第'+slot.slot+'籤'),isEmpty=!slot.teamname;
+    const maxLen=6;let line1=name,line2='';
+    if(name.length>maxLen){line1=name.slice(0,maxLen);line2=name.slice(maxLen,maxLen*2);if(name.length>maxLen*2)line2=line2.slice(0,maxLen-1)+'…';}
+    const boxH=line2?52:40;
+    svg+='<rect x="'+(pos.x-44)+'" y="'+(pos.y-boxH/2)+'" width="88" height="'+boxH+'" rx="8" fill="'+(isEmpty?'#ededea':'var(--yt-teal-light)')+'" stroke="'+(isEmpty?'#d5d4ce':'var(--yt-teal)')+'" stroke-width="1.5"/>';
+    svg+='<text x="'+pos.x+'" y="'+(pos.y-boxH/2+14)+'" text-anchor="middle" font-size="10" fill="#888">T'+(i+1)+'</text>';
+    svg+='<text x="'+pos.x+'" y="'+(pos.y-boxH/2+28)+'" text-anchor="middle" font-size="12" font-weight="700" fill="'+(isEmpty?'#888780':'var(--yt-teal-dark)')+'">'+esc(line1)+'</text>';
+    if(line2)svg+='<text x="'+pos.x+'" y="'+(pos.y-boxH/2+42)+'" text-anchor="middle" font-size="12" font-weight="700" fill="'+(isEmpty?'#888780':'var(--yt-teal-dark)')+'">'+esc(line2)+'</text>';
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+// ── Utils ──
+function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(d){if(!d)return '';const s=String(d);if(s.includes('T')||s.includes('-')){const dt=new Date(s);if(!isNaN(dt))return(dt.getMonth()+1)+'/'+dt.getDate();}return s;}
+function fmtTime(t){if(!t)return '';const s=String(t);if(s.includes('GMT')||s.includes('1899')||s.includes('T')){const d=new Date(s);if(!isNaN(d))return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}return s;}
+function toast(msg){const e=document.getElementById('toast');e.textContent=msg;e.className='toast show';setTimeout(()=>e.className='toast',2500);}
+</script>
+</body>
+</html>
