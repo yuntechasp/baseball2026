@@ -808,8 +808,18 @@ async function api(params) {
   return r.json();
 }
 async function apiPost(body) {
-  // Apps Script CORS workaround: use GET with encoded payload
-  const url = API_URL + '?payload=' + encodeURIComponent(JSON.stringify(body));
+  const json = JSON.stringify(body);
+  // 超過 4000 字元（含圖片）改用真正的 POST
+  if (json.length > 4000) {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: json,
+    });
+    return r.json();
+  }
+  // 一般請求用 GET payload
+  const url = API_URL + '?payload=' + encodeURIComponent(json);
   const r = await fetch(url);
   return r.json();
 }
@@ -1234,37 +1244,8 @@ async function submitNews() {
   const rowIndex = isEdit ? Number(existingRowIndex) : Date.now();
   const imageData = document.getElementById('nm-image-data').value;
 
-  // 圖片處理：用 doPost 傳送（支援大型 base64）
-  let imageUrl = '';
-  if (imageData && imageData.startsWith('data:')) {
-    btn.textContent = '上傳圖片中…';
-    try {
-      const uploadId = 'IMG_' + Date.now();
-      // 用 fetch POST + text/plain 繞過 CORS preflight
-      // Apps Script doPost 可接收，回應透過後續 GET 確認
-      await fetch(API_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'storeImage', uploadId, imageData }),
-      });
-      // 等待 Apps Script 處理完成（no-cors 無法讀回應，等 1.5 秒後確認）
-      btn.textContent = '確認上傳…';
-      await new Promise(r => setTimeout(r, 1500));
-      const check = await fetch(API_URL + '?action=getImage&imageKey=' + uploadId).then(r => r.json());
-      if (check.ok && check.imageData) {
-        imageUrl = uploadId;
-      } else {
-        throw new Error('圖片未成功儲存，請稍後再試');
-      }
-    } catch(e) {
-      toast('⚠️ 圖片上傳失敗：' + e.message, 'warn');
-      btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
-      return;
-    }
-  } else {
-    imageUrl = imageData || '';
-  }
+  // 圖片處理：壓縮後直接存為 base64（已壓縮約 20-50KB，Sheets 可存）
+  let imageUrl = imageData || '';
 
   btn.textContent = '儲存中…';
   const item = {
@@ -1278,16 +1259,17 @@ async function submitNews() {
 
   let saved = false;
   try {
-    const params = new URLSearchParams({
-      action:   isEdit ? 'updateNewsDirect' : 'addNewsDirect',
+    // 圖片太大不能放 URL 參數，改用 payload POST
+    const payload = {
+      action:   isEdit ? 'updateNews' : 'addNews',
       type:     item.type,
       title:    item.title,
       body:     item.body,
       date:     item.date,
-      imageUrl: imageUrl,
+      imageData: imageUrl,
       rowIndex: rowIndex,
-    });
-    const res = await (await fetch(API_URL + '?' + params.toString())).json();
+    };
+    const res = await apiPost(payload);
     saved = res && res.ok;
     if (!saved) console.error('submitNews error:', res);
   } catch(e) { console.error(e); }
