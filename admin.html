@@ -1215,21 +1215,25 @@ async function submitNews() {
   if (imageData && imageData.startsWith('data:')) {
     btn.textContent = '上傳圖片中…';
     try {
-      // 用 fetch POST 傳圖片（繞過 URL 長度限制）
-      const upRes = await fetch(API_URL, {
+      // 上傳圖片到 Imgur（免費圖床，支援跨來源，不需後端）
+      const base64only = imageData.replace(/^data:[^;]+;base64,/, '');
+      const fd = new FormData();
+      fd.append('image', base64only);
+      fd.append('type', 'base64');
+      const upRes = await fetch('https://api.imgur.com/3/image', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'uploadImage', imageData, filename: 'news_' + Date.now() + '.jpg' }),
+        headers: { 'Authorization': 'Client-ID 546c25a59c58ad7' },
+        body: fd,
       }).then(r => r.json());
-      if (upRes.ok && upRes.url) {
-        imageUrl = upRes.url;
+      if (upRes.success && upRes.data && upRes.data.link) {
+        imageUrl = upRes.data.link;
       } else {
-        toast('⚠️ 圖片上傳失敗：' + (upRes.error||''), 'warn');
+        toast('⚠️ 圖片上傳失敗，請稍後再試', 'warn');
         btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
         return;
       }
     } catch(e) {
-      toast('⚠️ 圖片上傳失敗，請稍後再試', 'warn');
+      toast('⚠️ 圖片上傳失敗：' + e.message, 'warn');
       btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
       return;
     }
