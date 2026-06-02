@@ -432,7 +432,11 @@ async function api(params) {
 // ── 初始化 ──────────────────────────────────
 (async () => {
   try {
-    const res = await api({ action:'getAllData' });
+    // 同時載入所有資料，加快速度
+    const [res, rulesRes] = await Promise.all([
+      api({ action:'getAllData' }),
+      api({ action:'getRules' }),
+    ]);
     if (res.ok) {
       settings  = res.settings || {};
       newsData  = res.news    || [];
@@ -441,12 +445,10 @@ async function api(params) {
       renderNews();
       renderStats();
     }
-    // 載入抽籤資料
-    await loadDraw();
-    // 載入競賽規程
-    const rulesRes = await api({ action:'getRules' });
     if (rulesRes.ok) rulesData = rulesRes.data || [];
     renderRules();
+    // 載入抽籤資料
+    await loadDraw();
   } catch(e) {
     console.error(e);
   }
@@ -525,15 +527,65 @@ function renderRules() {
     </div>`;
     return;
   }
-  el.innerHTML = rulesData.map(r => `
-    <div class="rule-card">
+  // Full-width document style if content is long (like a real regulation doc)
+  const isDoc = rulesData.length === 1 && rulesData[0].content && rulesData[0].content.length > 300;
+  if (isDoc) {
+    el.style.gridTemplateColumns = '1fr';
+  }
+  el.innerHTML = rulesData.map(r => {
+    // Format content: convert newlines to paragraphs, bold **text**, indent levels
+    const formattedContent = formatRuleContent(r.content || '');
+    return `
+    <div class="rule-card" style="${isDoc ? 'padding:24px 28px' : ''}">
       <div class="rule-card-icon">${r.icon || '📄'}</div>
       <div class="rule-card-title">${esc(r.title)}</div>
-      <div class="rule-card-content">${esc(r.content)}</div>
+      <div class="rule-card-content rule-doc-content">${formattedContent}</div>
       ${r.pdfUrl
         ? `<a class="rule-pdf-btn" href="${esc(r.pdfUrl)}" target="_blank">⬇ 下載 PDF</a>`
         : `<div class="rule-pdf-empty">PDF 尚未上傳</div>`}
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+// 將競賽規程文字轉換為帶格式的 HTML
+function formatRuleContent(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let html = '';
+  for (let line of lines) {
+    const raw = line;
+    // Count leading spaces/tabs for indent level
+    const trimmed = line.trimStart();
+    const indent = raw.length - trimmed.length;
+    if (!trimmed) { html += '<div style="height:6px"></div>'; continue; }
+
+    // Bold **text**
+    let formatted = esc(trimmed).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // Detect heading patterns: 一、二、三... or 十...
+    const isMainHead = /^[一二三四五六七八九十拾百千]+[、．.]/.test(trimmed);
+    // Sub items: (一)(二)... or 1. 2. or (1)(2)
+    const isSub1 = /^[（(][一二三四五六七八九十]+[）)]/.test(trimmed);
+    const isSub2 = /^[\d]+[.、．]/.test(trimmed);
+    const isSub3 = /^[（(][\d]+[）)]/.test(trimmed);
+    const isSub4 = /^[①②③④⑤⑥⑦⑧⑨⑩]/.test(trimmed);
+
+    if (isMainHead) {
+      html += `<div style="font-weight:700;color:var(--yt-teal-dark);margin-top:14px;margin-bottom:4px;font-size:14px">${formatted}</div>`;
+    } else if (isSub1) {
+      html += `<div style="margin-left:16px;margin-top:4px;font-size:13px">${formatted}</div>`;
+    } else if (isSub2 || isSub3) {
+      const indentPx = indent > 4 ? 32 : 16;
+      html += `<div style="margin-left:${indentPx}px;margin-top:3px;font-size:13px">${formatted}</div>`;
+    } else if (indent >= 8) {
+      html += `<div style="margin-left:40px;margin-top:2px;font-size:13px;color:var(--gray-600)">${formatted}</div>`;
+    } else if (indent >= 4) {
+      html += `<div style="margin-left:20px;margin-top:3px;font-size:13px">${formatted}</div>`;
+    } else {
+      html += `<div style="margin-top:3px;font-size:13px">${formatted}</div>`;
+    }
+  }
+  return html;
 }
 
 // ── 報名統計 ────────────────────────────────

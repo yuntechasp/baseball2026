@@ -1793,7 +1793,10 @@ function renderRulesAdmin() {
     el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>尚無競賽規程，請點右上角新增</div>';
     return;
   }
-  el.innerHTML = DB.rules.map(r => `
+  el.innerHTML = DB.rules.map(r => {
+    // Show a preview of the content (first 200 chars)
+    const preview = (r.content||'').slice(0,200) + ((r.content||'').length > 200 ? '…' : '');
+    return `
     <div style="border:1px solid var(--gray-100);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:12px;background:var(--white)">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:8px">
@@ -1805,9 +1808,10 @@ function renderRulesAdmin() {
           <button class="btn btn-sm btn-danger" onclick="deleteRule('${r.ruleId}')">刪除</button>
         </div>
       </div>
-      <div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap;margin-bottom:8px">${esc(r.content)}</div>
+      <div style="font-size:12px;color:var(--gray-600);white-space:pre-wrap;margin-bottom:8px;max-height:120px;overflow:hidden;border:1px solid var(--gray-100);border-radius:6px;padding:8px 10px;background:var(--gray-50)">${esc(preview)}</div>
       ${r.pdfUrl ? `<a href="${esc(r.pdfUrl)}" target="_blank" class="btn btn-sm" style="color:var(--blue)">⬇ PDF 連結</a>` : '<span style="font-size:12px;color:var(--gray-400)">尚無 PDF</span>'}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function openRuleModal(ruleId) {
