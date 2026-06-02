@@ -178,8 +178,8 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
 
   <!-- Tab 切換 -->
   <div class="tab-bar">
-    <a class="tab-btn" href="index.html" style="text-decoration:none;flex:0;padding:14px 16px;font-size:13px">
-      🏠 首頁
+    <a href="index.html" style="text-decoration:none;display:flex;align-items:center;padding:0 14px;color:rgba(255,255,255,.8);background:var(--blue-dark);border-right:1px solid rgba(255,255,255,.15);font-size:12px;gap:4px;white-space:nowrap" title="回主頁">
+      🏠 <span style="font-size:12px">首頁</span>
     </a>
     <button class="tab-btn active" id="tab-reg-btn" onclick="switchTab('reg')">
       ✏️ 隊伍報名
@@ -250,23 +250,43 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
           </div>
         </div>
 
+        <!-- 職員名單 -->
         <div class="card">
-          <div class="card-header"><div class="card-title">⚾ 隊長 &amp; 球員名單</div></div>
+          <div class="card-header"><div class="card-title">👔 職員名單</div></div>
           <div class="card-body">
             <p style="font-size:12px;color:var(--gray-400);margin-bottom:14px">
-              隊長1名 + 隊員19名，共20人。隊長及隊員均需填寫背號與學號。
+              職員至多 <strong>8 名</strong>（含領隊、總教練、教練、管理、訓練員及運動防護員），姓名為必填。
             </p>
             <div style="overflow-x:auto">
               <table class="mem-table">
-                <thead>
-                  <tr>
-                    <th style="width:50px">序號</th>
-                    <th style="width:80px">角色</th>
-                    <th>姓名 <span class="req">*</span></th>
-                    <th style="width:80px">背號 <span class="req">*</span></th>
-                    <th style="width:120px">學號 <span class="req">*</span></th>
-                  </tr>
-                </thead>
+                <thead><tr>
+                  <th style="width:40px">序</th>
+                  <th style="width:130px">職稱<span class="req">*</span></th>
+                  <th>姓名</th>
+                  <th style="width:130px">聯絡電話</th>
+                </tr></thead>
+                <tbody id="staff-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 運動員名單 -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚾ 運動員名單</div></div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--gray-400);margin-bottom:14px">
+              運動員（含隊長）至多 <strong>25 名</strong>，隊長及運動員均需填寫背號與學號。
+            </p>
+            <div style="overflow-x:auto">
+              <table class="mem-table">
+                <thead><tr>
+                  <th style="width:40px">序</th>
+                  <th style="width:70px">角色</th>
+                  <th>姓名<span class="req">*</span></th>
+                  <th style="width:80px">背號<span class="req">*</span></th>
+                  <th style="width:130px">學號<span class="req">*</span></th>
+                </tr></thead>
                 <tbody id="mem-tbody"></tbody>
               </table>
             </div>
