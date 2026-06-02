@@ -467,8 +467,10 @@ function applySettings() {
   } else {
     indicator.className = 'status-closed';
     statusText.textContent = '報名已截止';
-    document.getElementById('hero-reg-btn').style.opacity = '.5';
-    document.getElementById('nav-reg-btn').style.opacity = '.5';
+    const heroBtn = document.getElementById('hero-reg-btn');
+    const navBtn  = document.getElementById('nav-reg-btn');
+    if (heroBtn) heroBtn.style.opacity = '.5';
+    if (navBtn)  navBtn.style.opacity  = '.5';
   }
 
   // 倒數計時
