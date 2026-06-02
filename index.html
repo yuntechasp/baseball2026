@@ -432,11 +432,7 @@ async function api(params) {
 // ── 初始化 ──────────────────────────────────
 (async () => {
   try {
-    // 同時載入所有資料，加快速度
-    const [res, rulesRes] = await Promise.all([
-      api({ action:'getAllData' }),
-      api({ action:'getRules' }),
-    ]);
+    const res = await api({ action:'getAllData' });
     if (res.ok) {
       settings  = res.settings || {};
       newsData  = res.news    || [];
@@ -445,13 +441,22 @@ async function api(params) {
       renderNews();
       renderStats();
     }
-    if (rulesRes.ok) rulesData = rulesRes.data || [];
-    renderRules();
-    // 載入抽籤資料
-    await loadDraw();
-  } catch(e) {
-    console.error(e);
-  }
+  } catch(e) { console.error('getAllData error:', e); }
+
+  // 載入競賽規程（獨立載入，避免被其他請求干擾）
+  try {
+    const rulesRes = await api({ action:'getRules' });
+    if (rulesRes && Array.isArray(rulesRes.data) && rulesRes.data.length > 0) {
+      rulesData = rulesRes.data;
+    } else if (rulesRes && rulesRes.ok && rulesRes.data) {
+      rulesData = rulesRes.data;
+    }
+  } catch(e) { console.error('getRules error:', e); }
+  renderRules();
+
+  // 載入抽籤資料
+  try { await loadDraw(); } catch(e) { console.error('loadDraw error:', e); }
+
   document.getElementById('loading-main').style.display = 'none';
   document.getElementById('main-content').style.display = 'block';
 })();
