@@ -398,6 +398,14 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
                   <option value="true">🔓 開放各隊抽籤</option>
                 </select>
               </div>
+              <div>
+                <div style="font-size:12px;color:var(--gray-400);margin-bottom:4px">分組數</div>
+                <select id="draw-group-select" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                  <option value="2">2 組</option>
+                  <option value="3">3 組</option>
+                  <option value="4">4 組</option>
+                </select>
+              </div>
               <div style="display:flex;gap:8px;margin-top:16px">
                 <button class="btn btn-primary btn-sm" onclick="adminToggleDraw()">儲存開關</button>
                 <button class="btn btn-success btn-sm" onclick="adminAutoDrawAll()">⚡ 全部自動抽</button>
@@ -1482,6 +1490,8 @@ async function adminLoadDraw() {
       DB.matches     = res.matches || [];
       const sel = document.getElementById('draw-open-select');
       if (sel) sel.value = res.drawOpen ? 'true' : 'false';
+      const gsel = document.getElementById('draw-group-select');
+      if (gsel && res.groupCount) gsel.value = String(res.groupCount);
     }
   } catch(e) {}
   renderAdminDraw();
@@ -1531,9 +1541,13 @@ function renderAdminBracket() {
 }
 
 async function adminToggleDraw() {
-  const val = document.getElementById('draw-open-select').value;
-  try { await apiPost({ action:'toggleDraw', open: val === 'true' }); } catch(e){}
-  toast(val === 'true' ? '抽籤已開放，各隊可至主頁抽籤' : '抽籤已關閉', 'ok');
+  const val   = document.getElementById('draw-open-select').value;
+  const group = document.getElementById('draw-group-select').value;
+  try {
+    await apiPost({ action:'toggleDraw', open: val === 'true' });
+    await apiPost({ action:'updateSettings', settings:{ groupCount: group } });
+  } catch(e){}
+  toast(val === 'true' ? '抽籤已開放（' + group + '組），各隊可至主頁抽籤' : '抽籤已關閉', 'ok');
 }
 
 async function adminAutoDrawAll() {
