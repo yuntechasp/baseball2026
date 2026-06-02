@@ -1486,6 +1486,24 @@ function goPage(name) {
 // ═══════════════════════════════════════════
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function fmtDate(d) {
+  if (!d) return '';
+  const s = String(d);
+  if (s.includes('T') || (s.includes('-') && s.length > 10)) {
+    const dt = new Date(s);
+    if (!isNaN(dt)) return (dt.getMonth()+1) + '/' + dt.getDate();
+  }
+  return s;
+}
+function fmtTime(t) {
+  if (!t) return '';
+  const s = String(t);
+  if (s.includes('GMT') || s.includes('1899') || s.includes('T')) {
+    const d = new Date(s);
+    if (!isNaN(d)) return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  return s;
+}
 function esc(s) {
   if (s===undefined||s===null) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1578,12 +1596,12 @@ function renderAdminBracket() {
       </td>
       <td style="padding:8px 10px;font-weight:600;color:var(--blue-dark)">${esc(m.teamB)}</td>
       <td style="padding:8px 6px">
-        <input type="text" value="${esc(m.date)}" id="m-date-${i}"
+        <input type="text" value="${fmtDate(m.date)}" id="m-date-${i}"
           style="width:82px;padding:4px 6px;border:1px solid var(--gray-200);border-radius:4px;font-size:12px;font-family:inherit"
           placeholder="8/17">
       </td>
       <td style="padding:8px 6px">
-        <input type="text" value="${esc(m.time)}" id="m-time-${i}"
+        <input type="text" value="${fmtTime(m.time)}" id="m-time-${i}"
           style="width:62px;padding:4px 6px;border:1px solid var(--gray-200);border-radius:4px;font-size:12px;font-family:inherit"
           placeholder="09:00">
       </td>
