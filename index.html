@@ -718,15 +718,19 @@ function renderBracket() {
   const slotMap = {};
   drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
 
-  // Determine groups
+  // Determine groups - distribute evenly
   const groupCount = drawState.groupCount || 2;
-  const perGroup   = Math.ceil(n / groupCount);
   const groupLabels = ['A','B','C','D','E','F'];
+  const base2  = Math.floor(n / groupCount);
+  const extra2 = n % groupCount;
 
   let html = '';
+  let slotStart = 1;
   for (let g = 0; g < groupCount; g++) {
-    const startSlot = g * perGroup + 1;
-    const endSlot   = Math.min((g+1) * perGroup, n);
+    const groupSize = base2 + (g < extra2 ? 1 : 0);
+    const startSlot = slotStart;
+    const endSlot   = slotStart + groupSize - 1;
+    slotStart = endSlot + 1;
     if (startSlot > n) break;
 
     html += '<div style="margin-bottom:16px"><div class="bracket-title">⚾ ' + groupLabels[g] + ' 組（第 ' + startSlot + ' ～ ' + endSlot + ' 籤）</div>';

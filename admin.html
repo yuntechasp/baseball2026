@@ -1588,11 +1588,15 @@ function adminBuildMatches() {
   const courts = ['A場','B場'];
 
   const n = sorted.length;
+  const base2  = Math.floor(n / groupCount);
+  const extra2 = n % groupCount;
   let groups = [];
-  if (n <= 4)       groups = [sorted];
-  else if (n <= 8)  groups = [sorted.slice(0,Math.ceil(n/2)), sorted.slice(Math.ceil(n/2))];
-  else if (n <= 12) groups = [sorted.slice(0,4), sorted.slice(4,8), sorted.slice(8)];
-  else              groups = [sorted.slice(0,4), sorted.slice(4,8), sorted.slice(8,12), sorted.slice(12)];
+  let aidx = 0;
+  for (let g = 0; g < groupCount; g++) {
+    const size = base2 + (g < extra2 ? 1 : 0);
+    groups.push(sorted.slice(aidx, aidx + size));
+    aidx += size;
+  }
 
   DB.matches = [];
   let matchNum = 1;
