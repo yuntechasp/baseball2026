@@ -568,6 +568,10 @@ async function loadDraw() {
     } else if (res.ok) {
       matchData = res.matches || [];
     }
+    // 若開放抽籤但還沒賽程 → 用目前已抽的資料建立空白賽程圖
+    if ((drawState.open || drawState.done) && !matchData.length && drawState.approvedCount > 0) {
+      buildMatches();
+    }
   } catch(e) {}
   renderDraw();
   renderBracket();
@@ -715,12 +719,15 @@ function renderBracket() {
   const area = document.getElementById('bracket-area');
   if (!area) return;
   const n = drawState.approvedCount;
+
+  // 未開放且未完成 → 不顯示
+  if (!drawState.open && !drawState.done) {
+    area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">主辦單位開放抽籤後將顯示對戰圖</div></div>';
+    return;
+  }
+
   if (!n) {
-    if (drawState.open || drawState.done) {
-      area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">尚無已核准隊伍，請等待主辦單位審核後開放抽籤。</div></div>';
-    } else {
-      area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">管理員設定分組後將顯示對戰圖</div></div>';
-    }
+    area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">尚無已核准隊伍</div></div>';
     return;
   }
 

@@ -1519,6 +1519,11 @@ async function adminLoadDraw() {
       if (sel) sel.value = res.drawOpen ? 'true' : 'false';
       const gsel = document.getElementById('draw-group-select');
       if (gsel && res.groupCount) gsel.value = String(res.groupCount);
+
+      // 若抽籤已開放但還沒有賽程表 → 建立空白賽程圖
+      if ((res.drawOpen || DB.drawResults.length > 0) && DB.matches.length === 0 && DB.teams.filter(t=>t.status==='approved').length > 0) {
+        adminBuildMatches();
+      }
     }
   } catch(e) {}
   renderAdminDraw();
@@ -1554,6 +1559,10 @@ function renderAdminBracket() {
   if (!card || !tbody) return;
   if (!DB.matches.length) { card.style.display = 'none'; return; }
   card.style.display = 'block';
+  // Fill in draw results into matches
+  const slotMap = {};
+  DB.drawResults.forEach(d => { slotMap[d.slot] = d.teamname; });
+
   tbody.innerHTML = DB.matches.map((m,i) => {
     const scoreA = m.scoreA !== undefined ? m.scoreA : '';
     const scoreB = m.scoreB !== undefined ? m.scoreB : '';
