@@ -468,6 +468,13 @@ function applySettings() {
 // ── 最新消息 ────────────────────────────────
 const NB = { new:'nb-new', imp:'nb-imp', info:'nb-info' };
 const NL = { new:'最新', imp:'重要', info:'公告' };
+function newsImgSrc(val) {
+  if (!val) return '';
+  // If it's a stored key (IMG_...), fetch via API; else use directly (URL or base64)
+  if (val.startsWith('IMG_')) return API_URL + '?action=getImage&imageKey=' + encodeURIComponent(val);
+  return val;
+}
+
 function renderNews() {
   const el = document.getElementById('news-list');
   if (!newsData.length) { el.innerHTML = '<div class="news-empty">目前沒有公告</div>'; return; }
@@ -475,7 +482,7 @@ function renderNews() {
     const hasMore = !!(n.body || n.imageData);
     const bodyHtml = hasMore ? (
       (n.body ? '<div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap;line-height:1.7">' + esc(n.body) + '</div>' : '') +
-      (n.imageData ? '<img src="' + n.imageData + '" style="margin-top:10px;max-width:100%;border-radius:var(--radius);border:1px solid var(--gray-100)">' : '')
+      (n.imageData ? '<img src="' + newsImgSrc(n.imageData) + '" style="margin-top:10px;max-width:100%;border-radius:var(--radius);border:1px solid var(--gray-100)">' : '')
     ) : '';
     return '<div class="news-item' + (hasMore ? ' expandable' : '') + '" data-idx="' + i + '">' +
       '<div style="display:flex;gap:12px;align-items:center">' +

@@ -1215,22 +1215,27 @@ async function submitNews() {
   if (imageData && imageData.startsWith('data:')) {
     btn.textContent = '上傳圖片中…';
     try {
-      // 上傳圖片到 Imgur（免費圖床，支援跨來源，不需後端）
-      const base64only = imageData.replace(/^data:[^;]+;base64,/, '');
-      const fd = new FormData();
-      fd.append('image', base64only);
-      fd.append('type', 'base64');
-      const upRes = await fetch('https://api.imgur.com/3/image', {
-        method:  'POST',
-        headers: { 'Authorization': 'Client-ID 546c25a59c58ad7' },
-        body: fd,
-      }).then(r => r.json());
-      if (upRes.success && upRes.data && upRes.data.link) {
-        imageUrl = upRes.data.link;
+      // 分段上傳圖片到 Apps Script（每段 4000 字元，繞過 URL 長度限制）
+      const CHUNK = 4000;
+      const total = Math.ceil(imageData.length / CHUNK);
+      const uploadId = 'IMG_' + Date.now();
+      for (let i = 0; i < total; i++) {
+        btn.textContent = '上傳圖片 ' + (i+1) + '/' + total + '…';
+        const chunk = imageData.slice(i * CHUNK, (i+1) * CHUNK);
+        const p = new URLSearchParams({
+          action: 'uploadChunk',
+          uploadId, chunk, index: i, total,
+        });
+        const r = await fetch(API_URL + '?' + p.toString()).then(r => r.json());
+        if (!r.ok) throw new Error(r.error || 'chunk failed');
+      }
+      // Finalise: assemble chunks → return stored key
+      const fp = new URLSearchParams({ action: 'finalizeUpload', uploadId });
+      const fr = await fetch(API_URL + '?' + fp.toString()).then(r => r.json());
+      if (fr.ok && fr.imageKey) {
+        imageUrl = fr.imageKey;   // store key, retrieve via getImage action
       } else {
-        toast('⚠️ 圖片上傳失敗，請稍後再試', 'warn');
-        btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
-        return;
+        throw new Error(fr.error || 'finalize failed');
       }
     } catch(e) {
       toast('⚠️ 圖片上傳失敗：' + e.message, 'warn');
