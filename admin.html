@@ -671,9 +671,18 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
         <textarea id="rm-content" rows="6" placeholder="在此輸入規程說明文字..." style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit;resize:vertical"></textarea>
       </div>
       <div class="form-group" style="grid-column:span 2">
-        <label>PDF 連結（選填）</label>
-        <input type="url" id="rm-pdf" placeholder="https://drive.google.com/...（Google Drive 分享連結）">
-        <div style="font-size:11px;color:var(--gray-400);margin-top:3px">將 PDF 上傳至 Google Drive，設為「任何人可檢視」，貼上連結即可</div>
+        <label>PDF 檔案（選填）</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="file" id="rm-pdf-file" accept=".pdf"
+            style="flex:1;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:12px;font-family:inherit"
+            onchange="handlePdfFileSelect(this)">
+          <span style="font-size:12px;color:var(--gray-400)">或貼入連結：</span>
+        </div>
+        <input type="url" id="rm-pdf" placeholder="https://drive.google.com/... （Google Drive 分享連結）"
+          style="margin-top:6px">
+        <div id="rm-pdf-status" style="font-size:12px;margin-top:4px;color:var(--gray-400)">
+          📌 建議：將 PDF 上傳至 Google Drive → 設為「任何人可檢視」→ 貼上分享連結
+        </div>
       </div>
     </div>
     <div class="modal-actions">
@@ -1838,27 +1847,54 @@ function openRuleModal(ruleId) {
   openModal('rule-modal');
 }
 
+// ── PDF 檔案選擇處理 ─────────────────────────
+function handlePdfFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('rm-pdf-status');
+  status.style.color = 'var(--amber)';
+  status.textContent = '⚠️ 系統無法直接儲存 PDF 檔案。請將此 PDF 上傳至 Google Drive，設為「任何人可檢視」後，將分享連結貼入上方連結欄位。';
+  // Show file name as reminder
+  const urlInput = document.getElementById('rm-pdf');
+  if (!urlInput.value) urlInput.placeholder = '請貼入「' + file.name + '」的 Google Drive 分享連結';
+  input.value = ''; // clear file input
+}
+
 async function saveRule() {
   const title = document.getElementById('rm-title').value.trim();
   if (!title) { toast('請輸入規程標題'); return; }
+  const btn = document.querySelector('#rule-modal .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '儲存中…'; }
   const body = {
     action:  'saveRule',
     ruleId:  document.getElementById('rm-ruleId').value,
-    icon:    document.getElementById('rm-icon').value.trim() || '📄',
-    order:   parseInt(document.getElementById('rm-order').value) || 0,
+    icon:    document.getElementById('rm-icon').value.trim() || '📋',
+    order:   parseInt(document.getElementById('rm-order').value) || 1,
     title,
     content: document.getElementById('rm-content').value.trim(),
     pdfUrl:  document.getElementById('rm-pdf').value.trim(),
   };
-  try { await apiPost(body); } catch(e){}
-  // Update local DB
+  let saved = false;
+  try {
+    const res = await apiPost(body);
+    if (res && res.ok) {
+      saved = true;
+      if (res.ruleId) body.ruleId = res.ruleId;
+    } else {
+      console.error('saveRule API error:', res);
+    }
+  } catch(e) { console.error('saveRule exception:', e); }
+
+  // 無論 API 成功與否，先更新本地 DB 讓畫面正常顯示
   const idx = DB.rules.findIndex(r => r.ruleId === body.ruleId);
   if (idx >= 0) Object.assign(DB.rules[idx], body);
-  else DB.rules.push({ ...body, ruleId: 'R'+Date.now() });
-  DB.rules.sort((a,b) => a.order - b.order);
+  else DB.rules.push({ ...body, ruleId: body.ruleId || 'R'+Date.now() });
+  DB.rules.sort((a,b) => (a.order||0) - (b.order||0));
+
+  if (btn) { btn.disabled = false; btn.textContent = '儲存'; }
   closeModal('rule-modal');
   renderRulesAdmin();
-  toast('競賽規程已儲存', 'ok');
+  toast(saved ? '競賽規程已儲存' : '規程已暫存（請確認 API 連線）', saved ? 'ok' : 'warn');
 }
 
 async function deleteRule(ruleId) {
