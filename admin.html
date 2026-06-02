@@ -1234,27 +1234,28 @@ async function submitNews() {
   const rowIndex = isEdit ? Number(existingRowIndex) : Date.now();
   const imageData = document.getElementById('nm-image-data').value;
 
-  // 圖片處理：壓縮後的 base64 分段存入 Sheets
+  // 圖片處理：用 doPost 傳送（支援大型 base64）
   let imageUrl = '';
   if (imageData && imageData.startsWith('data:')) {
     btn.textContent = '上傳圖片中…';
     try {
-      const CHUNK = 3000;
-      const total = Math.ceil(imageData.length / CHUNK);
       const uploadId = 'IMG_' + Date.now();
-      for (let i = 0; i < total; i++) {
-        btn.textContent = '上傳圖片 ' + (i+1) + '/' + total + '…';
-        const chunk = encodeURIComponent(imageData.slice(i * CHUNK, (i+1) * CHUNK));
-        const p = new URLSearchParams({ action:'uploadChunk', uploadId, chunk, index:i, total });
-        const r = await fetch(API_URL + '?' + p.toString()).then(r => r.json());
-        if (!r.ok) throw new Error(r.error || 'chunk ' + i + ' failed');
-      }
-      const fp = new URLSearchParams({ action:'finalizeUpload', uploadId });
-      const fr = await fetch(API_URL + '?' + fp.toString()).then(r => r.json());
-      if (fr.ok && fr.imageKey) {
-        imageUrl = fr.imageKey;
+      // 用 fetch POST + text/plain 繞過 CORS preflight
+      // Apps Script doPost 可接收，回應透過後續 GET 確認
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'storeImage', uploadId, imageData }),
+      });
+      // 等待 Apps Script 處理完成（no-cors 無法讀回應，等 1.5 秒後確認）
+      btn.textContent = '確認上傳…';
+      await new Promise(r => setTimeout(r, 1500));
+      const check = await fetch(API_URL + '?action=getImage&imageKey=' + uploadId).then(r => r.json());
+      if (check.ok && check.imageData) {
+        imageUrl = uploadId;
       } else {
-        throw new Error(fr.error || 'finalize failed');
+        throw new Error('圖片未成功儲存，請稍後再試');
       }
     } catch(e) {
       toast('⚠️ 圖片上傳失敗：' + e.message, 'warn');
