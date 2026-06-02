@@ -466,12 +466,16 @@ function renderNews() {
   const el = document.getElementById('news-list');
   if (!newsData.length) { el.innerHTML = '<div class="news-empty">目前沒有公告</div>'; return; }
   el.innerHTML = newsData.map(n => `
-    <div class="news-item">
-      <span class="news-badge ${NB[n.type]||'nb-info'}">${NL[n.type]||'公告'}</span>
-      <div>
-        <div class="news-title">${esc(n.title)}</div>
-        <div class="news-date">${n.date||''}</div>
+    <div class="news-item" style="${n.imageData||n.body?'flex-direction:column;align-items:stretch':''}">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span class="news-badge ${NB[n.type]||'nb-info'}">${NL[n.type]||'公告'}</span>
+        <div style="flex:1">
+          <div class="news-title">${esc(n.title)}</div>
+          <div class="news-date">${n.date||''}</div>
+        </div>
       </div>
+      ${n.body ? `<div style="margin-top:8px;font-size:13px;color:var(--gray-600);white-space:pre-wrap;padding-left:4px">${esc(n.body)}</div>` : ''}
+      ${n.imageData ? `<img src="${n.imageData}" style="margin-top:10px;max-width:100%;border-radius:var(--radius);border:1px solid var(--gray-100)">` : ''}
     </div>`).join('');
 }
 

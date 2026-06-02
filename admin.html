@@ -746,7 +746,8 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
 <!-- 新增公告 -->
 <div class="overlay" id="news-modal">
   <div class="modal">
-    <div class="modal-title">📢 新增公告</div>
+    <input type="hidden" id="nm-rowindex">
+    <div class="modal-title" id="nm-modal-title">📢 新增公告</div>
     <div class="form-group" style="margin-bottom:12px">
       <label>公告類型</label>
       <select id="nm-type">
@@ -759,13 +760,28 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
       <label>公告標題</label>
       <input type="text" id="nm-title" placeholder="公告內容">
     </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>公告內文（選填）</label>
+      <textarea id="nm-body" rows="3" placeholder="詳細說明文字…" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit;resize:vertical"></textarea>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>上傳圖片（選填）</label>
+      <input type="file" id="nm-image" accept="image/*"
+        style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:12px;font-family:inherit"
+        onchange="previewNewsImage(this)">
+      <div id="nm-image-preview" style="margin-top:8px;display:none">
+        <img id="nm-preview-img" src="" style="max-width:100%;max-height:160px;border-radius:var(--radius);border:1px solid var(--gray-200)">
+        <button onclick="clearNewsImage()" style="display:block;margin-top:4px;font-size:12px;color:var(--red);background:none;border:none;cursor:pointer">✕ 移除圖片</button>
+      </div>
+      <input type="hidden" id="nm-image-data">
+    </div>
     <div class="form-group">
       <label>日期</label>
       <input type="date" id="nm-date">
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('news-modal')">取消</button>
-      <button class="btn btn-primary" onclick="submitNews()">新增</button>
+      <button class="btn btn-primary" id="nm-submit-btn" onclick="submitNews()">新增</button>
     </div>
   </div>
 </div>
@@ -1120,32 +1136,107 @@ function renderNewsAdmin() {
   el.innerHTML = DB.news.map(n => `
     <div class="news-item">
       <span class="news-badge ${NB[n.type]||'nb-info'}">${NL[n.type]||'公告'}</span>
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:500;color:var(--gray-900)">${esc(n.title)}</div>
-        <div style="font-size:12px;color:var(--gray-400)">${n.date||''}</div>
+        <div style="font-size:12px;color:var(--gray-400)">${n.date||''}${n.imageData ? ' 📷' : ''}</div>
       </div>
-      <button class="btn btn-sm" style="color:var(--red)" onclick="deleteNews(${n.rowIndex})">✕</button>
+      <div class="btn-row">
+        <button class="btn btn-sm" onclick="openNewsModal(${n.rowIndex})">編輯</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteNews(${n.rowIndex})">刪除</button>
+      </div>
     </div>`).join('');
 }
 
-function openNewsModal() {
-  document.getElementById('nm-date').value = new Date().toISOString().slice(0,10);
-  document.getElementById('nm-title').value = '';
+function openNewsModal(rowIndex) {
+  const isEdit = rowIndex !== undefined;
+  document.getElementById('nm-modal-title').textContent = isEdit ? '📢 編輯公告' : '📢 新增公告';
+  document.getElementById('nm-submit-btn').textContent  = isEdit ? '儲存' : '新增';
+  clearNewsImage();
+
+  if (isEdit) {
+    const n = DB.news.find(x => x.rowIndex === rowIndex);
+    if (!n) return;
+    document.getElementById('nm-rowindex').value   = rowIndex;
+    document.getElementById('nm-type').value       = n.type  || 'info';
+    document.getElementById('nm-title').value      = n.title || '';
+    document.getElementById('nm-body').value       = n.body  || '';
+    document.getElementById('nm-date').value       = n.date  || '';
+    if (n.imageData) {
+      document.getElementById('nm-image-data').value = n.imageData;
+      document.getElementById('nm-preview-img').src   = n.imageData;
+      document.getElementById('nm-image-preview').style.display = '';
+    }
+  } else {
+    document.getElementById('nm-rowindex').value  = '';
+    document.getElementById('nm-type').value      = 'info';
+    document.getElementById('nm-title').value     = '';
+    document.getElementById('nm-body').value      = '';
+    document.getElementById('nm-date').value      = new Date().toISOString().slice(0,10);
+  }
   openModal('news-modal');
 }
+
+function previewNewsImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 1.5 * 1024 * 1024) {
+    toast('圖片請勿超過 1.5 MB'); input.value=''; return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = e.target.result;
+    document.getElementById('nm-image-data').value = data;
+    document.getElementById('nm-preview-img').src  = data;
+    document.getElementById('nm-image-preview').style.display = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearNewsImage() {
+  document.getElementById('nm-image').value      = '';
+  document.getElementById('nm-image-data').value = '';
+  document.getElementById('nm-preview-img').src  = '';
+  document.getElementById('nm-image-preview').style.display = 'none';
+}
+
 async function submitNews() {
   const title = document.getElementById('nm-title').value.trim();
   if (!title) { toast('請輸入公告標題'); return; }
-  const item = { type:document.getElementById('nm-type').value, title, date:document.getElementById('nm-date').value, rowIndex:Date.now() };
-  DB.news.unshift(item);
-  try { await apiPost({ action:'addNews', ...item }); } catch(e){}
+  const btn = document.getElementById('nm-submit-btn');
+  btn.disabled = true; btn.textContent = '處理中…';
+
+  const existingRowIndex = document.getElementById('nm-rowindex').value;
+  const isEdit = !!existingRowIndex;
+  const rowIndex = isEdit ? Number(existingRowIndex) : Date.now();
+
+  const item = {
+    type:      document.getElementById('nm-type').value,
+    title,
+    body:      document.getElementById('nm-body').value.trim(),
+    date:      document.getElementById('nm-date').value,
+    imageData: document.getElementById('nm-image-data').value,
+    rowIndex,
+  };
+
+  if (isEdit) {
+    const idx = DB.news.findIndex(n => n.rowIndex === rowIndex);
+    if (idx >= 0) DB.news[idx] = item;
+    try { await apiPost({ action:'updateNews', ...item }); } catch(e){}
+    toast('公告已更新', 'ok');
+  } else {
+    DB.news.unshift(item);
+    try { await apiPost({ action:'addNews', ...item }); } catch(e){}
+    toast('公告已新增', 'ok');
+  }
+
+  btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
   closeModal('news-modal');
   renderNewsAdmin();
-  toast('公告已新增', 'ok');
 }
+
 async function deleteNews(rowIndex) {
   if (!confirm('確定刪除此公告？')) return;
-  DB.news = DB.news.filter(n=>n.rowIndex!==rowIndex);
+  DB.news = DB.news.filter(n => n.rowIndex !== rowIndex);
   try { await apiPost({ action:'deleteNews', rowIndex }); } catch(e){}
   renderNewsAdmin();
   toast('公告已刪除');
