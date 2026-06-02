@@ -5,8 +5,8 @@
 //            Execute as: Me / Who has access: Anyone
 // ═══════════════════════════════════════════════════════════
 
-const SHEET_ID   = '17RHesPHN6OfHAJ48_yFOzurbFWN-QAVcEyFAZQeRVtQ';          // ← 貼上您的 Google Sheets ID
-const ADMIN_PASS = 147258369'; // ← 修改為您的管理員密碼
+const SHEET_ID   = '';          // ← 貼上您的 Google Sheets ID
+const ADMIN_PASS = 'admin1234'; // ← 修改為您的管理員密碼
 
 const SH_SETTINGS = '賽事設定';
 const SH_TEAMS    = '隊伍報名';
@@ -16,6 +16,7 @@ const SH_PAYMENT  = '繳費紀錄';
 const SH_RULES    = '競賽規程';
 const SH_DRAW     = '抽籤紀錄';
 const SH_MATCHES  = '對戰時間表';
+const SH_SCORES   = '成績紀錄';
 
 // ── 統一回應 ───────────────────────────────────────────────
 function resp(data) {
@@ -33,12 +34,29 @@ function doOptions(e) {
 
 // ── 路由 ───────────────────────────────────────────────────
 function doGet(e) {
-  // Handle POST-like requests via GET payload (CORS workaround)
-  if (e.parameter.payload) {
-    const body = JSON.parse(decodeURIComponent(e.parameter.payload));
-    return doPostInternal(body);
-  }
   const action = e.parameter.action || '';
+
+  // verifyTeam: uses action + payload together
+  if (action === 'verifyTeam' && e.parameter.payload) {
+    try {
+      const body = JSON.parse(decodeURIComponent(e.parameter.payload));
+      return resp(verifyTeam(body));
+    } catch(err) {
+      return resp({ error: err.message });
+    }
+  }
+
+  // Other POST-like requests via GET payload (CORS workaround)
+  if (e.parameter.payload) {
+    try {
+      const body = JSON.parse(decodeURIComponent(e.parameter.payload));
+      return doPostInternal(body);
+    } catch(err) {
+      return resp({ error: err.message });
+    }
+  }
+
+  // Normal GET requests
   try {
     switch(action) {
       case 'getSettings': return resp(getSettings());
@@ -48,7 +66,8 @@ function doGet(e) {
       case 'getAllData':  return resp(getAllData());
       case 'getPayments': return resp(getPayments());
       case 'getRules':    return resp(getRules());
-      case 'getDrawData': return resp(getDrawData());
+      case 'getDrawData':  return resp(getDrawData());
+      case 'getMatches':   return resp(getMatchesWithScores());
       default:            return resp({ error: 'Unknown action' });
     }
   } catch(err) {
@@ -80,6 +99,8 @@ function doPostInternal(body) {
       case 'saveMatches': return resp(saveMatches(body));
       case 'resetDraw':   return resp(resetDraw());
       case 'toggleDraw':  return resp(toggleDraw(body.open));
+      case 'saveScore':      return resp(saveScore(body));
+      case 'updateMatch':    return resp(updateMatch(body));
       case 'saveRule':   return resp(saveRule(body));
       case 'deleteRule': return resp(deleteRule(body.ruleId));
       default:               return resp({ error: 'Unknown action' });
@@ -127,6 +148,8 @@ function initSheet(sh, name) {
     sh.appendRow(['payId','teamId','teamname','code','amount','payerName','note','status','createdAt']);
   } else if (name === SH_RULES) {
     sh.appendRow(['ruleId','title','content','pdfUrl','icon','order']);
+  } else if (name === SH_SCORES) {
+    sh.appendRow(['matchNum','teamA','scoreA','scoreB','teamB','winner','note','updatedAt']);
   } else if (name === SH_DRAW) {
     sh.appendRow(['teamId','teamname','slot','drawnAt']);
   } else if (name === SH_MATCHES) {
@@ -223,11 +246,21 @@ function submitTeam(body) {
     body.email, 'pending', now, ''
   ]);
   const memSh = getSheet(SH_MEMBERS);
-  if (body.manager) memSh.appendRow([teamId,'領隊',body.manager,'','']);
-  memSh.appendRow([teamId,'教練',body.coach,'','']);
+  // 職員（新格式：title+name+tel）
+  if (body.staff && body.staff.length) {
+    body.staff.forEach(s => {
+      if (s.name) memSh.appendRow([teamId, s.title, s.name, s.tel||'', '']);
+    });
+  } else {
+    // 舊格式相容
+    if (body.manager) memSh.appendRow([teamId,'領隊',body.manager,'','']);
+    memSh.appendRow([teamId,'教練',body.coach,'','']);
+  }
+  // 隊長
   memSh.appendRow([teamId,'隊長',body.captain.name,body.captain.num,body.captain.sid]);
+  // 運動員
   (body.members||[]).forEach((m,i) => {
-    if (m.name) memSh.appendRow([teamId,`隊員${i+1}`,m.name,m.num,m.sid]);
+    if (m.name) memSh.appendRow([teamId,'運動員'+(i+1),m.name,m.num,m.sid]);
   });
   // 寄送報名確認信
   if (body.email) {
@@ -460,6 +493,37 @@ function deleteRule(ruleId) {
 
 
 // ── 抽籤 ────────────────────────────────────────────────────
+// ── 驗證隊伍身份 ─────────────────────────────────────────
+function verifyTeam(body) {
+  const teamname   = body.teamname   || '';
+  const captainSid = body.captainSid || '';
+  if (!teamname || !captainSid) return { ok: false, error: '請填寫隊伍名稱與隊長學號' };
+
+  // Find team
+  const tsh  = getSheet(SH_TEAMS);
+  const rows = tsh.getDataRange().getValues().slice(1);
+  const team = rows.find(r => r[1] === teamname && r[9] === 'approved');
+  if (!team) return { ok: false, error: '找不到此隊伍，請確認名稱正確或尚未通過審核' };
+
+  // Find captain student ID
+  const msh   = getSheet(SH_MEMBERS);
+  const mrows = msh.getDataRange().getValues().slice(1);
+  const teamId = team[0];
+  const captain = mrows.find(r => r[0] === teamId && r[1] === '隊長');
+  if (!captain) return { ok: false, error: '找不到隊長資料' };
+  if (String(captain[4]).trim() !== String(captainSid).trim()) {
+    return { ok: false, error: '隊長學號不正確，請重新確認' };
+  }
+
+  // Check if already drawn
+  const dsh   = getSheet(SH_DRAW);
+  const drows = dsh.getDataRange().getValues().slice(1);
+  const drawn = drows.find(r => r[0] === teamId);
+  if (drawn) return { ok: false, error: '此隊伍已完成抽籤，籤號為第 ' + drawn[2] + ' 籤', alreadyDrawn: true, slot: drawn[2] };
+
+  return { ok: true, teamId, teamname };
+}
+
 function getDrawData() {
   const drawSh = getSheet(SH_DRAW);
   const drawRows = drawSh.getDataRange().getValues().slice(1);
@@ -474,11 +538,17 @@ function getDrawData() {
     date:r[4], time:r[5], court:r[6]
   }));
 
-  // Get draw open status from settings
-  const settings = getSettings().data;
-  const drawOpen = settings.drawOpen === 'true';
+  // Get approved teams count for bracket display
+  const tsh = getSheet(SH_TEAMS);
+  const trows = tsh.getDataRange().getValues().slice(1);
+  const approvedCount = trows.filter(r => r[9] === 'approved').length;
 
-  return { ok: true, draws, matches, drawOpen };
+  const settings = getSettings().data;
+  const drawOpen    = settings.drawOpen    === 'true';
+  const groupCount  = parseInt(settings.groupCount  || '2');
+  const groupSize   = parseInt(settings.groupSize   || '4');
+
+  return { ok: true, draws, matches, drawOpen, approvedCount, groupCount, groupSize };
 }
 
 function saveDraw(body) {
@@ -524,6 +594,68 @@ function toggleDraw(open) {
   }
   sh.appendRow(['drawOpen', open ? 'true' : 'false']);
   return { ok: true };
+}
+
+
+// ── 對戰時間表（含成績）────────────────────────────────────
+function getMatchesWithScores() {
+  const msh = getSheet(SH_MATCHES);
+  const mrows = msh.getDataRange().getValues().slice(1);
+  const matches = mrows.filter(r=>r[0]).map(r => ({
+    matchNum:r[0], phase:r[1], teamA:r[2], teamB:r[3],
+    date:r[4], time:r[5], court:r[6]
+  }));
+
+  const ssh = getSheet(SH_SCORES);
+  const srows = ssh.getDataRange().getValues().slice(1);
+  const scores = {};
+  srows.filter(r=>r[0]).forEach(r => {
+    scores[r[0]] = { scoreA:r[2], scoreB:r[3], winner:r[5], note:r[6] };
+  });
+
+  matches.forEach(m => {
+    if (scores[m.matchNum]) {
+      m.scoreA  = scores[m.matchNum].scoreA;
+      m.scoreB  = scores[m.matchNum].scoreB;
+      m.winner  = scores[m.matchNum].winner;
+      m.note    = scores[m.matchNum].note;
+    }
+  });
+
+  return { ok: true, data: matches };
+}
+
+function saveScore(body) {
+  const sh = getSheet(SH_SCORES);
+  const rows = sh.getDataRange().getValues();
+  const now  = new Date().toLocaleString('zh-TW');
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === body.matchNum) {
+      sh.getRange(i+1, 3).setValue(body.scoreA);
+      sh.getRange(i+1, 4).setValue(body.scoreB);
+      sh.getRange(i+1, 5).setValue(body.teamB);
+      sh.getRange(i+1, 6).setValue(body.winner);
+      sh.getRange(i+1, 7).setValue(body.note||'');
+      sh.getRange(i+1, 8).setValue(now);
+      return { ok: true };
+    }
+  }
+  sh.appendRow([body.matchNum, body.teamA, body.scoreA, body.scoreB, body.teamB, body.winner, body.note||'', now]);
+  return { ok: true };
+}
+
+function updateMatch(body) {
+  const sh = getSheet(SH_MATCHES);
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === body.matchNum) {
+      if (body.date  !== undefined) sh.getRange(i+1,5).setValue(body.date);
+      if (body.time  !== undefined) sh.getRange(i+1,6).setValue(body.time);
+      if (body.court !== undefined) sh.getRange(i+1,7).setValue(body.court);
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: '找不到場次' };
 }
 
 // ── 管理員登入 ──────────────────────────────────────────────

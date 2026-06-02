@@ -555,12 +555,18 @@ async function loadDraw() {
     const res = await api({ action:'getDrawData' });
     if (res.ok) {
       drawData  = res.draws   || [];
-      matchData = res.matches || [];
       drawState.open          = res.drawOpen === true;
       drawState.approvedCount = res.approvedCount || 0;
       drawState.groupCount    = res.groupCount  || 2;
       drawState.groupSize     = res.groupSize   || 4;
       drawState.done = drawData.length > 0 && drawData.length >= drawState.approvedCount && drawState.approvedCount > 0;
+    }
+    // 載入賽程（含成績）
+    const mres = await api({ action:'getMatches' });
+    if (mres.ok && mres.data && mres.data.length) {
+      matchData = mres.data;
+    } else if (res.ok) {
+      matchData = res.matches || [];
     }
   } catch(e) {}
   renderDraw();
@@ -710,7 +716,11 @@ function renderBracket() {
   if (!area) return;
   const n = drawState.approvedCount;
   if (!n) {
-    area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">尚無已核准隊伍</div></div>';
+    if (drawState.open || drawState.done) {
+      area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">尚無已核准隊伍，請等待主辦單位審核後開放抽籤。</div></div>';
+    } else {
+      area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--gray-400);padding:32px">管理員設定分組後將顯示對戰圖</div></div>';
+    }
     return;
   }
 
@@ -810,14 +820,23 @@ function renderSchedule() {
     const matches = matchData.filter(m => m.phase === phase);
     html += '<div class="schedule-wrap"><div class="group-title">📅 ' + esc(phase) + ' 賽程</div>' +
       '<table class="match-table"><thead><tr>' +
-      '<th style="width:60px">場次</th><th>隊伍 A</th><th style="width:30px"></th><th>隊伍 B</th>' +
+      '<th style="width:55px">場次</th><th>隊伍 A</th><th style="width:90px;text-align:center">比分</th><th>隊伍 B</th>' +
       '<th style="width:70px">日期</th><th style="width:60px">時間</th><th style="width:50px">場地</th>' +
       '</tr></thead><tbody>';
     matches.forEach(m => {
-      html += '<tr><td><strong>' + esc(m.matchNum) + '</strong></td>' +
-        '<td style="font-weight:600;color:var(--blue-dark)">' + esc(m.teamA) + '</td>' +
-        '<td><span class="vs-tag">VS</span></td>' +
-        '<td style="font-weight:600;color:var(--blue-dark)">' + esc(m.teamB) + '</td>' +
+      const hasScore = m.scoreA !== undefined && m.scoreA !== '' && m.scoreB !== undefined && m.scoreB !== '';
+      const isWinA   = hasScore && Number(m.scoreA) > Number(m.scoreB);
+      const isWinB   = hasScore && Number(m.scoreB) > Number(m.scoreA);
+      const scoreCell = hasScore
+        ? '<span style="font-weight:700;color:var(--blue-dark);font-size:15px">'+m.scoreA+' : '+m.scoreB+'</span>' +
+          (m.winner && m.winner !== '平局' ? '<br><span style="font-size:11px;color:var(--green)">✅ '+esc(m.winner)+'</span>' : '<br><span style="font-size:11px;color:var(--gray-400)">平局</span>')
+        : '<span style="color:var(--gray-400);font-size:12px">待賽</span>';
+      const rowBg = hasScore ? 'background:#f0fff4' : '';
+      html += '<tr style="'+rowBg+'">' +
+        '<td><strong>' + esc(m.matchNum) + '</strong></td>' +
+        '<td style="font-weight:'+(isWinA?'700':'500')+';color:'+(isWinA?'var(--green)':'var(--blue-dark)')+'">' + esc(m.teamA) + '</td>' +
+        '<td style="text-align:center">' + scoreCell + '</td>' +
+        '<td style="font-weight:'+(isWinB?'700':'500')+';color:'+(isWinB?'var(--green)':'var(--blue-dark)')+'">' + esc(m.teamB) + '</td>' +
         '<td>' + esc(m.date) + '</td><td>' + esc(m.time) + '</td><td>' + esc(m.court) + '</td></tr>';
     });
     html += '</tbody></table></div>';

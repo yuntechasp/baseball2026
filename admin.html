@@ -287,7 +287,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
           <span class="nav-icon">⚙️</span>賽事設定
         </div>
       </nav>
-      <div class="sidebar-footer">登入中 · 管理員</div>
+      <div class="sidebar-footer"><a href="index.html" style="color:rgba(255,255,255,.6);text-decoration:none">🏠 回主頁</a> · 管理員</div>
     </aside>
 
     <!-- Content -->
@@ -410,6 +410,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
                 <button class="btn btn-primary btn-sm" onclick="adminToggleDraw()">儲存開關</button>
                 <button class="btn btn-success btn-sm" onclick="adminAutoDrawAll()">⚡ 全部自動抽</button>
                 <button class="btn btn-sm" onclick="adminResetDraw()">↺ 重置抽籤</button>
+                <button class="btn btn-sm" onclick="saveAllMatchTimes()" style="background:#f0f4ff;color:var(--blue);border-color:var(--blue)">⏰ 批次儲存時間</button>
                 <button class="btn btn-success btn-sm" onclick="exportBracketExcel()">⬇ 匯出 Excel</button>
               </div>
             </div>
@@ -433,14 +434,15 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
             <div class="card-body" style="padding:0;overflow-x:auto">
               <table class="bracket-table" style="width:100%;border-collapse:collapse">
                 <thead><tr>
-                  <th style="width:60px;padding:9px 12px">場次</th>
-                  <th style="padding:9px 12px">組別/階段</th>
-                  <th style="padding:9px 12px">隊伍 A</th>
-                  <th style="width:30px;padding:9px 12px"></th>
-                  <th style="padding:9px 12px">隊伍 B</th>
-                  <th style="width:80px;padding:9px 12px">日期</th>
-                  <th style="width:70px;padding:9px 12px">時間</th>
-                  <th style="width:55px;padding:9px 12px">場地</th>
+                  <th style="width:55px;padding:8px 10px">場次</th>
+                  <th style="padding:8px 10px">組別</th>
+                  <th style="padding:8px 10px">隊伍 A</th>
+                  <th style="width:80px;padding:8px 10px;text-align:center">比分</th>
+                  <th style="padding:8px 10px">隊伍 B</th>
+                  <th style="width:90px;padding:8px 10px">日期</th>
+                  <th style="width:70px;padding:8px 10px">時間</th>
+                  <th style="width:55px;padding:8px 10px">場地</th>
+                  <th style="width:80px;padding:8px 10px">操作</th>
                 </tr></thead>
                 <tbody id="admin-bracket-tbody"></tbody>
               </table>
@@ -608,6 +610,31 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
 </div>
 
 <!-- ══ Modals ══ -->
+
+<!-- 成績輸入 Modal -->
+<div class="overlay" id="score-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title" id="sm-title">⚾ 輸入成績</div>
+    <input type="hidden" id="sm-matchNum">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;justify-content:center">
+      <div style="text-align:center">
+        <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:8px" id="sm-teamA"></div>
+        <input type="number" id="sm-scoreA" min="0" placeholder="0"
+          style="width:70px;padding:10px;text-align:center;font-size:24px;font-weight:700;border:2px solid var(--gray-200);border-radius:var(--radius);font-family:inherit">
+      </div>
+      <div style="font-size:18px;font-weight:700;color:var(--gray-400)">:</div>
+      <div style="text-align:center">
+        <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:8px" id="sm-teamB"></div>
+        <input type="number" id="sm-scoreB" min="0" placeholder="0"
+          style="width:70px;padding:10px;text-align:center;font-size:24px;font-weight:700;border:2px solid var(--gray-200);border-radius:var(--radius);font-family:inherit">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('score-modal')">取消</button>
+      <button class="btn btn-primary" onclick="submitScore()">儲存成績</button>
+    </div>
+  </div>
+</div>
 
 <!-- 競賽規程 Modal -->
 <div class="overlay" id="rule-modal">
@@ -1527,17 +1554,43 @@ function renderAdminBracket() {
   if (!card || !tbody) return;
   if (!DB.matches.length) { card.style.display = 'none'; return; }
   card.style.display = 'block';
-  tbody.innerHTML = DB.matches.map(m => `
-    <tr>
-      <td style="padding:9px 12px"><strong>${esc(m.matchNum)}</strong></td>
-      <td style="padding:9px 12px;font-size:12px;color:var(--gray-400)">${esc(m.phase)}</td>
-      <td style="padding:9px 12px;font-weight:600;color:var(--blue-dark)">${esc(m.teamA)}</td>
-      <td style="padding:9px 12px"><span class="vs-badge">VS</span></td>
-      <td style="padding:9px 12px;font-weight:600;color:var(--blue-dark)">${esc(m.teamB)}</td>
-      <td style="padding:9px 12px">${esc(m.date)}</td>
-      <td style="padding:9px 12px">${esc(m.time)}</td>
-      <td style="padding:9px 12px">${esc(m.court)}</td>
-    </tr>`).join('');
+  tbody.innerHTML = DB.matches.map((m,i) => {
+    const scoreA = m.scoreA !== undefined ? m.scoreA : '';
+    const scoreB = m.scoreB !== undefined ? m.scoreB : '';
+    const hasScore = scoreA !== '' && scoreB !== '';
+    return `<tr style="${hasScore ? 'background:#f0fff4' : ''}">
+      <td style="padding:8px 10px"><strong>${esc(m.matchNum)}</strong></td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--gray-400)">${esc(m.phase)}</td>
+      <td style="padding:8px 10px;font-weight:600;color:var(--blue-dark)">${esc(m.teamA)}</td>
+      <td style="padding:8px 10px;text-align:center">
+        ${hasScore
+          ? `<span style="font-weight:700;color:var(--blue-dark)">${scoreA} : ${scoreB}</span>`
+          : '<span style="color:var(--gray-400);font-size:12px">未填</span>'}
+      </td>
+      <td style="padding:8px 10px;font-weight:600;color:var(--blue-dark)">${esc(m.teamB)}</td>
+      <td style="padding:8px 6px">
+        <input type="text" value="${esc(m.date)}" id="m-date-${i}"
+          style="width:82px;padding:4px 6px;border:1px solid var(--gray-200);border-radius:4px;font-size:12px;font-family:inherit"
+          placeholder="8/17">
+      </td>
+      <td style="padding:8px 6px">
+        <input type="text" value="${esc(m.time)}" id="m-time-${i}"
+          style="width:62px;padding:4px 6px;border:1px solid var(--gray-200);border-radius:4px;font-size:12px;font-family:inherit"
+          placeholder="09:00">
+      </td>
+      <td style="padding:8px 6px">
+        <input type="text" value="${esc(m.court)}" id="m-court-${i}"
+          style="width:48px;padding:4px 6px;border:1px solid var(--gray-200);border-radius:4px;font-size:12px;font-family:inherit"
+          placeholder="A場">
+      </td>
+      <td style="padding:8px 6px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <button class="btn btn-sm" onclick="openScoreModal('${m.matchNum}','${esc(m.teamA)}','${esc(m.teamB)}',${scoreA||"''"}, ${scoreB||"''"})" style="font-size:11px;padding:3px 8px">⚾ 成績</button>
+          <button class="btn btn-sm btn-primary" onclick="saveMatchTime(${i},'${m.matchNum}')" style="font-size:11px;padding:3px 8px">💾 儲存</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 async function adminToggleDraw() {
@@ -1633,6 +1686,54 @@ async function adminResetDraw() {
   renderAdminDraw();
   renderAdminBracket();
   toast('抽籤已重置');
+}
+
+
+// ── 賽程時間儲存 ─────────────────────────────────────────────
+async function saveAllMatchTimes() {
+  const len = DB.matches.length;
+  for (let i = 0; i < len; i++) {
+    const matchNum = DB.matches[i].matchNum;
+    await saveMatchTime(i, matchNum);
+  }
+  toast('全部賽程時間已儲存', 'ok');
+}
+
+async function saveMatchTime(idx, matchNum) {
+  const date  = document.getElementById('m-date-'+idx)?.value.trim();
+  const time  = document.getElementById('m-time-'+idx)?.value.trim();
+  const court = document.getElementById('m-court-'+idx)?.value.trim();
+  const m = DB.matches.find(x => x.matchNum === matchNum);
+  if (m) { m.date = date; m.time = time; m.court = court; }
+  try { await apiPost({ action:'updateMatch', matchNum, date, time, court }); } catch(e){}
+  toast('賽程時間已儲存 ' + matchNum, 'ok');
+}
+
+// ── 成績輸入 Modal ────────────────────────────────────────────
+function openScoreModal(matchNum, teamA, teamB, scoreA, scoreB) {
+  document.getElementById('sm-matchNum').value = matchNum;
+  document.getElementById('sm-teamA').textContent = teamA;
+  document.getElementById('sm-teamB').textContent = teamB;
+  document.getElementById('sm-scoreA').value = scoreA;
+  document.getElementById('sm-scoreB').value = scoreB;
+  document.getElementById('sm-title').textContent = '⚾ 輸入成績 — ' + matchNum;
+  openModal('score-modal');
+}
+
+async function submitScore() {
+  const matchNum = document.getElementById('sm-matchNum').value;
+  const teamA    = document.getElementById('sm-teamA').textContent;
+  const teamB    = document.getElementById('sm-teamB').textContent;
+  const scoreA   = document.getElementById('sm-scoreA').value.trim();
+  const scoreB   = document.getElementById('sm-scoreB').value.trim();
+  if (scoreA === '' || scoreB === '') { toast('請填寫比分'); return; }
+  const winner = Number(scoreA) > Number(scoreB) ? teamA : Number(scoreB) > Number(scoreA) ? teamB : '平局';
+  const m = DB.matches.find(x => x.matchNum === matchNum);
+  if (m) { m.scoreA = scoreA; m.scoreB = scoreB; m.winner = winner; }
+  try { await apiPost({ action:'saveScore', matchNum, teamA, teamB, scoreA, scoreB, winner }); } catch(e){}
+  closeModal('score-modal');
+  renderAdminBracket();
+  toast(matchNum + ' 成績已儲存', 'ok');
 }
 
 // ═══════════════════════════════════════════
