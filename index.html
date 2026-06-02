@@ -99,6 +99,12 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .news-title{font-size:14px;font-weight:500;color:var(--gray-900);margin-bottom:2px}
 .news-date{font-size:12px;color:var(--gray-400)}
 .news-empty{padding:24px;text-align:center;color:var(--gray-400);font-size:13px}
+.news-item.expandable{cursor:pointer}
+.news-item.expandable:hover{background:var(--gray-50)}
+.news-expand-body{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--gray-100)}
+.news-expand-body.open{display:block}
+.news-chevron{font-size:11px;color:var(--gray-400);margin-left:auto;transition:transform .2s;flex-shrink:0}
+.news-chevron.open{transform:rotate(180deg)}
 
 /* ── 競賽規程 ── */
 .rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -465,18 +471,33 @@ const NL = { new:'最新', imp:'重要', info:'公告' };
 function renderNews() {
   const el = document.getElementById('news-list');
   if (!newsData.length) { el.innerHTML = '<div class="news-empty">目前沒有公告</div>'; return; }
-  el.innerHTML = newsData.map(n => `
-    <div class="news-item" style="${n.imageData||n.body?'flex-direction:column;align-items:stretch':''}">
-      <div style="display:flex;gap:12px;align-items:flex-start">
+  el.innerHTML = newsData.map((n, i) => {
+    const hasMore = !!(n.body || n.imageData);
+    return `
+    <div class="news-item${hasMore ? ' expandable' : ''}" ${hasMore ? `onclick="toggleNews(this)"` : ''}>
+      <div style="display:flex;gap:12px;align-items:center">
         <span class="news-badge ${NB[n.type]||'nb-info'}">${NL[n.type]||'公告'}</span>
         <div style="flex:1">
           <div class="news-title">${esc(n.title)}</div>
-          <div class="news-date">${n.date||''}</div>
+          <div class="news-date">${n.date||''}${hasMore ? ' · 點擊展開' : ''}</div>
         </div>
+        ${hasMore ? '<span class="news-chevron">▼</span>' : ''}
       </div>
-      ${n.body ? `<div style="margin-top:8px;font-size:13px;color:var(--gray-600);white-space:pre-wrap;padding-left:4px">${esc(n.body)}</div>` : ''}
-      ${n.imageData ? `<img src="${n.imageData}" style="margin-top:10px;max-width:100%;border-radius:var(--radius);border:1px solid var(--gray-100)">` : ''}
-    </div>`).join('');
+      ${hasMore ? `
+      <div class="news-expand-body">
+        ${n.body ? `<div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap;line-height:1.7">${esc(n.body)}</div>` : ''}
+        ${n.imageData ? `<img src="${n.imageData}" style="margin-top:10px;max-width:100%;border-radius:var(--radius);border:1px solid var(--gray-100)">` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleNews(el) {
+  const body    = el.querySelector('.news-expand-body');
+  const chevron = el.querySelector('.news-chevron');
+  if (!body) return;
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
 }
 
 // ── 競賽規程 ────────────────────────────────
