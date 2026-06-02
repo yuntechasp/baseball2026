@@ -1865,36 +1865,54 @@ async function saveRule() {
   if (!title) { toast('請輸入規程標題'); return; }
   const btn = document.querySelector('#rule-modal .btn-primary');
   if (btn) { btn.disabled = true; btn.textContent = '儲存中…'; }
-  const body = {
-    action:  'saveRule',
-    ruleId:  document.getElementById('rm-ruleId').value,
-    icon:    document.getElementById('rm-icon').value.trim() || '📋',
-    order:   parseInt(document.getElementById('rm-order').value) || 1,
-    title,
-    content: document.getElementById('rm-content').value.trim(),
-    pdfUrl:  document.getElementById('rm-pdf').value.trim(),
-  };
+
+  const ruleId  = document.getElementById('rm-ruleId').value;
+  const icon    = document.getElementById('rm-icon').value.trim() || '📋';
+  const order   = parseInt(document.getElementById('rm-order').value) || 1;
+  const content = document.getElementById('rm-content').value.trim();
+  const pdfUrl  = document.getElementById('rm-pdf').value.trim();
+
   let saved = false;
+  let savedRuleId = ruleId;
+
   try {
-    const res = await apiPost(body);
+    // 用 saveRuleDirect（GET 個別參數），完全繞過 payload 長度限制
+    const params = new URLSearchParams({
+      action:  'saveRuleDirect',
+      ruleId,
+      title,
+      content,
+      pdfUrl,
+      icon,
+      order,
+    });
+    const r = await fetch(API_URL + '?' + params.toString());
+    const res = await r.json();
     if (res && res.ok) {
       saved = true;
-      if (res.ruleId) body.ruleId = res.ruleId;
+      if (res.ruleId) savedRuleId = res.ruleId;
     } else {
-      console.error('saveRule API error:', res);
+      console.error('saveRule error:', res);
+      toast('❌ 儲存失敗：' + (res.error || '未知錯誤'), 'warn');
     }
-  } catch(e) { console.error('saveRule exception:', e); }
+  } catch(e) {
+    console.error('saveRule exception:', e);
+    toast('❌ 網路錯誤，請稍後再試', 'warn');
+  }
 
-  // 無論 API 成功與否，先更新本地 DB 讓畫面正常顯示
-  const idx = DB.rules.findIndex(r => r.ruleId === body.ruleId);
-  if (idx >= 0) Object.assign(DB.rules[idx], body);
-  else DB.rules.push({ ...body, ruleId: body.ruleId || 'R'+Date.now() });
-  DB.rules.sort((a,b) => (a.order||0) - (b.order||0));
+  if (saved) {
+    // 更新本地 DB
+    const body = { action:'saveRule', ruleId:savedRuleId, title, content, pdfUrl, icon, order };
+    const idx = DB.rules.findIndex(r => r.ruleId === ruleId || r.ruleId === savedRuleId);
+    if (idx >= 0) Object.assign(DB.rules[idx], body);
+    else DB.rules.push({ ...body });
+    DB.rules.sort((a,b) => (a.order||0) - (b.order||0));
+    closeModal('rule-modal');
+    renderRulesAdmin();
+    toast('✅ 競賽規程已儲存', 'ok');
+  }
 
   if (btn) { btn.disabled = false; btn.textContent = '儲存'; }
-  closeModal('rule-modal');
-  renderRulesAdmin();
-  toast(saved ? '競賽規程已儲存' : '規程已暫存（請確認 API 連線）', saved ? 'ok' : 'warn');
 }
 
 async function deleteRule(ruleId) {
