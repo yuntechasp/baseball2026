@@ -435,7 +435,7 @@ function applySettings() {
   document.getElementById('hd-gamedate').textContent = s.gamedate || '—';
   document.getElementById('hd-gameend').textContent  = s.gameend  || '—';
   // 繳費資訊
-  documentdocument.getElementById('pi-bank').textContent    = s.bankName    || '請洽主辦單位';
+  document.getElementById('pi-bank').textContent    = s.bankName    || '請洽主辦單位';
   document.getElementById('pi-account').textContent = s.bankAccount || '—';
   document.getElementById('pi-fee').textContent     = s.regFee ? 'NT$ ' + Number(s.regFee).toLocaleString() : '請洽主辦單位';
   document.getElementById('pi-note').textContent    = s.regFeeNote || '';
