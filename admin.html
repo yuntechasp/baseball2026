@@ -1138,7 +1138,7 @@ function renderNewsAdmin() {
       <span class="news-badge ${NB[n.type]||'nb-info'}">${NL[n.type]||'公告'}</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:500;color:var(--gray-900)">${esc(n.title)}</div>
-        <div style="font-size:12px;color:var(--gray-400)">${n.date||''}${n.imageData ? ' 📷' : ''}</div>
+        <div style="font-size:12px;color:var(--gray-400)">${n.date||''}</div>
       </div>
       <div class="btn-row">
         <button class="btn btn-sm" onclick="openNewsModal(${n.rowIndex})">編輯</button>
