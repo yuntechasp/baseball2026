@@ -6,9 +6,21 @@
 <title>比賽報名</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* ── YunTech Brand Colors ── */
 :root{
-  --blue:#1a5fa8;--blue-dark:#0d3b6e;--blue-light:#e6f1fb;
-  --green:#1d9e75;--accent:#e85d24;--amber:#ba7517;
+  --yt-teal:#00A88F;
+  --yt-teal-dark:#00695C;
+  --yt-teal-mid:#00876f;
+  --yt-teal-light:#E0F5F2;
+  --yt-teal-border:#9FD9CE;
+  --yt-orange:#F47920;
+  --yt-orange-light:#FEF0E6;
+  --yt-orange-border:#FBCFA4;
+}
+
+:root{
+  --blue:#00A88F;--blue-dark:#00695C;--blue-light:#E0F5F2;
+  --green:#1d9e75;--accent:#F47920;--amber:#ba7517;
   --gray-50:#f7f6f3;--gray-100:#ededea;--gray-200:#d5d4ce;
   --gray-400:#888780;--gray-700:#3d3d3a;--gray-900:#1c1c1a;
   --white:#fff;--radius:8px;--radius-lg:12px;
@@ -18,7 +30,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   background:var(--gray-50);color:var(--gray-700);font-size:14px;line-height:1.6;min-height:100vh}
 
 /* Header */
-.header{background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:#fff;padding:28px 20px;text-align:center}
+.header{background:linear-gradient(135deg,var(--yt-teal-dark) 0%,var(--yt-teal) 60%,#00BFA5 100%);color:#fff;padding:28px 20px;text-align:center}
 .header h1{font-size:22px;font-weight:700;margin-bottom:6px}
 .header p{font-size:13px;opacity:.8}
 .header-meta{display:flex;justify-content:center;gap:12px;margin-top:14px;flex-wrap:wrap}
@@ -32,13 +44,13 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   margin-bottom:-2px;transition:all .15s;font-family:inherit;display:flex;
   align-items:center;justify-content:center;gap:6px}
 .tab-btn:hover{color:var(--gray-700);background:var(--gray-50)}
-.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
-.tab-btn.active.green{color:var(--green);border-bottom-color:var(--green)}
+.tab-btn.active{color:var(--yt-teal);border-bottom-color:var(--yt-teal)}
+.tab-btn.active.green{color:var(--yt-orange);border-bottom-color:var(--yt-orange)}
 
 /* Main */
 .main{max-width:720px;margin:0 auto;padding:24px 16px 60px}
 .status-banner{padding:12px 16px;border-radius:var(--radius);margin-bottom:20px;font-size:13px;font-weight:500;text-align:center}
-.status-open{background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.status-open{background:var(--yt-teal-light);color:var(--yt-teal-dark);border:1px solid var(--yt-teal-border)}
 .status-closed{background:#fcebeb;color:#a32d2d;border:1px solid #f7c1c1}
 
 /* Card */
@@ -59,7 +71,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   font-size:13px;color:var(--gray-700);background:var(--white);font-family:inherit;
   transition:border .15s,box-shadow .15s}
 .form-group input:focus,.form-group select:focus{
-  outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,95,168,.12)}
+  outline:none;border-color:var(--yt-teal);box-shadow:0 0 0 3px rgba(0,168,143,.12)}
 
 /* Member table */
 .mem-table{width:100%;border-collapse:collapse}
@@ -69,9 +81,9 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .mem-table tr.cap td{background:#fffbf0}
 .mem-in{width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:6px;
   font-size:13px;color:var(--gray-700);background:transparent;font-family:inherit}
-.mem-in:focus{outline:none;border-color:var(--blue);background:var(--white)}
-.role-cap{display:inline-block;font-size:11px;font-weight:700;background:#faeeda;
-  color:var(--amber);border-radius:4px;padding:2px 7px;border:1px solid #f0d090}
+.mem-in:focus{outline:none;border-color:var(--yt-teal);background:var(--white)}
+.role-cap{display:inline-block;font-size:11px;font-weight:700;background:var(--yt-teal-light);
+  color:var(--yt-teal-dark);border-radius:4px;padding:2px 7px;border:1px solid var(--yt-teal-border)}
 .role-mem{display:inline-block;font-size:11px;background:var(--gray-100);
   color:var(--gray-700);border-radius:4px;padding:2px 7px}
 
@@ -82,11 +94,11 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   transition:all .15s;font-family:inherit}
 .btn:hover{background:var(--gray-50)}
 .btn:active{transform:scale(.98)}
-.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
-.btn-primary:hover{background:var(--blue-dark)}
+.btn-primary{background:var(--yt-teal);color:#fff;border-color:var(--yt-teal)}
+.btn-primary:hover{background:var(--yt-teal-dark)}
 .btn-primary:disabled{background:var(--gray-200);border-color:var(--gray-200);cursor:not-allowed}
-.btn-success{background:var(--green);color:#fff;border-color:var(--green)}
-.btn-success:hover{background:#0f6e56}
+.btn-success{background:var(--yt-orange);color:#fff;border-color:var(--yt-orange)}
+.btn-success:hover{background:#c4601a}
 .btn-success:disabled{background:var(--gray-200);border-color:var(--gray-200);cursor:not-allowed}
 .btn-ghost{background:transparent;color:var(--gray-400)}
 .btn-ghost:hover{color:var(--gray-700);background:var(--gray-50)}
@@ -98,13 +110,13 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .alert-err{background:#fcebeb;color:#a32d2d;border:1px solid #f7c1c1}
 
 /* 繳費區塊 */
-.payment-info-box{background:var(--blue-light);border:1px solid #b5d4f4;
+.payment-info-box{background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);
   border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:20px}
-.payment-account{font-size:24px;font-weight:700;color:var(--blue-dark);
+.payment-account{font-size:24px;font-weight:700;color:var(--yt-teal-dark);
   letter-spacing:.12em;text-align:center;padding:10px 0}
 .code-input{font-size:22px;font-weight:700;letter-spacing:.2em;text-align:center;
   padding:10px;border:2px solid var(--gray-200);border-radius:var(--radius)}
-.code-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12)}
+.code-input:focus{border-color:var(--yt-teal);box-shadow:0 0 0 3px rgba(0,168,143,.12)}
 
 /* Tab panels */
 .tab-panel{display:none}.tab-panel.active{display:block}
@@ -178,7 +190,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
 
   <!-- Tab 切換 -->
   <div class="tab-bar">
-    <a href="index.html" style="text-decoration:none;display:flex;align-items:center;padding:0 14px;color:rgba(255,255,255,.8);background:var(--blue-dark);border-right:1px solid rgba(255,255,255,.15);font-size:12px;gap:4px;white-space:nowrap" title="回主頁">
+    <a href="index.html" style="text-decoration:none;display:flex;align-items:center;padding:0 14px;color:rgba(255,255,255,.9);background:var(--yt-teal-dark);border-right:1px solid rgba(255,255,255,.15);font-size:12px;gap:4px;white-space:nowrap;font-weight:500" title="回主頁">
       🏠 <span style="font-size:12px">首頁</span>
     </a>
     <button class="tab-btn active" id="tab-reg-btn" onclick="switchTab('reg')">
@@ -423,7 +435,7 @@ function applySettings() {
   document.getElementById('hd-gamedate').textContent = s.gamedate || '—';
   document.getElementById('hd-gameend').textContent  = s.gameend  || '—';
   // 繳費資訊
-  document.getElementById('pi-bank').textContent    = s.bankName    || '請洽主辦單位';
+  documentdocument.getElementById('pi-bank').textContent    = s.bankName    || '請洽主辦單位';
   document.getElementById('pi-account').textContent = s.bankAccount || '—';
   document.getElementById('pi-fee').textContent     = s.regFee ? 'NT$ ' + Number(s.regFee).toLocaleString() : '請洽主辦單位';
   document.getElementById('pi-note').textContent    = s.regFeeNote || '';

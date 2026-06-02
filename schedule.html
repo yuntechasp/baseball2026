@@ -6,9 +6,21 @@
 <title>賽程資訊</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* ── YunTech Brand Colors ── */
 :root{
-  --blue:#1a5fa8;--blue-dark:#0d3b6e;--blue-light:#e6f1fb;
-  --green:#1d9e75;--accent:#e85d24;--amber:#ba7517;
+  --yt-teal:#00A88F;
+  --yt-teal-dark:#00695C;
+  --yt-teal-mid:#00876f;
+  --yt-teal-light:#E0F5F2;
+  --yt-teal-border:#9FD9CE;
+  --yt-orange:#F47920;
+  --yt-orange-light:#FEF0E6;
+  --yt-orange-border:#FBCFA4;
+}
+
+:root{
+  --blue:#00A88F;--blue-dark:#00695C;--blue-light:#E0F5F2;
+  --green:#1d9e75;--accent:#F47920;--amber:#ba7517;
   --gray-50:#f7f6f3;--gray-100:#ededea;--gray-200:#d5d4ce;
   --gray-400:#888780;--gray-700:#3d3d3a;--gray-900:#1c1c1a;
   --white:#fff;--radius:8px;--radius-lg:12px;
@@ -18,7 +30,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   background:var(--gray-50);color:var(--gray-700);font-size:14px;line-height:1.6;min-height:100vh}
 
 /* Nav */
-.nav{background:var(--blue-dark);color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.nav{background:var(--yt-teal-dark);color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .nav-inner{max-width:1000px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px}
 .nav-logo{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
 .nav-links{display:flex;gap:4px;align-items:center}
@@ -26,10 +38,10 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   color:rgba(255,255,255,.8);text-decoration:none;transition:all .15s}
 .nav-link:hover{background:rgba(255,255,255,.12);color:#fff}
 .nav-link.active{background:rgba(255,255,255,.18);color:#fff}
-.nav-link.cta{background:var(--accent);color:#fff}
+.nav-link.cta{background:var(--yt-orange);color:#fff;font-weight:600}
 
 /* Header */
-.page-header{background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:#fff;padding:28px 20px;text-align:center}
+.page-header{background:linear-gradient(135deg,var(--yt-teal-dark) 0%,var(--yt-teal) 60%,#00BFA5 100%);color:#fff;padding:28px 20px;text-align:center}
 .page-header h1{font-size:20px;font-weight:700;margin-bottom:4px}
 .page-header p{font-size:13px;opacity:.8}
 
@@ -44,15 +56,15 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 
 /* Status tag */
 .status-tag{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:20px}
-.st-open{background:#fff0e6;color:var(--accent);border:1px solid #fcd5bd}
-.st-done{background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.st-open{background:var(--yt-orange-light);color:#c4601a;border:1px solid var(--yt-orange-border)}
+.st-done{background:var(--yt-teal-light);color:var(--yt-teal-dark);border:1px solid var(--yt-teal-border)}
 .st-closed{background:var(--gray-100);color:var(--gray-400);border:1px solid var(--gray-200)}
 
 /* Group section */
 .group-section{margin-bottom:40px}
-.group-label{font-size:16px;font-weight:700;color:var(--blue-dark);
+.group-label{font-size:16px;font-weight:700;color:var(--yt-teal-dark);
   display:flex;align-items:center;gap:8px;margin-bottom:16px;
-  padding-bottom:10px;border-bottom:2px solid var(--gray-100)}
+  padding-bottom:10px;border-bottom:2px solid var(--yt-teal-light)}
 
 /* ── 循環賽方塊圖 ── */
 .bracket-box{background:var(--white);border-radius:var(--radius-lg);
@@ -62,7 +74,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 /* ── 對戰時間表 ── */
 .match-table-wrap{overflow-x:auto}
 .match-table{width:100%;border-collapse:collapse}
-.match-table th{background:var(--blue-dark);color:#fff;padding:9px 12px;font-size:12px;text-align:left}
+.match-table th{background:var(--yt-teal-dark);color:#fff;padding:9px 12px;font-size:12px;text-align:left}
 .match-table td{padding:9px 12px;border-bottom:1px solid var(--gray-100);font-size:13px}
 .match-table tr:last-child td{border-bottom:none}
 .match-table tr:hover td{background:var(--gray-50)}
@@ -74,7 +86,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .pending-tag{color:var(--gray-400);font-size:12px}
 
 /* Footer */
-.footer{background:var(--blue-dark);color:rgba(255,255,255,.6);text-align:center;padding:20px;font-size:12px}
+.footer{background:var(--yt-teal-dark);color:rgba(255,255,255,.6);text-align:center;padding:20px;font-size:12px}
 
 @media(max-width:600px){
   .nav-links .nav-link:not(.cta):not(.home){display:none}
@@ -162,12 +174,12 @@ async function api(params) {
 })();
 
 function applySettings() {
-  const title = settings.title || '比賽賽程';
+  const title = settings.title || '2026全國大專夏季校際棒球錦標賽';
   document.title = title + ' — 賽程資訊';
   document.getElementById('nav-title').textContent   = title;
   document.getElementById('page-title').textContent  = '賽程資訊';
   document.getElementById('page-sub').textContent    = (settings.subtitle||'') + (settings.venue ? '  ·  ' + settings.venue : '');
-  document.getElementById('footer-title').textContent = title;
+  document.getElementById('footer-title').textContent = settings.title || title;
 }
 
 function render() {
@@ -355,9 +367,9 @@ function buildSVG(group, matches) {
     const pos = positions[i] || { x: cx, y: cy };
     const name = slot.teamname || ('第' + slot.slot + '籤');
     const isEmpty = !slot.teamname;
-    const bgColor = isEmpty ? '#ededea' : '#e6f1fb';
-    const textColor = isEmpty ? '#888780' : '#0d3b6e';
-    const borderColor = isEmpty ? '#d5d4ce' : '#1a5fa8';
+    const bgColor = isEmpty ? '#ededea' : 'var(--yt-teal-light)';
+    const textColor = isEmpty ? '#888780' : 'var(--yt-teal-dark)';
+    const borderColor = isEmpty ? '#d5d4ce' : 'var(--yt-teal)';
 
     // Split name into two lines if long
     const maxLen = 6;

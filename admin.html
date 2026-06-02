@@ -7,9 +7,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* ── YunTech Brand Colors ── */
 :root{
-  --blue:#1a5fa8;--blue-dark:#0d3b6e;--blue-light:#e6f1fb;
-  --green:#1d9e75;--accent:#e85d24;--amber:#ba7517;--red:#a32d2d;
+  --yt-teal:#00A88F;
+  --yt-teal-dark:#00695C;
+  --yt-teal-mid:#00876f;
+  --yt-teal-light:#E0F5F2;
+  --yt-teal-border:#9FD9CE;
+  --yt-orange:#F47920;
+  --yt-orange-light:#FEF0E6;
+  --yt-orange-border:#FBCFA4;
+}
+
+:root{
+  --blue:#00A88F;--blue-dark:#00695C;--blue-light:#E0F5F2;
+  --green:#1d9e75;--accent:#F47920;--amber:#ba7517;--red:#a32d2d;
   --gray-50:#f7f6f3;--gray-100:#ededea;--gray-200:#d5d4ce;
   --gray-400:#888780;--gray-600:#5f5e5a;--gray-700:#3d3d3a;--gray-900:#1c1c1a;
   --white:#fff;--radius:8px;--radius-lg:12px;
@@ -33,7 +45,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 
 /* ── Layout ── */
 .admin-wrap{display:flex;min-height:100vh}
-.sidebar{width:220px;flex-shrink:0;background:var(--blue-dark);color:#fff;
+.sidebar{width:220px;flex-shrink:0;background:var(--yt-teal-dark);color:#fff;
   display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:50;
   transition:transform .3s}
 .sidebar-header{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
@@ -44,9 +56,9 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   font-size:13px;font-weight:500;color:rgba(255,255,255,.75);cursor:pointer;
   border-left:3px solid transparent;transition:all .15s;user-select:none}
 .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
-.nav-item.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:#fff}
+.nav-item.active{background:rgba(255,255,255,.15);color:#fff;border-left-color:rgba(255,255,255,.9)}
 .nav-icon{font-size:16px;width:20px;text-align:center}
-.nav-badge{margin-left:auto;background:var(--accent);color:#fff;border-radius:10px;
+.nav-badge{margin-left:auto;background:var(--yt-orange);color:#fff;border-radius:10px;
   font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center}
 .sidebar-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.1);
   font-size:12px;opacity:.5}
@@ -74,14 +86,14 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .stat-label{font-size:11px;color:var(--gray-400);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
 .stat-val{font-size:26px;font-weight:700;color:var(--gray-900);line-height:1.2;margin-top:2px}
 .stat-sub{font-size:11px;color:var(--gray-400);margin-top:2px}
-.stat-box.blue .stat-val{color:var(--blue)}
+.stat-box.blue .stat-val{color:var(--yt-teal)}
 .stat-box.green .stat-val{color:var(--green)}
 .stat-box.amber .stat-val{color:var(--amber)}
 .stat-box.red .stat-val{color:var(--red)}
 
 /* ── Tables ── */
 .data-table{width:100%;border-collapse:collapse}
-.data-table th{background:var(--gray-50);padding:9px 12px;font-size:11px;font-weight:700;
+.data-table th{background:var(--yt-teal-light);padding:9px 12px;font-size:11px;font-weight:700;
   color:var(--gray-400);text-align:left;border-bottom:1px solid var(--gray-100);
   text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .data-table td{padding:10px 12px;border-bottom:1px solid var(--gray-100);font-size:13px;vertical-align:middle}
@@ -104,8 +116,8 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .btn:hover{background:var(--gray-50)}
 .btn:active{transform:scale(.97)}
 .btn-sm{padding:4px 10px;font-size:11px}
-.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
-.btn-primary:hover{background:var(--blue-dark)}
+.btn-primary{background:var(--yt-teal);color:#fff;border-color:var(--yt-teal)}
+.btn-primary:hover{background:var(--yt-teal-dark)}
 .btn-success{background:var(--green);color:#fff;border-color:var(--green)}
 .btn-success:hover{background:#0f6e56}
 .btn-danger{background:var(--red);color:#fff;border-color:var(--red)}
@@ -125,7 +137,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   font-size:13px;color:var(--gray-700);background:var(--white);font-family:inherit;
   transition:border .15s}
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{
-  outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(26,95,168,.1)}
+  outline:none;border-color:var(--yt-teal);box-shadow:0 0 0 2px rgba(0,168,143,.1)}
 .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
   color:var(--gray-400);border-bottom:1px solid var(--gray-100);padding-bottom:7px;margin-bottom:14px}
 
@@ -137,7 +149,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .mem-table tr.cap-row td{background:#fffbf0}
 .mem-in{width:100%;padding:5px 8px;border:1px solid var(--gray-200);border-radius:6px;
   font-size:12px;color:var(--gray-700);background:var(--white);font-family:inherit}
-.mem-in:focus{outline:none;border-color:var(--blue)}
+.mem-in:focus{outline:none;border-color:var(--yt-teal)}
 .role-badge{display:inline-block;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px}
 .r-cap{background:#faeeda;color:var(--amber);border:1px solid #f0d090}
 .r-mgr{background:var(--blue-light);color:var(--blue)}
@@ -148,21 +160,21 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   font-size:13px;font-weight:600;cursor:pointer;margin:4px;border:1.5px solid var(--gray-200);
   background:var(--white);color:var(--gray-700);transition:all .2s;user-select:none}
 .chip:hover{border-color:var(--blue);color:var(--blue)}
-.chip.drawn{background:var(--blue-light);border-color:var(--blue);color:var(--blue);cursor:default}
+.chip.drawn{background:var(--yt-teal-light);border-color:var(--yt-teal);color:var(--yt-teal-dark);cursor:default}
 .chip.spinning{background:var(--accent);border-color:var(--accent);color:#fff}
 @keyframes pop{0%{transform:scale(.9)}60%{transform:scale(1.07)}100%{transform:scale(1)}}
 .chip.pop{animation:pop .35s ease-out}
-.draw-display{background:var(--white);border:1.5px solid var(--gray-200);
+.draw-display{background:var(--yt-teal-light);border:1.5px solid var(--yt-teal-border);
   border-radius:var(--radius-lg);padding:20px;text-align:center;min-height:80px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;margin:14px 0}
-.draw-num{font-size:42px;font-weight:900;color:var(--blue);line-height:1}
+.draw-num{font-size:42px;font-weight:900;color:var(--yt-teal-dark);line-height:1}
 .draw-name{font-size:14px;font-weight:500;color:var(--gray-700);margin-bottom:6px}
 .draw-hint{font-size:13px;color:var(--gray-400)}
 @keyframes numSpin{0%{opacity:.3;transform:translateY(-3px)}100%{opacity:1;transform:translateY(0)}}
 .spinning-num{animation:numSpin .08s ease-out}
 
 .bracket-table{width:100%;border-collapse:collapse}
-.bracket-table th{background:var(--blue);color:#fff;padding:9px 12px;font-size:12px;text-align:left}
+.bracket-table th{background:var(--yt-teal-dark);color:#fff;padding:9px 12px;font-size:12px;text-align:left}
 .bracket-table td{padding:9px 12px;border-bottom:1px solid var(--gray-100);font-size:13px}
 .bracket-table tr:hover td{background:var(--gray-50)}
 .vs-badge{display:inline-block;background:var(--gray-100);color:var(--gray-400);
@@ -1317,7 +1329,7 @@ function renderOrderPreview() {
     el.innerHTML='<div class="empty"><div class="empty-icon">📄</div>尚無核准隊伍資料</div>'; return;
   }
   let html = `<div style="border:1px solid var(--gray-200);border-radius:var(--radius-lg);overflow:hidden">
-    <div style="background:var(--blue);color:#fff;text-align:center;padding:14px 20px">
+    <div style="background:var(--yt-teal);color:#fff;text-align:center;padding:14px 20px">
       <div style="font-size:16px;font-weight:700">${esc(s.title||'')}</div>
       <div style="font-size:12px;opacity:.8;margin-top:3px">${esc(s.subtitle||'')} · ${esc(s.venue||'')} · ${s.gamedate||''}</div>
     </div>

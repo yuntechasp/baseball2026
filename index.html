@@ -6,9 +6,21 @@
 <title>比賽主頁</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* ── YunTech Brand Colors ── */
 :root{
-  --blue:#1a5fa8;--blue-dark:#0d3b6e;--blue-light:#e6f1fb;
-  --green:#1d9e75;--accent:#e85d24;--amber:#ba7517;
+  --yt-teal:#00A88F;
+  --yt-teal-dark:#00695C;
+  --yt-teal-mid:#00876f;
+  --yt-teal-light:#E0F5F2;
+  --yt-teal-border:#9FD9CE;
+  --yt-orange:#F47920;
+  --yt-orange-light:#FEF0E6;
+  --yt-orange-border:#FBCFA4;
+}
+
+:root{
+  --blue:#00A88F;--blue-dark:#00695C;--blue-light:#E0F5F2;
+  --green:#1d9e75;--accent:#F47920;--amber:#ba7517;
   --gray-50:#f7f6f3;--gray-100:#ededea;--gray-200:#d5d4ce;
   --gray-400:#888780;--gray-600:#5f5e5a;--gray-700:#3d3d3a;--gray-900:#1c1c1a;
   --white:#fff;--radius:8px;--radius-lg:12px;
@@ -18,7 +30,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   background:var(--gray-50);color:var(--gray-700);font-size:14px;line-height:1.7;min-height:100vh}
 
 /* ── Nav ── */
-.nav{background:var(--blue-dark);color:#fff;position:sticky;top:0;z-index:100;
+.nav{background:var(--yt-teal-dark);color:#fff;position:sticky;top:0;z-index:100;
   box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .nav-inner{max-width:1000px;margin:0 auto;padding:0 20px;
   display:flex;align-items:center;justify-content:space-between;height:52px}
@@ -29,8 +41,8 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   text-decoration:none;transition:all .15s;font-family:inherit}
 .nav-link:hover{background:rgba(255,255,255,.12);color:#fff}
 .nav-link.active{background:rgba(255,255,255,.18);color:#fff}
-.nav-link.cta{background:var(--accent);color:#fff;margin-left:8px}
-.nav-link.cta:hover{background:#c54d1d}
+.nav-link.cta{background:var(--yt-orange);color:#fff;margin-left:8px;font-weight:600}
+.nav-link.cta:hover{background:#c4601a}
 
 /* ── Hero ── */
 .hero{background:linear-gradient(135deg,var(--blue-dark) 0%,var(--blue) 60%,#2d7dd2 100%);
@@ -55,9 +67,9 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .status-bar{background:var(--white);border-bottom:1px solid var(--gray-100);padding:10px 20px}
 .status-inner{max-width:1000px;margin:0 auto;display:flex;align-items:center;
   justify-content:space-between;gap:12px;flex-wrap:wrap}
-.status-open{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#3b6d11}
+.status-open{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--yt-teal-dark)}
 .status-closed{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#a32d2d}
-.status-dot{width:8px;height:8px;border-radius:50%;background:currentColor;
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--yt-teal);
   animation:pulse-dot 1.5s ease-in-out infinite}
 @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
 .countdown{font-size:12px;color:var(--gray-400)}
@@ -67,7 +79,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .section{margin-bottom:36px}
 .section-title{font-size:17px;font-weight:700;color:var(--gray-900);
   display:flex;align-items:center;gap:8px;margin-bottom:16px;
-  padding-bottom:10px;border-bottom:2px solid var(--gray-100)}
+  padding-bottom:10px;border-bottom:2px solid var(--yt-teal-light)}
 .section-title-icon{font-size:20px}
 
 /* ── Card ── */
@@ -83,7 +95,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   border-radius:20px;margin-top:1px;white-space:nowrap}
 .nb-new{background:#fff0e6;color:var(--accent);border:1px solid #fcd5bd}
 .nb-imp{background:#fcebeb;color:#a32d2d;border:1px solid #f5c1c1}
-.nb-info{background:var(--blue-light);color:var(--blue);border:1px solid #b5d4f4}
+.nb-info{background:var(--yt-teal-light);color:var(--yt-teal-dark);border:1px solid var(--yt-teal-border)}
 .news-title{font-size:14px;font-weight:500;color:var(--gray-900);margin-bottom:2px}
 .news-date{font-size:12px;color:var(--gray-400)}
 .news-empty{padding:24px;text-align:center;color:var(--gray-400);font-size:13px}
@@ -110,7 +122,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   padding:16px 18px;box-shadow:var(--shadow-sm);text-align:center}
 .stat-val{font-size:36px;font-weight:700;line-height:1;margin-bottom:4px}
 .stat-label{font-size:12px;color:var(--gray-400);font-weight:500}
-.stat-blue .stat-val{color:var(--blue)}
+.stat-blue .stat-val{color:var(--yt-teal)}
 .stat-green .stat-val{color:var(--green)}
 .stat-amber .stat-val{color:var(--amber)}
 
@@ -160,9 +172,9 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 
 /* ── 對戰圖 ── */
 .bracket-wrap{overflow-x:auto;margin-bottom:20px}
-.bracket-title{font-size:13px;font-weight:700;color:var(--blue-dark);
-  padding:8px 14px;background:var(--blue-light);border-radius:var(--radius) var(--radius) 0 0;
-  border:1px solid #b5d4f4;border-bottom:none}
+.bracket-title{font-size:13px;font-weight:700;color:var(--yt-teal-dark);
+  padding:8px 14px;background:var(--yt-teal-light);border-radius:var(--radius) var(--radius) 0 0;
+  border:1px solid var(--yt-teal-border);border-bottom:none}
 .bracket-grid{display:grid;gap:0;border:1px solid var(--gray-200);border-radius:0 0 var(--radius) var(--radius);overflow:hidden}
 .bracket-row{display:grid;grid-template-columns:50px 1fr 30px 1fr 70px 60px 50px;
   border-bottom:1px solid var(--gray-100)}
@@ -176,11 +188,11 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   border-radius:4px;padding:2px 6px;font-weight:600;white-space:nowrap}
 
 /* ── 對戰表 ── */
-.group-title{font-size:14px;font-weight:700;color:var(--blue-dark);
-  padding:10px 16px;background:var(--blue-light);border-radius:var(--radius) var(--radius) 0 0;
-  border:1px solid #b5d4f4}
+.group-title{font-size:14px;font-weight:700;color:var(--yt-teal-dark);
+  padding:10px 16px;background:var(--yt-teal-light);border-radius:var(--radius) var(--radius) 0 0;
+  border:1px solid var(--yt-teal-border)}
 .match-table{width:100%;border-collapse:collapse}
-.match-table th{background:var(--blue-dark);color:#fff;padding:9px 12px;
+.match-table th{background:var(--yt-teal-dark);color:#fff;padding:9px 12px;
   font-size:12px;text-align:left}
 .match-table td{padding:9px 12px;border-bottom:1px solid var(--gray-100);font-size:13px}
 .match-table tr:last-child td{border-bottom:none}
@@ -197,7 +209,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   padding:12px 16px;text-align:center;font-size:13px;font-weight:500;color:#3b6d11;margin-bottom:14px}
 
 /* ── Footer ── */
-.footer{background:var(--blue-dark);color:rgba(255,255,255,.6);
+.footer{background:var(--yt-teal-dark);color:rgba(255,255,255,.6);
   text-align:center;padding:20px;font-size:12px}
 .footer a{color:rgba(255,255,255,.8);text-decoration:none}
 .footer a:hover{color:#fff}
@@ -238,7 +250,7 @@ const REGISTER_URL = 'register.html';
       <a class="nav-link" href="#draw">線上抽籤</a>
       <a class="nav-link" href="schedule.html">🗓 賽程資訊</a>
       <a class="nav-link" href="#stats">報名統計</a>
-      <a class="nav-link" href="register.html#pay">💰 繳費回報</a>
+      <a class="nav-link" href="register.html#pay" style="color:rgba(255,255,255,.9)">💰 繳費回報</a>
       <a class="nav-link cta" id="nav-reg-btn" href="register.html">✏️ 立即報名</a>
     </div>
   </div>
@@ -385,10 +397,10 @@ const REGISTER_URL = 'register.html';
 
 <!-- Footer -->
 <div class="footer">
-  <div id="footer-title" style="font-size:14px;font-weight:700;color:rgba(255,255,255,.9);margin-bottom:12px"></div>
-  <div style="display:flex;justify-content:center;gap:40px;flex-wrap:wrap;margin-bottom:12px">
+  <div id="footer-title" style="font-size:15px;font-weight:500;color:white;margin-bottom:14px;letter-spacing:.02em"></div>
+  <div style="display:flex;justify-content:center;gap:32px;flex-wrap:wrap;margin-bottom:12px">
     <div>
-      <div style="font-size:11px;opacity:.5;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">主辦單位</div>
+      <div style="font-size:10px;opacity:.5;margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em">主辦單位</div>
       <div style="font-size:13px;color:rgba(255,255,255,.85)">雲科大體育室</div>
     </div>
     <div>
