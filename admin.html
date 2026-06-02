@@ -765,12 +765,13 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
       <textarea id="nm-body" rows="3" placeholder="詳細說明文字…" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit;resize:vertical"></textarea>
     </div>
     <div class="form-group" style="margin-bottom:12px">
-      <label>上傳圖片（選填）</label>
-      <input type="file" id="nm-image" accept="image/*"
+      <label>上傳圖片（選填，PNG / JPG，建議 1MB 以下）</label>
+      <input type="file" id="nm-image-file" accept="image/*"
         style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:12px;font-family:inherit"
-        onchange="previewNewsImage(this)">
+        onchange="handleNewsImage(this)">
+      <div id="nm-image-status" style="font-size:11px;color:var(--gray-400);margin-top:3px">圖片會自動壓縮後儲存</div>
       <div id="nm-image-preview" style="margin-top:8px;display:none">
-        <img id="nm-preview-img" src="" style="max-width:100%;max-height:160px;border-radius:var(--radius);border:1px solid var(--gray-200)">
+        <img id="nm-preview-img" src="" style="max-width:100%;max-height:180px;border-radius:var(--radius);border:1px solid var(--gray-200)">
         <button onclick="clearNewsImage()" style="display:block;margin-top:4px;font-size:12px;color:var(--red);background:none;border:none;cursor:pointer">✕ 移除圖片</button>
       </div>
       <input type="hidden" id="nm-image-data">
@@ -1161,10 +1162,14 @@ function openNewsModal(rowIndex) {
     document.getElementById('nm-title').value      = n.title || '';
     document.getElementById('nm-body').value       = n.body  || '';
     document.getElementById('nm-date').value       = n.date  || '';
+    const status = document.getElementById('nm-image-status');
     if (n.imageData) {
       document.getElementById('nm-image-data').value = n.imageData;
       document.getElementById('nm-preview-img').src   = n.imageData;
       document.getElementById('nm-image-preview').style.display = '';
+      if (status) { status.style.color='var(--green)'; status.textContent='✅ 已有圖片'; }
+    } else {
+      if (status) { status.style.color='var(--gray-400)'; status.textContent='圖片會自動壓縮後儲存'; }
     }
   } else {
     document.getElementById('nm-rowindex').value  = '';
@@ -1176,27 +1181,46 @@ function openNewsModal(rowIndex) {
   openModal('news-modal');
 }
 
-function previewNewsImage(input) {
+function handleNewsImage(input) {
   const file = input.files[0];
   if (!file) return;
-  if (file.size > 1.5 * 1024 * 1024) {
-    toast('圖片請勿超過 1.5 MB'); input.value=''; return;
-  }
+  const status = document.getElementById('nm-image-status');
+  status.style.color = 'var(--amber)';
+  status.textContent = '壓縮中…';
+
   const reader = new FileReader();
   reader.onload = e => {
-    const data = e.target.result;
-    document.getElementById('nm-image-data').value = data;
-    document.getElementById('nm-preview-img').src  = data;
-    document.getElementById('nm-image-preview').style.display = '';
+    const img = new Image();
+    img.onload = () => {
+      // 壓縮：最大寬度 900px，品質 0.75
+      const MAX_W = 900, MAX_H = 900;
+      let w = img.width, h = img.height;
+      if (w > MAX_W) { h = Math.round(h * MAX_W / w); w = MAX_W; }
+      if (h > MAX_H) { w = Math.round(w * MAX_H / h); h = MAX_H; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.75);
+      const kb = Math.round(compressed.length * 0.75 / 1024);
+      document.getElementById('nm-image-data').value = compressed;
+      document.getElementById('nm-preview-img').src  = compressed;
+      document.getElementById('nm-image-preview').style.display = '';
+      status.style.color = 'var(--green)';
+      status.textContent = '✅ 圖片已壓縮（約 ' + kb + ' KB）';
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
 function clearNewsImage() {
-  document.getElementById('nm-image').value      = '';
+  const fi = document.getElementById('nm-image-file');
+  if (fi) fi.value = '';
   document.getElementById('nm-image-data').value = '';
   document.getElementById('nm-preview-img').src  = '';
   document.getElementById('nm-image-preview').style.display = 'none';
+  const status = document.getElementById('nm-image-status');
+  if (status) { status.style.color = 'var(--gray-400)'; status.textContent = '圖片會自動壓縮後儲存'; }
 }
 
 async function submitNews() {
@@ -1210,30 +1234,25 @@ async function submitNews() {
   const rowIndex = isEdit ? Number(existingRowIndex) : Date.now();
   const imageData = document.getElementById('nm-image-data').value;
 
-  // 若有圖片，先上傳到 Google Drive 取得 URL
+  // 圖片處理：壓縮後的 base64 分段存入 Sheets
   let imageUrl = '';
   if (imageData && imageData.startsWith('data:')) {
     btn.textContent = '上傳圖片中…';
     try {
-      // 分段上傳圖片到 Apps Script（每段 4000 字元，繞過 URL 長度限制）
-      const CHUNK = 4000;
+      const CHUNK = 3000;
       const total = Math.ceil(imageData.length / CHUNK);
       const uploadId = 'IMG_' + Date.now();
       for (let i = 0; i < total; i++) {
         btn.textContent = '上傳圖片 ' + (i+1) + '/' + total + '…';
-        const chunk = imageData.slice(i * CHUNK, (i+1) * CHUNK);
-        const p = new URLSearchParams({
-          action: 'uploadChunk',
-          uploadId, chunk, index: i, total,
-        });
+        const chunk = encodeURIComponent(imageData.slice(i * CHUNK, (i+1) * CHUNK));
+        const p = new URLSearchParams({ action:'uploadChunk', uploadId, chunk, index:i, total });
         const r = await fetch(API_URL + '?' + p.toString()).then(r => r.json());
-        if (!r.ok) throw new Error(r.error || 'chunk failed');
+        if (!r.ok) throw new Error(r.error || 'chunk ' + i + ' failed');
       }
-      // Finalise: assemble chunks → return stored key
-      const fp = new URLSearchParams({ action: 'finalizeUpload', uploadId });
+      const fp = new URLSearchParams({ action:'finalizeUpload', uploadId });
       const fr = await fetch(API_URL + '?' + fp.toString()).then(r => r.json());
       if (fr.ok && fr.imageKey) {
-        imageUrl = fr.imageKey;   // store key, retrieve via getImage action
+        imageUrl = fr.imageKey;
       } else {
         throw new Error(fr.error || 'finalize failed');
       }
@@ -1242,9 +1261,8 @@ async function submitNews() {
       btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
       return;
     }
-  } else if (imageData && !imageData.startsWith('data:')) {
-    // Already a URL (editing existing)
-    imageUrl = imageData;
+  } else {
+    imageUrl = imageData || '';
   }
 
   btn.textContent = '儲存中…';
