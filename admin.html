@@ -2164,7 +2164,8 @@ function renderPayments() {
       <td>
         <div class="btn-row">
           <button class="btn btn-sm btn-success" onclick="setPayStatus('${p.payId}','confirmed')">✔ 確認</button>
-          <button class="btn btn-sm" style="color:var(--red)" onclick="setPayStatus('${p.payId}','rejected')">✕</button>
+          <button class="btn btn-sm" style="color:var(--amber)" onclick="setPayStatus('${p.payId}','rejected')" title="標記有問題">⚠</button>
+          <button class="btn btn-sm btn-danger" onclick="deletePayment('${p.payId}')" title="刪除此紀錄">🗑</button>
         </div>
       </td>
     </tr>`).join('');
@@ -2175,7 +2176,22 @@ async function setPayStatus(payId, status) {
   if (p) p.status = status;
   try { await apiPost({ action:'updatePaymentStatus', payId, status }); } catch(e){}
   renderPayments(); updatePaymentBadge();
-  toast(status==='confirmed'?'已確認繳費':'已標記為有問題');
+  toast(status==='confirmed'?'✅ 已確認繳費':'⚠️ 已標記為有問題');
+}
+
+async function deletePayment(payId) {
+  if (!confirm('確定要刪除此筆繳費紀錄？此操作無法復原。')) return;
+  DB.payments = (DB.payments||[]).filter(x => x.payId !== payId);
+  try {
+    const res = await apiPost({ action:'deletePayment', payId });
+    if (!res.ok) throw new Error(res.error);
+    toast('🗑 繳費紀錄已刪除');
+  } catch(e) {
+    toast('⚠️ 刪除失敗：' + e.message, 'warn');
+    loadPayments(); // reload to restore
+    return;
+  }
+  renderPayments(); updatePaymentBadge();
 }
 
 // Auto-login if session exists
