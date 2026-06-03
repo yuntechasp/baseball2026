@@ -808,18 +808,7 @@ async function api(params) {
   return r.json();
 }
 async function apiPost(body) {
-  const json = JSON.stringify(body);
-  // 超過 4000 字元（含圖片）改用真正的 POST
-  if (json.length > 4000) {
-    const r = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: json,
-    });
-    return r.json();
-  }
-  // 一般請求用 GET payload
-  const url = API_URL + '?payload=' + encodeURIComponent(json);
+  const url = API_URL + '?payload=' + encodeURIComponent(JSON.stringify(body));
   const r = await fetch(url);
   return r.json();
 }
@@ -1191,6 +1180,26 @@ function openNewsModal(rowIndex) {
   openModal('news-modal');
 }
 
+function getContentBounds(ctx, w, h) {
+  // 只裁底部多餘的黑色空白，不動其他邊，避免裁到內容文字
+  const data = ctx.getImageData(0, 0, w, h).data;
+  // 從底部往上找第一個「有內容」的行
+  let bottomY = h;
+  for (let y = h-1; y >= 0; y--) {
+    let hasContent = false;
+    for (let x = 0; x < w; x++) {
+      const i = (y*w+x)*4;
+      const r=data[i], g=data[i+1], b=data[i+2], a=data[i+3];
+      // 非黑色且不透明視為有內容
+      if (a > 30 && (r > 30 || g > 30 || b > 30)) {
+        hasContent = true; break;
+      }
+    }
+    if (hasContent) { bottomY = y + 8; break; } // 多留 8px
+  }
+  return { x1:0, y1:0, x2:w, y2:Math.min(h, bottomY) };
+}
+
 function handleNewsImage(input) {
   const file = input.files[0];
   if (!file) return;
@@ -1202,21 +1211,33 @@ function handleNewsImage(input) {
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      // 壓縮：最大寬度 900px，品質 0.75
-      const MAX_W = 900, MAX_H = 900;
-      let w = img.width, h = img.height;
+      // 先畫到 canvas 偵測實際內容邊界（自動裁切黑色/透明邊緣）
+      const tmp = document.createElement('canvas');
+      tmp.width = img.width; tmp.height = img.height;
+      const tmpCtx = tmp.getContext('2d');
+      tmpCtx.drawImage(img, 0, 0);
+
+      // 偵測內容邊界
+      let { x1, y1, x2, y2 } = getContentBounds(tmpCtx, img.width, img.height);
+      let cw = x2 - x1, ch = y2 - y1;
+      if (cw < 10 || ch < 10) { x1=0; y1=0; cw=img.width; ch=img.height; } // 偵測失敗則不裁切
+
+      // 壓縮：最大寬度 900px，品質 0.80
+      const MAX_W = 900, MAX_H = 600;
+      let w = cw, h = ch;
       if (w > MAX_W) { h = Math.round(h * MAX_W / w); w = MAX_W; }
       if (h > MAX_H) { w = Math.round(w * MAX_H / h); h = MAX_H; }
+
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const compressed = canvas.toDataURL('image/jpeg', 0.75);
+      canvas.getContext('2d').drawImage(img, x1, y1, cw, ch, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.80);
       const kb = Math.round(compressed.length * 0.75 / 1024);
       document.getElementById('nm-image-data').value = compressed;
       document.getElementById('nm-preview-img').src  = compressed;
       document.getElementById('nm-image-preview').style.display = '';
       status.style.color = 'var(--green)';
-      status.textContent = '✅ 圖片已壓縮（約 ' + kb + ' KB）';
+      status.textContent = '✅ 圖片已壓縮裁切（約 ' + kb + ' KB）';
     };
     img.src = e.target.result;
   };
@@ -1244,8 +1265,42 @@ async function submitNews() {
   const rowIndex = isEdit ? Number(existingRowIndex) : Date.now();
   const imageData = document.getElementById('nm-image-data').value;
 
-  // 圖片處理：壓縮後直接存為 base64（已壓縮約 20-50KB，Sheets 可存）
-  let imageUrl = imageData || '';
+  // 圖片處理：壓縮後分段存入 PropertiesService，再用 key 儲存
+  let imageUrl = '';
+  if (imageData && imageData.startsWith('data:')) {
+    btn.textContent = '上傳圖片中…';
+    try {
+      const CHUNK = 3000;
+      const total = Math.ceil(imageData.length / CHUNK);
+      const uploadId = 'IMG_' + Date.now();
+      for (let i = 0; i < total; i++) {
+        btn.textContent = '上傳 ' + (i+1) + '/' + total + '…';
+        // 用 btoa 安全 encode，避免特殊字元問題
+        const chunk = imageData.slice(i * CHUNK, (i+1) * CHUNK);
+        const p = new URLSearchParams();
+        p.append('action', 'uploadChunk');
+        p.append('uploadId', uploadId);
+        p.append('chunk', chunk);
+        p.append('index', i);
+        p.append('total', total);
+        const r = await fetch(API_URL + '?' + p.toString()).then(r => r.json());
+        if (!r.ok) throw new Error('第 ' + (i+1) + ' 段失敗：' + (r.error||''));
+      }
+      const fp = new URLSearchParams({ action:'finalizeUpload', uploadId });
+      const fr = await fetch(API_URL + '?' + fp.toString()).then(r => r.json());
+      if (fr.ok && fr.imageKey) {
+        imageUrl = fr.imageKey;
+      } else {
+        throw new Error(fr.error || '組合失敗');
+      }
+    } catch(e) {
+      toast('⚠️ 圖片上傳失敗：' + e.message, 'warn');
+      btn.disabled = false; btn.textContent = isEdit ? '儲存' : '新增';
+      return;
+    }
+  } else {
+    imageUrl = imageData || '';
+  }
 
   btn.textContent = '儲存中…';
   const item = {
@@ -1259,17 +1314,17 @@ async function submitNews() {
 
   let saved = false;
   try {
-    // 圖片太大不能放 URL 參數，改用 payload POST
-    const payload = {
-      action:   isEdit ? 'updateNews' : 'addNews',
-      type:     item.type,
-      title:    item.title,
-      body:     item.body,
-      date:     item.date,
-      imageData: imageUrl,
-      rowIndex: rowIndex,
-    };
-    const res = await apiPost(payload);
+    // 用 saveRuleDirect 同款的 GET 個別參數方式儲存（imageData 用 addNewsDirect）
+    const p = new URLSearchParams({
+      action:    isEdit ? 'updateNewsDirect' : 'addNewsDirect',
+      type:      item.type,
+      title:     item.title,
+      body:      item.body,
+      date:      item.date,
+      imageUrl:  imageUrl,
+      rowIndex:  rowIndex,
+    });
+    const res = await fetch(API_URL + '?' + p.toString()).then(r => r.json());
     saved = res && res.ok;
     if (!saved) console.error('submitNews error:', res);
   } catch(e) { console.error(e); }
