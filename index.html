@@ -100,6 +100,13 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .news-title{font-size:14px;font-weight:500;color:var(--gray-900);margin-bottom:2px}
 .news-date{font-size:12px;color:var(--gray-400)}
 .news-empty{padding:24px;text-align:center;color:var(--gray-400);font-size:13px}
+.skel{background:linear-gradient(90deg,var(--gray-100) 25%,var(--gray-50) 50%,var(--gray-100) 75%);
+  background-size:200% 100%;animation:skel-wave 1.4s infinite;border-radius:6px}
+@keyframes skel-wave{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-line{height:14px;margin-bottom:8px}
+.skel-line.short{width:40%}
+.skel-line.med{width:65%}
+.skel-line.full{width:100%}
 .news-item.expandable{cursor:pointer}
 .news-item.expandable:hover{background:var(--gray-50);border-radius:var(--radius)}
 .news-expand-body{display:none;width:100%;margin-top:10px;padding-top:10px;
@@ -288,10 +295,7 @@ const REGISTER_URL = 'register.html';
 <!-- Main -->
 <div class="main">
 
-  <div id="loading-main" class="loading">
-    <div class="spinner"></div>
-    <div>載入資料中…</div>
-  </div>
+  <div id="loading-main" style="display:none"></div>
 
   <div id="main-content" style="display:none">
 
@@ -393,26 +397,76 @@ async function api(params) {
   }
 }
 
+// ── 快取 Key ──────────────────────────────────
+const CACHE_KEY = 'baseball2026_cache';
+
+function loadFromCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    // 快取有效期 10 分鐘
+    if (Date.now() - ts > 10 * 60 * 1000) return null;
+    return data;
+  } catch(e) { return null; }
+}
+
+function saveToCache(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+  } catch(e) {}
+}
+
+function applyData(res) {
+  if (!res) return;
+  settings  = res.settings || {};
+  newsData  = res.news     || [];
+  teamsData = res.teams    || [];
+  if (Array.isArray(res.rules) && res.rules.length > 0) rulesData = res.rules;
+  applySettings();
+  renderNews();
+  renderStats();
+  renderRules();
+}
+
 // ── 初始化 ──────────────────────────────────
 (async () => {
+  // 先顯示快取資料（秒開）
+  const cached = loadFromCache();
+  if (cached) {
+    applyData(cached);
+    document.getElementById('loading-main').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+  } else {
+    // 沒有快取時顯示骨架畫面
+    document.getElementById('news-list').innerHTML =
+      [1,2,3].map(() => `<div class="news-item">
+        <div class="news-item-header">
+          <div class="skel" style="width:36px;height:22px;border-radius:20px;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div class="skel skel-line med"></div>
+            <div class="skel skel-line short" style="height:11px;margin-top:4px"></div>
+          </div>
+        </div>
+      </div>`).join('');
+    document.getElementById('rules-grid').innerHTML =
+      `<div class="rule-card"><div class="skel" style="width:40px;height:40px;border-radius:8px;margin-bottom:10px"></div>
+       <div class="skel skel-line med" style="margin-bottom:8px"></div>
+       <div class="skel skel-line full"></div><div class="skel skel-line full"></div></div>`;
+    document.getElementById('loading-main').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+  }
+
+  // 背景更新最新資料
   try {
     const res = await api({ action:'getAllData' });
     if (res.ok) {
-      settings  = res.settings || {};
-      newsData  = res.news    || [];
-      teamsData = res.teams   || [];
-      // rules 直接從 getAllData 回應取得，不需額外呼叫
-      if (Array.isArray(res.rules) && res.rules.length > 0) {
-        rulesData = res.rules;
-      }
-      applySettings();
-      renderNews();
-      renderStats();
-      renderRules();
+      saveToCache(res);
+      applyData(res);
     }
   } catch(e) { console.error('getAllData error:', e); }
 
-  // 若 getAllData 沒帶回 rules，再單獨嘗試一次
+  // 若 rules 還是空的，單獨再試一次
   if (!rulesData.length) {
     try {
       const rulesRes = await api({ action:'getRules' });
@@ -420,11 +474,8 @@ async function api(params) {
         rulesData = rulesRes.data;
         renderRules();
       }
-    } catch(e) { console.error('getRules fallback error:', e); }
+    } catch(e) {}
   }
-
-  document.getElementById('loading-main').style.display = 'none';
-  document.getElementById('main-content').style.display = 'block';
 })();
 
 // ── 套用設定 ────────────────────────────────
