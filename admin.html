@@ -1077,19 +1077,29 @@ async function renderPlayers() {
 
   let html = '';
   for (const t of teams) {
-    const members = await loadMembers(t.teamId);
-    const rows = members.map((m, idx) => {
+    const rawMembers = await loadMembers(t.teamId);
+    // 排序：隊職員在前，運動員在後
+    const roleOrder = ['領隊','總教練','教練','管理','訓練員','運動防護員','隊長','運動員'];
+    const members = [...rawMembers].sort((a, b) => {
+      const ai = roleOrder.indexOf(a.role);
+      const bi = roleOrder.indexOf(b.role);
+      const av = ai === -1 ? 99 : ai;
+      const bv = bi === -1 ? 99 : bi;
+      return av - bv;
+    });
+    const rows = members.map((m) => {
       const isCap = m.role === '隊長';
-      const isMgr = m.role === '領隊' || m.role === '教練';
+      const isMgr = ['領隊','總教練','教練','管理','訓練員','運動防護員'].includes(m.role);
       const roleCls = isCap ? 'r-cap' : isMgr ? 'r-mgr' : 'r-mem';
+      const origIdx = m.rowIndex; // 使用原始 rowIndex，不受排序影響
       return `<tr class="${isCap?'cap-row':''}">
         <td><span class="role-badge ${roleCls}">${esc(m.role)}</span></td>
         <td>${esc(m.name)}</td>
         <td>${esc(m.number)}</td>
         <td>${esc(m.studentId)}</td>
         <td>
-          <button class="btn btn-sm" onclick="openMemberModal('${t.teamId}',${idx},'${esc(m.role)}','${esc(m.name)}','${esc(m.number)}','${esc(m.studentId)}')">編輯</button>
-          ${!isMgr ? `<button class="btn btn-sm btn-danger" onclick="deleteMemberRow('`+t.teamId+`',`+idx+`)">刪除</button>` : ''}
+          <button class="btn btn-sm" onclick="openMemberModal('${t.teamId}',${origIdx},'${esc(m.role)}','${esc(m.name)}','${esc(m.number)}','${esc(m.studentId)}')">編輯</button>
+          ${!isMgr ? `<button class="btn btn-sm btn-danger" onclick="deleteMemberRow('`+t.teamId+`',`+origIdx+`)">刪除</button>` : ''}
         </td>
       </tr>`;
     }).join('');
