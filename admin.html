@@ -551,6 +551,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
                 <div class="form-group">
                   <label>報名截止日</label>
                   <input type="date" id="cfg-deadline">
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+                    <span style="font-size:12px;color:var(--gray-600);white-space:nowrap">截止時間</span>
+                    <input type="time" id="cfg-deadlinetime" value="17:00"
+                      style="flex:1;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>比賽開始日</label>
@@ -563,6 +568,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
                 <div class="form-group">
                   <label>抽籤日期</label>
                   <input type="date" id="cfg-drawdate">
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+                    <span style="font-size:12px;color:var(--gray-600);white-space:nowrap">抽籤時間</span>
+                    <input type="time" id="cfg-drawtime" value="09:00"
+                      style="flex:1;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>最多隊伍數</label>
@@ -719,26 +729,43 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
 <!-- 球員編輯 -->
 <div class="overlay" id="member-modal">
   <div class="modal">
-    <div class="modal-title" id="mm-title">✏️ 編輯球員</div>
+    <div class="modal-title" id="mm-title">✏️ 編輯成員</div>
     <input type="hidden" id="mm-teamId">
     <input type="hidden" id="mm-memberIndex">
     <div class="form-grid">
+      <div class="form-group" style="grid-column:span 2">
+        <label>角色</label>
+        <select id="mm-role" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+          <optgroup label="隊職員">
+            <option value="領隊">領隊</option>
+            <option value="總教練">總教練</option>
+            <option value="教練">教練</option>
+            <option value="管理">管理</option>
+            <option value="訓練員">訓練員</option>
+            <option value="運動防護員">運動防護員</option>
+          </optgroup>
+          <optgroup label="球員">
+            <option value="隊長">隊長</option>
+            <option value="運動員">運動員</option>
+          </optgroup>
+        </select>
+      </div>
       <div class="form-group">
-        <label>姓名</label>
+        <label>姓名<span style="color:var(--accent)">*</span></label>
         <input type="text" id="mm-name" placeholder="姓名">
       </div>
       <div class="form-group">
         <label>背號</label>
-        <input type="text" id="mm-number" placeholder="背號" maxlength="3">
+        <input type="text" id="mm-number" placeholder="背號（球員填寫）" maxlength="3">
       </div>
       <div class="form-group" style="grid-column:span 2">
         <label>學號</label>
-        <input type="text" id="mm-sid" placeholder="學號">
+        <input type="text" id="mm-sid" placeholder="學號（球員填寫）">
       </div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('member-modal')">取消</button>
-      <button class="btn btn-primary" onclick="saveMember()">儲存</button>
+      <button class="btn btn-primary" id="mm-submit-btn" onclick="saveMember()">儲存</button>
     </div>
   </div>
 </div>
@@ -1073,7 +1100,10 @@ async function renderPlayers() {
           ${esc(t.teamname)}
           <span style="font-weight:400;color:var(--gray-400);font-size:12px;margin-left:6px">${statusBadge(t.status)}</span>
         </div>
-        <span style="font-size:12px;color:var(--gray-400)">${members.length} 人</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;color:var(--gray-400)">${members.length} 人</span>
+          <button class="btn btn-sm btn-primary" onclick="openAddMemberModal('${t.teamId}','${esc(t.teamname)}')">＋ 新增成員</button>
+        </div>
       </div>
       <table class="mem-table">
         <thead><tr>
@@ -1088,31 +1118,66 @@ async function renderPlayers() {
   body.innerHTML = html;
 }
 
+function openAddMemberModal(teamId, teamname) {
+  document.getElementById('mm-teamId').value      = teamId;
+  document.getElementById('mm-memberIndex').value = '-1'; // -1 = new
+  document.getElementById('mm-title').textContent = `➕ 新增成員 - ${teamname}`;
+  document.getElementById('mm-role').value   = '運動員';
+  document.getElementById('mm-name').value   = '';
+  document.getElementById('mm-number').value = '';
+  document.getElementById('mm-sid').value    = '';
+  document.getElementById('mm-submit-btn').textContent = '新增';
+  openModal('member-modal');
+}
+
 function openMemberModal(teamId, idx, role, name, number, sid) {
   document.getElementById('mm-teamId').value      = teamId;
   document.getElementById('mm-memberIndex').value = idx;
-  document.getElementById('mm-title').textContent = `✏️ 編輯 - ${role}`;
+  document.getElementById('mm-title').textContent = `✏️ 編輯成員`;
+  document.getElementById('mm-role').value   = role;
   document.getElementById('mm-name').value   = name;
   document.getElementById('mm-number').value = number;
   document.getElementById('mm-sid').value    = sid;
+  document.getElementById('mm-submit-btn').textContent = '儲存';
   openModal('member-modal');
 }
 
 async function saveMember() {
   const teamId = document.getElementById('mm-teamId').value;
   const idx    = parseInt(document.getElementById('mm-memberIndex').value);
+  const role   = document.getElementById('mm-role').value;
   const name   = document.getElementById('mm-name').value.trim();
   const number = document.getElementById('mm-number').value.trim();
   const sid    = document.getElementById('mm-sid').value.trim();
-  if (DB.members[teamId] && DB.members[teamId][idx]) {
-    DB.members[teamId][idx].name = name;
-    DB.members[teamId][idx].number = number;
-    DB.members[teamId][idx].studentId = sid;
+  if (!name) { toast('請輸入姓名'); return; }
+
+  const btn = document.getElementById('mm-submit-btn');
+  btn.disabled = true; btn.textContent = '處理中…';
+
+  const isNew = idx === -1;
+  if (isNew) {
+    // 新增
+    if (!DB.members[teamId]) DB.members[teamId] = [];
+    DB.members[teamId].push({ role, name, number, studentId: sid });
+    try {
+      const res = await apiPost({ action:'addMember', teamId, role, name, number, studentId:sid });
+      if (res && res.ok) toast('✅ 成員已新增', 'ok');
+      else toast('⚠️ 新增異常：' + (res&&res.error||''), 'warn');
+    } catch(e) { toast('⚠️ 網路錯誤', 'warn'); }
+  } else {
+    // 編輯
+    if (DB.members[teamId] && DB.members[teamId][idx]) {
+      Object.assign(DB.members[teamId][idx], { role, name, number, studentId: sid });
+    }
+    try {
+      await apiPost({ action:'updateMember', teamId, memberIndex:idx, role, name, number, studentId:sid });
+      toast('✅ 成員已儲存', 'ok');
+    } catch(e) { toast('⚠️ 網路錯誤', 'warn'); }
   }
-  try { await apiPost({ action:'updateMember', teamId, memberIndex:idx, name, number, studentId:sid }); } catch(e){}
+
+  btn.disabled = false;
   closeModal('member-modal');
   await renderPlayers();
-  toast('球員資料已儲存', 'ok');
 }
 
 async function deleteMemberRow(teamId, idx) {
@@ -1355,7 +1420,7 @@ async function deleteNews(rowIndex) {
 // ═══════════════════════════════════════════
 function renderSettings() {
   const s = DB.settings;
-  ['title','subtitle','venue','deadline','gamedate','gameend','drawdate','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
+  ['title','subtitle','venue','deadline','deadlinetime','gamedate','gameend','drawdate','drawtime','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
     const el = document.getElementById('cfg-'+k);
     if (el && s[k] !== undefined) el.value = s[k];
   });
@@ -1370,7 +1435,7 @@ async function saveSettings() {
   }
   al.className = 'alert';
   const s = {};
-  ['title','subtitle','venue','deadline','gamedate','gameend','drawdate','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
+  ['title','subtitle','venue','deadline','deadlinetime','gamedate','gameend','drawdate','drawtime','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
     const el = document.getElementById('cfg-'+k);
     if (el) s[k] = el.value;
   });
