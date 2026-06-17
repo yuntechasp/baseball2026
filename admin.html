@@ -1009,6 +1009,7 @@ function renderReview() {
       <td>
         <div class="btn-row">
           <button class="btn btn-sm" onclick="openReviewModal('${t.teamId}','${t.status}','${esc(t.note)}')">審核</button>
+          <button class="btn btn-sm" style="color:var(--blue)" onclick="printTeamForm('${t.teamId}')">🖨 報名表</button>
           <button class="btn btn-sm btn-danger" onclick="deleteTeam('${t.teamId}','${esc(t.teamname)}')">刪除</button>
         </div>
       </td>
@@ -1048,6 +1049,90 @@ async function submitReview() {
   closeModal('review-modal');
   renderAll();
   toast('審核狀態已更新', 'ok');
+}
+
+async function printTeamForm(teamId) {
+  const t = DB.teams.find(x => x.teamId === teamId);
+  if (!t) return;
+  const s = DB.settings || {};
+
+  // 載入球員名單
+  const res = await api({ action:'getMembers', teamId });
+  const members = (res.ok ? res.data : []) || [];
+
+  // 排序：職員在前，球員在後
+  const roleOrder = ['領隊','總教練','教練','管理','訓練員','運動防護員','隊長','運動員'];
+  members.sort((a,b) => {
+    const ai = roleOrder.indexOf(a.role); const bi = roleOrder.indexOf(b.role);
+    return (ai===-1?99:ai) - (bi===-1?99:bi);
+  });
+
+  const staff   = members.filter(m => !['隊長','運動員'].includes(m.role));
+  const players = members.filter(m => ['隊長','運動員'].includes(m.role));
+
+  const staffRows = staff.map((m,i) =>
+    `<tr><td>${i+1}</td><td>${m.role}</td><td>${m.name}</td><td>${m.number||''}</td></tr>`
+  ).join('') || '<tr><td colspan="4" style="text-align:center;color:#aaa">未填寫</td></tr>';
+
+  const playerRows = players.map((m,i) =>
+    `<tr${m.role==='隊長'?' style="background:#fffbf0"':''}><td>${m.role==='隊長'?'—':i}</td><td>${m.role==='隊長'?'★ 隊長':'運動員'}</td><td>${m.name}</td><td>${m.number||''}</td><td>${m.studentId||''}</td></tr>`
+  ).join('') || '<tr><td colspan="5" style="text-align:center;color:#aaa">未填寫</td></tr>';
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
+  <title>${t.teamname} 報名表</title>
+  <style>
+    body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;padding:24px;color:#333;max-width:900px;margin:0 auto}
+    h1{font-size:20px;text-align:center;color:#0d3b6e;margin-bottom:4px}
+    h2{font-size:14px;text-align:center;color:#555;font-weight:400;margin-bottom:20px}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;border:1px solid #ddd;padding:12px;border-radius:6px}
+    .info-item{font-size:13px}.info-label{color:#888;font-size:12px;margin-bottom:2px}
+    table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px}
+    th{background:#0d3b6e;color:white;padding:8px 10px;text-align:left}
+    td{padding:7px 10px;border-bottom:1px solid #eee}
+    tr:nth-child(even){background:#f9f9f9}
+    .section-title{font-size:14px;font-weight:700;color:#0d3b6e;border-left:4px solid #1a5fa8;padding-left:8px;margin:16px 0 8px}
+    @media print{@page{margin:1.5cm}button{display:none}}
+  </style></head><body>
+  <h1>${s.title||'比賽報名系統'}</h1>
+  <h2>報名表</h2>
+  <div class="info-grid">
+    <div class="info-item"><div class="info-label">學校/隊伍名稱</div><strong>${t.teamname}</strong></div>
+    <div class="info-item"><div class="info-label">運動種類</div>棒球</div>
+    <div class="info-item"><div class="info-label">報名組別</div>${t.group||'大專男生組'}</div>
+    <div class="info-item"><div class="info-label">領隊</div>${t.manager||''}</div>
+    <div class="info-item"><div class="info-label">領隊電話</div>${t.managerTel||''}</div>
+    <div class="info-item"><div class="info-label">教練</div>${t.coach||''}</div>
+    <div class="info-item"><div class="info-label">教練電話</div>${t.coachTel||''}</div>
+    <div class="info-item"><div class="info-label">聯絡信箱</div>${t.email||''}</div>
+    <div class="info-item"><div class="info-label">比賽日期</div>${(s.gamedate||'')+(s.gameend?' ~ '+s.gameend:'')}</div>
+    <div class="info-item"><div class="info-label">比賽場地</div>${s.venue||''}</div>
+  </div>
+  <div class="section-title">職員名單</div>
+  <table>
+    <thead><tr><th style="width:40px">序</th><th style="width:100px">職稱</th><th>姓名</th><th style="width:80px">背號</th></tr></thead>
+    <tbody>${staffRows}</tbody>
+  </table>
+  <div class="section-title">運動員名單（含隊長）</div>
+  <table>
+    <thead><tr><th style="width:40px">序</th><th style="width:80px">角色</th><th>姓名</th><th style="width:60px">背號</th><th style="width:120px">學號</th></tr></thead>
+    <tbody>${playerRows}</tbody>
+  </table>
+  <div style="margin-top:40px;display:flex;gap:30px;align-items:flex-end">
+    <div style="flex:1">
+      <p style="font-size:12px;color:#666;margin-bottom:6px">※ 本報名表所填資料均屬實，如有不實，願負一切法律責任。</p>
+      <p style="font-size:12px;color:#666">※ 報名截止日：${s.deadline||''}${s.deadlinetime?' '+s.deadlinetime:''}</p>
+    </div>
+    <div style="text-align:center;flex-shrink:0">
+      <div style="width:180px;height:100px;border:1px solid #333;border-radius:4px;margin-bottom:8px;display:flex;align-items:center;justify-content:center">
+        <span style="font-size:12px;color:#aaa">（蓋章處）</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:#333">學校或體育行政主管單位核章</div>
+    </div>
+  </div>
+  <p style="text-align:right;font-size:11px;color:#aaa;margin-top:24px">列印日期：${new Date().toLocaleDateString('zh-TW')}</p>
+  <script>window.onload=()=>window.print()<\/script>
+  </body></html>`);
 }
 
 async function deleteTeam(teamId, teamname) {
