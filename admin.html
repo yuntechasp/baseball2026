@@ -1067,16 +1067,27 @@ async function printTeamForm(teamId) {
     return (ai===-1?99:ai) - (bi===-1?99:bi);
   });
 
-  const staff   = members.filter(m => !['隊長','運動員'].includes(m.role));
-  const players = members.filter(m => ['隊長','運動員'].includes(m.role));
+  // 判斷是否為球員：隊長 or 運動員/運動員1/運動員2...
+  const isPlayer = m => m.role === '隊長' || m.role.startsWith('運動員');
+  const staff   = members.filter(m => !isPlayer(m));
+  const players = members.filter(m => isPlayer(m));
 
   const staffRows = staff.map((m,i) =>
     `<tr><td>${i+1}</td><td>${m.role}</td><td>${m.name}</td><td>${m.number||''}</td></tr>`
   ).join('') || '<tr><td colspan="4" style="text-align:center;color:#aaa">未填寫</td></tr>';
 
-  const playerRows = players.map((m,i) =>
-    `<tr${m.role==='隊長'?' style="background:#fffbf0"':''}><td>${m.role==='隊長'?'—':i}</td><td>${m.role==='隊長'?'★ 隊長':'運動員'}</td><td>${m.name}</td><td>${m.number||''}</td><td>${m.studentId||''}</td></tr>`
-  ).join('') || '<tr><td colspan="5" style="text-align:center;color:#aaa">未填寫</td></tr>';
+  let pNum = 0;
+  const playerRows = players.map((m) => {
+    const isCap = m.role === '隊長';
+    if (!isCap) pNum++;
+    return `<tr${isCap?' style="background:#fffbf0"':''}>
+      <td>${isCap ? '—' : pNum}</td>
+      <td>${isCap ? '★ 隊長' : '運動員'}</td>
+      <td>${m.name}</td>
+      <td>${m.number||''}</td>
+      <td>${m.studentId||''}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#aaa">未填寫</td></tr>';
 
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
