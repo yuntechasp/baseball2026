@@ -130,6 +130,14 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .rule-pdf-empty{font-size:12px;color:var(--gray-400);font-style:italic}
 
 /* ── 報名統計 ── */
+.reg-table{width:100%;border-collapse:collapse;font-size:13px}
+.reg-table th{background:var(--yt-teal-dark);color:#fff;padding:10px 14px;text-align:left;font-size:12px;font-weight:600}
+.reg-table td{padding:10px 14px;border-bottom:1px solid var(--gray-100)}
+.reg-table tr:last-child td{border-bottom:none}
+.reg-table tr:hover td{background:var(--gray-50)}
+.status-approved{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.status-pending{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#fff0e6;color:#c4601a;border:1px solid #fbcfa4}
+.status-rejected{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#fcebeb;color:#a32d2d;border:1px solid #f5c1c1}
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
 .stat-box{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);
   padding:16px 18px;box-shadow:var(--shadow-sm);text-align:center}
@@ -342,15 +350,19 @@ const REGISTER_URL = 'register.html';
           <div class="stat-label">最多收隊數</div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-body">
-          <div style="font-size:13px;font-weight:500;color:var(--gray-600);margin-bottom:12px">
-            已核准隊伍名單
-          </div>
-          <div class="teams-grid" id="teams-grid">
-            <div class="teams-empty">尚無已核准隊伍</div>
-          </div>
-        </div>
+      <div class="card" style="overflow:hidden">
+        <table class="reg-table">
+          <thead>
+            <tr>
+              <th style="width:44px">序</th>
+              <th>學校／隊伍名稱</th>
+              <th style="width:100px;text-align:center">報名狀態</th>
+            </tr>
+          </thead>
+          <tbody id="teams-tbody">
+            <tr><td colspan="3" class="teams-empty">尚無報名資料</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -487,7 +499,8 @@ function applySettings() {
   document.getElementById('hero-title').textContent  = title;
   document.getElementById('hero-sub').textContent    = s.subtitle || '';
   document.getElementById('hero-tag').textContent    = '棒球';
-  document.getElementById('hero-deadline').textContent = s.deadline || '—';
+  const deadlineTime = s.deadlinetime ? ' ' + s.deadlinetime : '';
+  document.getElementById('hero-deadline').textContent = s.deadline ? s.deadline + deadlineTime : '—';
   document.getElementById('hero-venue').textContent    = s.venue    || '—';
   document.getElementById('hero-gamedate').textContent = s.gamedate || '—';
   document.getElementById('hero-gameend').textContent  = s.gameend  || '—';
@@ -510,12 +523,19 @@ function applySettings() {
     if (navBtn)  navBtn.style.opacity  = '.5';
   }
 
-  // 倒數計時
+  // 倒數計時（含時間）
   if (s.deadline) {
-    const diff = new Date(s.deadline) - new Date();
+    const deadlineStr = s.deadlinetime
+      ? s.deadline + 'T' + s.deadlinetime + ':00'
+      : s.deadline + 'T23:59:59';
+    const diff = new Date(deadlineStr) - new Date();
     if (diff > 0) {
-      const days = Math.ceil(diff / 86400000);
-      document.getElementById('countdown-text').textContent = `距報名截止還有 ${days} 天`;
+      const days  = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
+      const text  = days > 0
+        ? `距報名截止還有 ${days} 天`
+        : `距報名截止還有 ${hours} 小時`;
+      document.getElementById('countdown-text').textContent = text;
     } else if (!isOpen) {
       document.getElementById('countdown-text').textContent = '報名已結束';
     }
@@ -674,16 +694,25 @@ function renderStats() {
   document.getElementById('stat-total').textContent    = teamsData.length;
   document.getElementById('stat-approved').textContent = approved.length;
 
-  const grid = document.getElementById('teams-grid');
-  if (!approved.length) {
-    grid.innerHTML = '<div class="teams-empty">尚無已核准隊伍</div>';
+  const tbody = document.getElementById('teams-tbody');
+  if (!teamsData.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="teams-empty" style="text-align:center;padding:24px;color:var(--gray-400)">尚無報名資料</td></tr>';
     return;
   }
-  grid.innerHTML = approved.map((t, i) => `
-    <div class="team-chip">
-      <div class="team-chip-num">${i+1}</div>
-      <div class="team-chip-name">${esc(t.teamname)}</div>
-    </div>`).join('');
+
+  const statusLabel = { approved:'已核准', pending:'待審核', rejected:'退件' };
+  const statusCls   = { approved:'status-approved', pending:'status-pending', rejected:'status-rejected' };
+
+  tbody.innerHTML = teamsData.map((t, i) => `
+    <tr>
+      <td style="color:var(--gray-400);font-weight:600">${i+1}</td>
+      <td style="font-weight:500;color:var(--gray-900)">${esc(t.teamname)}</td>
+      <td style="text-align:center">
+        <span class="${statusCls[t.status]||'status-pending'}">
+          ${statusLabel[t.status]||'待審核'}
+        </span>
+      </td>
+    </tr>`).join('');
 }
 
 
