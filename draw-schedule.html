@@ -202,8 +202,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
       🎰 線上抽籤
       <span class="tab-badge" id="draw-tab-badge" style="display:none">進行中</span>
     </button>
+    <button class="tab-btn" id="tab-bracket-btn" onclick="switchTab('bracket')">
+      🏆 賽程圖
+    </button>
     <button class="tab-btn" id="tab-schedule-btn" onclick="switchTab('schedule')">
-      🗓 賽程資訊
+      🗓 賽程時間表
     </button>
   </div>
 </div>
@@ -266,51 +269,48 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
 
     </div>
 
-    <!-- ══ Tab 二：賽程資訊 ══ -->
+    <!-- ══ Tab 二：賽程圖 ══ -->
+    <div id="tab-bracket" class="tab-panel">
+      <div style="background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:var(--radius);padding:10px 16px;font-size:13px;color:var(--yt-teal-dark);margin-bottom:20px;text-align:center;font-weight:500">
+        預賽：各組循環賽，每組取前二名晉級複賽 ｜ 複賽：單淘汰制
+      </div>
+
+      <!-- 預賽四組 -->
+      <div class="bracket-section-title">⚾ 預賽分組</div>
+      <div class="groups-row">
+        <div class="group-box">
+          <div class="group-box-title">⚾ A 組</div>
+          <div class="group-svg-wrap" id="svg-group-a"></div>
+        </div>
+        <div class="group-box">
+          <div class="group-box-title">⚾ B 組</div>
+          <div class="group-svg-wrap" id="svg-group-b"></div>
+        </div>
+      </div>
+      <div class="groups-row">
+        <div class="group-box">
+          <div class="group-box-title">⚾ C 組</div>
+          <div class="group-svg-wrap" id="svg-group-c"></div>
+        </div>
+        <div class="group-box">
+          <div class="group-box-title">⚾ D 組</div>
+          <div class="group-svg-wrap" id="svg-group-d"></div>
+        </div>
+      </div>
+
+      <!-- 複賽淘汰圖 -->
+      <div class="bracket-section-title" style="margin-top:8px">🏆 複賽對戰圖</div>
+      <div class="elim-box">
+        <div class="elim-box-title">🏆 八強 → 四強 → 季軍賽 / 決賽</div>
+        <div class="elim-svg-wrap" id="svg-elim"></div>
+      </div>
+    </div>
+
+    <!-- ══ Tab 三：賽程時間表 ══ -->
     <div id="tab-schedule" class="tab-panel">
       <div style="text-align:center;margin-bottom:20px">
         <span class="status-tag" id="sched-status-tag">載入中</span>
       </div>
-
-      <!-- 賽制說明圖 -->
-      <div class="bracket-section">
-        <div class="bracket-section-title">🏆 賽制總覽</div>
-        <div style="background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:var(--radius);padding:10px 16px;font-size:13px;color:var(--yt-teal-dark);margin-bottom:16px;text-align:center;font-weight:500">
-          預賽：各組循環賽，每組取前二名晉級複賽 ｜ 複賽：單淘汰制
-        </div>
-
-        <!-- 預賽四組 -->
-        <div class="bracket-section-title" style="font-size:13px">⚾ 預賽分組</div>
-        <div class="groups-row">
-          <div class="group-box">
-            <div class="group-box-title">⚾ A 組</div>
-            <div class="group-svg-wrap" id="svg-group-a"></div>
-          </div>
-          <div class="group-box">
-            <div class="group-box-title">⚾ B 組</div>
-            <div class="group-svg-wrap" id="svg-group-b"></div>
-          </div>
-        </div>
-        <div class="groups-row">
-          <div class="group-box">
-            <div class="group-box-title">⚾ C 組</div>
-            <div class="group-svg-wrap" id="svg-group-c"></div>
-          </div>
-          <div class="group-box">
-            <div class="group-box-title">⚾ D 組</div>
-            <div class="group-svg-wrap" id="svg-group-d"></div>
-          </div>
-        </div>
-
-        <!-- 複賽淘汰圖 -->
-        <div class="bracket-section-title" style="font-size:13px;margin-top:8px">🏆 複賽對戰圖</div>
-        <div class="elim-box">
-          <div class="elim-box-title">🏆 八強 → 四強 → 季軍賽 / 決賽</div>
-          <div class="elim-svg-wrap" id="svg-elim"></div>
-        </div>
-      </div>
-
-      <!-- 詳細賽程表 -->
       <div id="groups-area">
         <div class="loading"><div class="spinner"></div><div>載入賽程中…</div></div>
       </div>
@@ -382,8 +382,7 @@ async function api(params) {
 
   // 若 URL 帶 #schedule 則切到賽程頁
   if (location.hash === '#schedule') switchTab('schedule');
-  // 若預設在賽程 tab，立即繪製
-  else drawBrackets();
+  else if (location.hash === '#bracket') switchTab('bracket');
 })();
 
 function applySettings() {
@@ -403,8 +402,7 @@ function switchTab(tab) {
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('tab-'+tab+'-btn').classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  // 切換到賽程頁時繪製賽程圖
-  if (tab === 'schedule') setTimeout(drawBrackets, 50);
+  if (tab === 'bracket') setTimeout(drawBrackets, 50);
 }
 
 // ════════════════════════════════

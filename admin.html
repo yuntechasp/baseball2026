@@ -237,7 +237,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 
 <script>
 // ── 設定：換成您的 Apps Script 網址 ──
-const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKqT9gMboDs3_l0_pfattRc-7pmcQ1MVtIJpz_ijClORWs/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0moc322x0N3igfZqWBA-qNiAdLalNOoxjDzl5Go3GJYix/exec';
 </script>
 
 <!-- ══ 登入畫面 ══ -->
@@ -417,6 +417,16 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
                   <option value="3">3 組</option>
                   <option value="4">4 組</option>
                 </select>
+              </div>
+              <div>
+                <div style="font-size:12px;color:var(--gray-400);margin-bottom:4px">⏰ 排程自動開放</div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                  <input type="date" id="draw-sched-date" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                  <input type="time" id="draw-sched-time" value="09:00" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                  <button class="btn btn-sm" style="background:#f0f4ff;color:var(--blue);border-color:var(--blue)" onclick="setDrawSchedule()">設定</button>
+                  <button class="btn btn-sm" style="color:var(--gray-400)" onclick="clearDrawSchedule()">清除</button>
+                </div>
+                <div id="draw-sched-status" style="font-size:11px;color:var(--gray-400);margin-top:4px"></div>
               </div>
               <div style="display:flex;gap:8px;margin-top:16px">
                 <button class="btn btn-primary btn-sm" onclick="adminToggleDraw()">儲存開關</button>
@@ -1926,6 +1936,7 @@ async function adminLoadDraw() {
       DB.matches     = res.matches || [];
       const sel = document.getElementById('draw-open-select');
       if (sel) sel.value = res.drawOpen ? 'true' : 'false';
+    updateDrawSchedStatus(); checkDrawSchedule();
       const gsel = document.getElementById('draw-group-select');
       if (gsel && res.groupCount) gsel.value = String(res.groupCount);
 
@@ -2020,6 +2031,76 @@ async function adminToggleDraw() {
   } catch(e){}
   toast(val === 'true' ? '抽籤已開放（' + group + '組），各隊可至主頁抽籤' : '抽籤已關閉', 'ok');
 }
+
+// ── 抽籤排程自動開放 ────────────────────────
+const DRAW_SCHED_KEY = 'draw_schedule_v1';
+
+function setDrawSchedule() {
+  const d = document.getElementById('draw-sched-date').value;
+  const t = document.getElementById('draw-sched-time').value;
+  if (!d || !t) { toast('請選擇日期和時間'); return; }
+  const dt = new Date(d + 'T' + t + ':00');
+  if (dt <= new Date()) { toast('請選擇未來的時間'); return; }
+  localStorage.setItem(DRAW_SCHED_KEY, JSON.stringify({
+    datetime: dt.toISOString(),
+    group: document.getElementById('draw-group-select').value
+  }));
+  updateDrawSchedStatus();
+  toast('✅ 排程已設定，系統將在指定時間自動開放抽籤', 'ok');
+}
+
+function clearDrawSchedule() {
+  localStorage.removeItem(DRAW_SCHED_KEY);
+  updateDrawSchedStatus();
+  toast('排程已清除');
+}
+
+function updateDrawSchedStatus() {
+  const el = document.getElementById('draw-sched-status');
+  const raw = localStorage.getItem(DRAW_SCHED_KEY);
+  if (!raw) { el.textContent = '尚未設定排程'; return; }
+  try {
+    const { datetime, group } = JSON.parse(raw);
+    const dt = new Date(datetime);
+    const now = new Date();
+    if (dt <= now) {
+      el.textContent = '⚠️ 排程時間已過，請重新設定';
+      el.style.color = 'var(--accent)';
+    } else {
+      const diff = Math.round((dt - now) / 60000);
+      const hrs = Math.floor(diff / 60), mins = diff % 60;
+      el.textContent = '⏰ 將於 ' + dt.toLocaleString('zh-TW') + ' 自動開放（' + group + '組）｜距離 ' + (hrs>0?hrs+'小時':'') + mins + '分';
+      el.style.color = 'var(--blue)';
+      // Fill date/time fields
+      document.getElementById('draw-sched-date').value = datetime.slice(0,10);
+      document.getElementById('draw-sched-time').value = datetime.slice(11,16);
+    }
+  } catch(e) { el.textContent = ''; }
+}
+
+// 每分鐘檢查排程
+function checkDrawSchedule() {
+  const raw = localStorage.getItem(DRAW_SCHED_KEY);
+  if (!raw) return;
+  try {
+    const { datetime, group } = JSON.parse(raw);
+    const dt = new Date(datetime);
+    if (new Date() >= dt) {
+      // 時間到，自動開放
+      localStorage.removeItem(DRAW_SCHED_KEY);
+      document.getElementById('draw-open-select').value = 'true';
+      document.getElementById('draw-group-select').value = group;
+      adminToggleDraw().then(() => {
+        toast('🎰 排程時間到！抽籤已自動開放（' + group + '組）', 'ok');
+        updateDrawSchedStatus();
+      });
+    } else {
+      updateDrawSchedStatus();
+    }
+  } catch(e) {}
+}
+
+setInterval(checkDrawSchedule, 30000); // 每30秒檢查一次
 
 async function adminAutoDrawAll() {
   if (!confirm('確定要自動完成所有隊伍的抽籤？')) return;
