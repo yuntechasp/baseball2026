@@ -167,7 +167,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 <body>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKqT9gMboDs3_l0_pfattRc-7pmcQ1MVtIJpz_ijClORWs/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0moc322x0N3igfZqWBA-qNiAdLalNOoxjDzl5Go3GJYix/exec';
 </script>
 
 <div id="loading-init" class="loading show">
@@ -435,7 +435,7 @@ function applySettings() {
   document.getElementById('hd-gamedate').textContent = s.gamedate || '—';
   document.getElementById('hd-gameend').textContent  = s.gameend  || '—';
   // 繳費資訊
-  documentdocument.getElementById('pi-bank').textContent    = s.bankName    || '請洽主辦單位';
+  document.getElementById('pi-bank').textContent    = s.bankName    || '請洽主辦單位';
   document.getElementById('pi-account').textContent = s.bankAccount || '—';
   document.getElementById('pi-fee').textContent     = s.regFee ? 'NT$ ' + Number(s.regFee).toLocaleString() : '請洽主辦單位';
   document.getElementById('pi-note').textContent    = s.regFeeNote || '';
