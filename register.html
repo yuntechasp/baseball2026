@@ -435,7 +435,7 @@ function applySettings() {
   document.getElementById('hd-gamedate').textContent = s.gamedate || '—';
   document.getElementById('hd-gameend').textContent  = s.gameend  || '—';
   // 繳費資訊
-  document.getElementById('pi-bank').textContent    = s.bankName    || '請洽主辦單位';
+  documentdocument.getElementById('pi-bank').textContent    = s.bankName    || '請洽主辦單位';
   document.getElementById('pi-account').textContent = s.bankAccount || '—';
   document.getElementById('pi-fee').textContent     = s.regFee ? 'NT$ ' + Number(s.regFee).toLocaleString() : '請洽主辦單位';
   document.getElementById('pi-note').textContent    = s.regFeeNote || '';
@@ -532,6 +532,33 @@ async function submitReg() {
       members,
     });
     if (res.ok) {
+      // 暫存報名資料供列印使用
+      window._submittedData = {
+        teamname: v('f-teamname'), sport: v('f-sport'), group: v('f-group'),
+        manager: v('f-manager'), coach: v('f-coach'),
+        coachTel: v('f-coach-tel'), email: v('f-email'),
+        captain: { name: v('m0-name'), num: v('m0-num'), sid: v('m0-sid') },
+        staff: (() => {
+          const rows = [];
+          for (let i=0; i<8; i++) {
+            const title = document.getElementById('s'+i+'-title') ? document.getElementById('s'+i+'-title').value : '';
+            const name  = document.getElementById('s'+i+'-name') ? document.getElementById('s'+i+'-name').value.trim() : '';
+            const tel   = document.getElementById('s'+i+'-tel')  ? document.getElementById('s'+i+'-tel').value.trim()  : '';
+            if (name) rows.push({ title, name, tel });
+          }
+          return rows;
+        })(),
+        members: (() => {
+          const rows = [];
+          for (let i=1; i<=24; i++) {
+            const n   = document.getElementById('m'+i+'-name') ? document.getElementById('m'+i+'-name').value.trim() : '';
+            const num = document.getElementById('m'+i+'-num')  ? document.getElementById('m'+i+'-num').value.trim()  : '';
+            const sid = document.getElementById('m'+i+'-sid')  ? document.getElementById('m'+i+'-sid').value.trim()  : '';
+            if (n) rows.push({ n, num, sid });
+          }
+          return rows;
+        })(),
+      };
       document.getElementById('reg-form').style.display = 'none';
       document.getElementById('reg-success').style.display = 'block';
       // 預填隊名到繳費頁
@@ -553,32 +580,46 @@ async function submitReg() {
 // ── 列印報名表 PDF ────────────────────────────
 function printRegForm() {
   const s = settings;
-  const teamname  = document.getElementById('f-teamname').value.trim();
-  const coach     = document.getElementById('f-coach').value.trim();
-  const coachTel  = document.getElementById('f-coach-tel').value.trim();
-  const email     = document.getElementById('f-email').value.trim();
+  // 優先使用暫存的報名資料（送出後表單已隱藏）
+  const d = window._submittedData || {};
+  const teamname = d.teamname || document.getElementById('f-teamname').value.trim();
+  const coach    = d.coach    || document.getElementById('f-coach').value.trim();
+  const coachTel = d.coachTel || document.getElementById('f-coach-tel').value.trim();
+  const email    = d.email    || document.getElementById('f-email').value.trim();
+  const manager  = d.manager  || document.getElementById('f-manager') ? document.getElementById('f-manager').value.trim() : '';
 
   // 職員
   let staffRows = '';
-  for (let i = 0; i < 8; i++) {
-    const title = document.getElementById('s'+i+'-title') ? document.getElementById('s'+i+'-title').value : '';
-    const name  = document.getElementById('s'+i+'-name') ? document.getElementById('s'+i+'-name').value.trim() : '';
-    const tel   = document.getElementById('s'+i+'-tel')  ? document.getElementById('s'+i+'-tel').value.trim()  : '';
-    if (name) {
-      staffRows += '<tr><td>'+(i+1)+'</td><td>'+title+'</td><td>'+name+'</td><td>'+tel+'</td></tr>';
+  if (d.staff && d.staff.length) {
+    d.staff.forEach((st, i) => {
+      staffRows += '<tr><td>'+(i+1)+'</td><td>'+st.title+'</td><td>'+st.name+'</td><td>'+st.tel+'</td></tr>';
+    });
+  } else {
+    for (let i = 0; i < 8; i++) {
+      const title = document.getElementById('s'+i+'-title') ? document.getElementById('s'+i+'-title').value : '';
+      const name  = document.getElementById('s'+i+'-name') ? document.getElementById('s'+i+'-name').value.trim() : '';
+      const tel   = document.getElementById('s'+i+'-tel')  ? document.getElementById('s'+i+'-tel').value.trim()  : '';
+      if (name) staffRows += '<tr><td>'+(i+1)+'</td><td>'+title+'</td><td>'+name+'</td><td>'+tel+'</td></tr>';
     }
   }
 
   // 運動員
-  const capName = document.getElementById('m0-name') ? document.getElementById('m0-name').value.trim() : '';
-  const capNum  = document.getElementById('m0-num')  ? document.getElementById('m0-num').value.trim()  : '';
-  const capSid  = document.getElementById('m0-sid')  ? document.getElementById('m0-sid').value.trim()  : '';
+  const cap = d.captain || {};
+  const capName = cap.name || (document.getElementById('m0-name') ? document.getElementById('m0-name').value.trim() : '');
+  const capNum  = cap.num  || (document.getElementById('m0-num')  ? document.getElementById('m0-num').value.trim()  : '');
+  const capSid  = cap.sid  || (document.getElementById('m0-sid')  ? document.getElementById('m0-sid').value.trim()  : '');
   let memberRows = '<tr style="background:#fffbf0"><td>—</td><td>★ 隊長</td><td>'+capName+'</td><td>'+capNum+'</td><td>'+capSid+'</td></tr>';
-  for (let i = 1; i <= 24; i++) {
-    const n = document.getElementById('m'+i+'-name') ? document.getElementById('m'+i+'-name').value.trim() : '';
-    const num = document.getElementById('m'+i+'-num') ? document.getElementById('m'+i+'-num').value.trim() : '';
-    const sid = document.getElementById('m'+i+'-sid') ? document.getElementById('m'+i+'-sid').value.trim() : '';
-    if (n) memberRows += '<tr><td>'+i+'</td><td>運動員</td><td>'+n+'</td><td>'+num+'</td><td>'+sid+'</td></tr>';
+  if (d.members && d.members.length) {
+    d.members.forEach((m, i) => {
+      memberRows += '<tr><td>'+(i+1)+'</td><td>運動員</td><td>'+m.n+'</td><td>'+m.num+'</td><td>'+m.sid+'</td></tr>';
+    });
+  } else {
+    for (let i = 1; i <= 24; i++) {
+      const n   = document.getElementById('m'+i+'-name') ? document.getElementById('m'+i+'-name').value.trim() : '';
+      const num = document.getElementById('m'+i+'-num')  ? document.getElementById('m'+i+'-num').value.trim()  : '';
+      const sid = document.getElementById('m'+i+'-sid')  ? document.getElementById('m'+i+'-sid').value.trim()  : '';
+      if (n) memberRows += '<tr><td>'+i+'</td><td>運動員</td><td>'+n+'</td><td>'+num+'</td><td>'+sid+'</td></tr>';
+    }
   }
 
   const w = window.open('', '_blank');
