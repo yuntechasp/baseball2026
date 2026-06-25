@@ -379,10 +379,11 @@ async function api(params) {
   renderDraw();
   renderBracket();
   renderScheduleTab();
-  drawBrackets();
 
   // 若 URL 帶 #schedule 則切到賽程頁
   if (location.hash === '#schedule') switchTab('schedule');
+  // 若預設在賽程 tab，立即繪製
+  else drawBrackets();
 })();
 
 function applySettings() {
@@ -402,6 +403,8 @@ function switchTab(tab) {
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('tab-'+tab+'-btn').classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
+  // 切換到賽程頁時繪製賽程圖
+  if (tab === 'schedule') setTimeout(drawBrackets, 50);
 }
 
 // ════════════════════════════════
