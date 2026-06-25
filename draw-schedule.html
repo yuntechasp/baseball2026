@@ -133,6 +133,23 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .score-cell{font-weight:700;color:var(--blue-dark);font-size:15px;text-align:center}
 .pending-tag{color:var(--gray-400);font-size:12px}
 
+/* ── 賽程圖 ── */
+.bracket-section{margin-bottom:32px}
+.bracket-section-title{font-size:15px;font-weight:700;color:var(--yt-teal-dark);
+  display:flex;align-items:center;gap:8px;margin-bottom:16px;
+  padding-bottom:8px;border-bottom:2px solid var(--yt-teal-light)}
+.groups-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:640px){.groups-row{grid-template-columns:1fr}}
+.group-box{background:var(--white);border:1.5px solid var(--yt-teal-border);
+  border-radius:var(--radius-lg);overflow:hidden}
+.group-box-title{background:var(--yt-teal-dark);color:#fff;font-size:13px;font-weight:700;
+  padding:8px 14px;display:flex;align-items:center;gap:6px}
+.group-svg-wrap{padding:12px;display:flex;justify-content:center}
+.elim-box{background:var(--white);border:1.5px solid var(--yt-teal-border);
+  border-radius:var(--radius-lg);overflow:hidden;margin-bottom:16px}
+.elim-box-title{background:var(--yt-teal-dark);color:#fff;font-size:13px;font-weight:700;padding:8px 14px}
+.elim-svg-wrap{padding:16px;display:flex;justify-content:center;overflow-x:auto}
+
 /* ── Loading ── */
 .loading{text-align:center;padding:40px;color:var(--gray-400)}
 .spinner{display:inline-block;width:28px;height:28px;border:2px solid var(--gray-200);
@@ -254,6 +271,46 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
       <div style="text-align:center;margin-bottom:20px">
         <span class="status-tag" id="sched-status-tag">載入中</span>
       </div>
+
+      <!-- 賽制說明圖 -->
+      <div class="bracket-section">
+        <div class="bracket-section-title">🏆 賽制總覽</div>
+        <div style="background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:var(--radius);padding:10px 16px;font-size:13px;color:var(--yt-teal-dark);margin-bottom:16px;text-align:center;font-weight:500">
+          預賽：各組循環賽，每組取前二名晉級複賽 ｜ 複賽：單淘汰制
+        </div>
+
+        <!-- 預賽四組 -->
+        <div class="bracket-section-title" style="font-size:13px">⚾ 預賽分組</div>
+        <div class="groups-row">
+          <div class="group-box">
+            <div class="group-box-title">⚾ A 組</div>
+            <div class="group-svg-wrap" id="svg-group-a"></div>
+          </div>
+          <div class="group-box">
+            <div class="group-box-title">⚾ B 組</div>
+            <div class="group-svg-wrap" id="svg-group-b"></div>
+          </div>
+        </div>
+        <div class="groups-row">
+          <div class="group-box">
+            <div class="group-box-title">⚾ C 組</div>
+            <div class="group-svg-wrap" id="svg-group-c"></div>
+          </div>
+          <div class="group-box">
+            <div class="group-box-title">⚾ D 組</div>
+            <div class="group-svg-wrap" id="svg-group-d"></div>
+          </div>
+        </div>
+
+        <!-- 複賽淘汰圖 -->
+        <div class="bracket-section-title" style="font-size:13px;margin-top:8px">🏆 複賽對戰圖</div>
+        <div class="elim-box">
+          <div class="elim-box-title">🏆 八強 → 四強 → 季軍賽 / 決賽</div>
+          <div class="elim-svg-wrap" id="svg-elim"></div>
+        </div>
+      </div>
+
+      <!-- 詳細賽程表 -->
       <div id="groups-area">
         <div class="loading"><div class="spinner"></div><div>載入賽程中…</div></div>
       </div>
@@ -322,6 +379,7 @@ async function api(params) {
   renderDraw();
   renderBracket();
   renderScheduleTab();
+  drawBrackets();
 
   // 若 URL 帶 #schedule 則切到賽程頁
   if (location.hash === '#schedule') switchTab('schedule');
@@ -619,6 +677,156 @@ function buildSVG(group,matches){
     if(line2)svg+='<text x="'+pos.x+'" y="'+(pos.y-boxH/2+42)+'" text-anchor="middle" font-size="12" font-weight="700" fill="'+(isEmpty?'#888780':'var(--yt-teal-dark)')+'">'+esc(line2)+'</text>';
   });
   svg+='</svg>';
+  return svg;
+}
+
+// ── 賽程圖繪製 ──────────────────────────────
+function drawBrackets() {
+  const slotMap = {};
+  drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
+
+  // 各組隊伍名稱（抽籤後顯示，否則顯示籤號）
+  const groupTeams = {
+    A: [slotMap[1]||'A組第1籤', slotMap[2]||'A組第2籤', slotMap[3]||'A組第3籤', slotMap[4]||'A組第4籤'],
+    B: [slotMap[5]||'B組第1籤', slotMap[6]||'B組第2籤', slotMap[7]||'B組第3籤', slotMap[8]||'B組第4籤'],
+    C: [slotMap[9]||'C組第1籤', slotMap[10]||'C組第2籤', slotMap[11]||'C組第3籤', slotMap[12]||'C組第4籤'],
+    D: [slotMap[13]||'D組第1籤', slotMap[14]||'D組第2籤', slotMap[15]||'D組第3籤', slotMap[16]||'D組第4籤'],
+  };
+
+  ['A','B','C','D'].forEach(g => {
+    const el = document.getElementById('svg-group-' + g.toLowerCase());
+    if (el) el.innerHTML = drawGroupSVG(groupTeams[g]);
+  });
+
+  const elimEl = document.getElementById('svg-elim');
+  if (elimEl) elimEl.innerHTML = drawElimSVG(groupTeams);
+}
+
+function drawGroupSVG(teams) {
+  const W = 260, H = 220;
+  const pos = [
+    {x:30,  y:30},   // TL
+    {x:230, y:30},   // TR
+    {x:230, y:190},  // BR
+    {x:30,  y:190},  // BL
+  ];
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:260px">`;
+  // Cross lines (dashed)
+  svg += `<line x1="${pos[0].x}" y1="${pos[0].y}" x2="${pos[2].x}" y2="${pos[2].y}" stroke="#9FD9CE" stroke-width="1.5" stroke-dasharray="5,4"/>`;
+  svg += `<line x1="${pos[1].x}" y1="${pos[1].y}" x2="${pos[3].x}" y2="${pos[3].y}" stroke="#9FD9CE" stroke-width="1.5" stroke-dasharray="5,4"/>`;
+  // Border lines
+  [[0,1],[1,2],[2,3],[3,0]].forEach(([a,b]) => {
+    svg += `<line x1="${pos[a].x}" y1="${pos[a].y}" x2="${pos[b].x}" y2="${pos[b].y}" stroke="#00695C" stroke-width="1.5"/>`;
+  });
+  // Team labels
+  const align = ['start','end','end','start'];
+  const dy    = [-14, -14, 14, 14];
+  teams.forEach((name, i) => {
+    const p = pos[i];
+    const anchor = align[i];
+    const short  = name.length > 6 ? name.slice(0,6)+'…' : name;
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#00695C"/>`;
+    svg += `<text x="${p.x + (anchor==='start'?8:-8)}" y="${p.y + dy[i]/2 + 5}" text-anchor="${anchor}" font-size="12" font-weight="600" fill="#00695C" font-family="'Microsoft JhengHei',sans-serif">${esc(short)}</text>`;
+  });
+  svg += '</svg>';
+  return svg;
+}
+
+function drawElimSVG(groupTeams) {
+  const W = 700, H = 320;
+  // 8強位置（底部）
+  const r8 = [
+    {x:60,  label:'A1', team: groupTeams.A[0]+'\n第1名'},
+    {x:175, label:'B2', team: groupTeams.B[1]+'\n第2名'},
+    {x:290, label:'C1', team: groupTeams.C[0]+'\n第1名'},  // 依對戰表Q3:C1 vs B2
+    {x:405, label:'D2', team: groupTeams.D[1]+'\n第2名'},  // Q1:A1 vs D2
+    {x:520, label:'B1', team: groupTeams.B[0]+'\n第1名'},
+    {x:635, label:'A2', team: groupTeams.A[1]+'\n第2名'},
+  ];
+  // 依照賽程：Q1=A1vD2, Q2=B1vC2, Q3=C1vB2, Q4=D1vA2
+  const q8 = [
+    {x:60,  label:'A1'},
+    {x:175, label:'D2'},
+    {x:290, label:'B1'},
+    {x:405, label:'C2'},
+    {x:520, label:'C1'},
+    {x:635, label:'B2'},
+  ];
+  // 重新依對戰排列：Q1(A1,D2) Q2(B1,C2) Q3(C1,B2) Q4(D1,A2)
+  const q8pos = [
+    {x:60,  name:'A1', full: groupTeams.A[0]},
+    {x:175, name:'D2', full: groupTeams.D[1]},
+    {x:290, name:'B1', full: groupTeams.B[0]},
+    {x:405, name:'C2', full: groupTeams.C[1]},
+    {x:520, name:'C1', full: groupTeams.C[0]},
+    {x:635, name:'B2', full: groupTeams.B[1]},
+  ];
+  // 修正：8強是8隊，4場準決賽
+  const q8all = [
+    {x:50,  name:'A1', full: groupTeams.A[0]},
+    {x:150, name:'D2', full: groupTeams.D[1]},
+    {x:250, name:'B1', full: groupTeams.B[0]},
+    {x:350, name:'C2', full: groupTeams.C[1]},
+    {x:450, name:'C1', full: groupTeams.C[0]},
+    {x:550, name:'B2', full: groupTeams.B[1]},
+    {x:650, name:'D1', full: groupTeams.D[0]},
+    {x:750, name:'A2', full: groupTeams.A[1]},
+  ];
+
+  const EW = 820, EH = 340;
+  let svg = `<svg viewBox="0 0 ${EW} ${EH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:600px">`;
+  svg += `<rect width="${EW}" height="${EH}" fill="#f7f6f3" rx="10"/>`;
+
+  // 8強（底部 y=290）
+  const y8 = 290, y4 = 190, yS = 110, yF = 40;
+  const pairs = [[0,1],[2,3],[4,5],[6,7]];
+  // 4場準決賽的中點 x
+  const q4x = pairs.map(([a,b]) => (q8all[a].x + q8all[b].x) / 2);
+
+  // 繪製底部8隊
+  q8all.forEach((t, i) => {
+    const short = t.full.length > 5 ? t.full.slice(0,5)+'…' : t.full;
+    svg += `<rect x="${t.x-38}" y="${y8-18}" width="76" height="36" rx="6" fill="white" stroke="#9FD9CE" stroke-width="1.5"/>`;
+    svg += `<text x="${t.x}" y="${y8-4}" text-anchor="middle" font-size="10" fill="#888" font-family="'Microsoft JhengHei',sans-serif">${t.name}</text>`;
+    svg += `<text x="${t.x}" y="${y8+12}" text-anchor="middle" font-size="11" font-weight="600" fill="#00695C" font-family="'Microsoft JhengHei',sans-serif">${esc(short)}</text>`;
+  });
+
+  // 4場準決賽連線 + 框
+  pairs.forEach(([a,b], qi) => {
+    const xa = q8all[a].x, xb = q8all[b].x, mx = q4x[qi];
+    svg += `<line x1="${xa}" y1="${y8-18}" x2="${xa}" y2="${y4+18}" stroke="#9FD9CE" stroke-width="1.5"/>`;
+    svg += `<line x1="${xb}" y1="${y8-18}" x2="${xb}" y2="${y4+18}" stroke="#9FD9CE" stroke-width="1.5"/>`;
+    svg += `<line x1="${xa}" y1="${y4+18}" x2="${xb}" y2="${y4+18}" stroke="#9FD9CE" stroke-width="1.5"/>`;
+    svg += `<rect x="${mx-42}" y="${y4-18}" width="84" height="36" rx="6" fill="white" stroke="#00876f" stroke-width="1.5"/>`;
+    svg += `<text x="${mx}" y="${y4-4}" text-anchor="middle" font-size="10" fill="#888" font-family="'Microsoft JhengHei',sans-serif">Q${qi+1}勝隊</text>`;
+    svg += `<text x="${mx}" y="${y4+12}" text-anchor="middle" font-size="11" font-weight="600" fill="#00695C" font-family="'Microsoft JhengHei',sans-serif">待定</text>`;
+  });
+
+  // 4強：兩場（(Q1勝vsQ2勝) 和 (Q3勝vsQ4勝)）
+  const sf = [[0,1],[2,3]];
+  const sfx = sf.map(([a,b]) => (q4x[a]+q4x[b])/2);
+
+  sf.forEach(([a,b], si) => {
+    const xa = q4x[a], xb = q4x[b], mx = sfx[si];
+    svg += `<line x1="${xa}" y1="${y4-18}" x2="${xa}" y2="${yS+18}" stroke="#9FD9CE" stroke-width="1.5"/>`;
+    svg += `<line x1="${xb}" y1="${y4-18}" x2="${xb}" y2="${yS+18}" stroke="#9FD9CE" stroke-width="1.5"/>`;
+    svg += `<line x1="${xa}" y1="${yS+18}" x2="${xb}" y2="${yS+18}" stroke="#9FD9CE" stroke-width="1.5"/>`;
+    svg += `<rect x="${mx-42}" y="${yS-18}" width="84" height="36" rx="6" fill="white" stroke="#F47920" stroke-width="1.5"/>`;
+    svg += `<text x="${mx}" y="${yS-4}" text-anchor="middle" font-size="10" fill="#888" font-family="'Microsoft JhengHei',sans-serif">${si===0?'季軍賽':'季軍賽'}</text>`;
+    svg += `<text x="${mx}" y="${yS+12}" text-anchor="middle" font-size="11" font-weight="600" fill="#c4601a" font-family="'Microsoft JhengHei',sans-serif">${si===0?'S1敗隊':'S2敗隊'}</text>`;
+  });
+
+  // 決賽
+  const fx = EW/2;
+  [0,1].forEach(si => {
+    svg += `<line x1="${sfx[si]}" y1="${yS-18}" x2="${sfx[si]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.5"/>`;
+  });
+  svg += `<line x1="${sfx[0]}" y1="${yF+18}" x2="${sfx[1]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.5"/>`;
+  svg += `<rect x="${fx-50}" y="${yF-22}" width="100" height="44" rx="8" fill="#00695C" stroke="#00695C" stroke-width="2"/>`;
+  svg += `<text x="${fx}" y="${yF-6}" text-anchor="middle" font-size="11" fill="white" font-family="'Microsoft JhengHei',sans-serif">🏆 決賽</text>`;
+  svg += `<text x="${fx}" y="${yF+12}" text-anchor="middle" font-size="12" font-weight="700" fill="white" font-family="'Microsoft JhengHei',sans-serif">冠亞軍</text>`;
+
+  svg += '</svg>';
   return svg;
 }
 
