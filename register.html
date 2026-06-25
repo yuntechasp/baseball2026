@@ -411,12 +411,12 @@ async function apiPost(body) {
   try {
     const res = await api({ action:'getAllData' });
     if (res.ok) {
-      settings = res.settings || {};
-      applySettings();
+      settings  = res.settings || {};
+      const teams = res.teams || [];
+      applySettings(teams);
       document.getElementById('loading-init').classList.remove('show');
       document.getElementById('app').style.display = 'block';
       buildMemberRows();
-      // 從 URL 參數決定預設 tab
       if (location.hash === '#pay') switchTab('pay');
     }
   } catch(e) {
@@ -425,12 +425,12 @@ async function apiPost(body) {
   }
 })();
 
-function applySettings() {
+function applySettings(teams) {
   const s = settings;
   document.title = (s.title || '比賽報名') + ' — 報名';
   document.getElementById('hd-title').textContent    = s.title    || '比賽報名系統';
   document.getElementById('hd-sub').textContent      = s.subtitle || '';
-  document.getElementById('hd-deadline').textContent = s.deadline || '—';
+  document.getElementById('hd-deadline').textContent = (s.deadline || '—') + (s.deadlinetime ? ' ' + s.deadlinetime : '');
   document.getElementById('hd-venue').textContent    = s.venue    || '—';
   document.getElementById('hd-gamedate').textContent = s.gamedate || '—';
   document.getElementById('hd-gameend').textContent  = s.gameend  || '—';
@@ -439,11 +439,33 @@ function applySettings() {
   document.getElementById('pi-account').textContent = s.bankAccount || '—';
   document.getElementById('pi-fee').textContent     = s.regFee ? 'NT$ ' + Number(s.regFee).toLocaleString() : '請洽主辦單位';
   document.getElementById('pi-note').textContent    = s.regFeeNote || '';
+
+  const banner = document.getElementById('status-banner');
+  const btn    = document.getElementById('submit-btn');
+
+  // 優先判斷報名是否關閉
   if (s.open === 'false') {
-    document.getElementById('status-banner').className = 'status-banner status-closed';
-    document.getElementById('status-banner').textContent = '⛔ 報名已截止，感謝各隊踴躍參與';
-    document.getElementById('submit-btn').disabled = true;
+    banner.className   = 'status-banner status-closed';
+    banner.textContent = '⛔ 報名已截止，感謝各隊踴躍參與';
+    btn.disabled = true;
+    return;
   }
+
+  // 判斷是否額滿
+  const maxTeams    = parseInt(s.maxTeams) || 16;
+  const approvedCount = (teams || []).filter(t => t.status === 'approved').length;
+  if (approvedCount >= maxTeams) {
+    banner.className   = 'status-banner status-closed';
+    banner.innerHTML   = '🔴 報名隊伍已達上限（' + maxTeams + ' 隊），目前報名已額滿';
+    btn.disabled = true;
+    btn.textContent = '報名已額滿';
+    return;
+  }
+
+  // 正常開放
+  const remaining = maxTeams - approvedCount;
+  banner.className   = 'status-banner status-open';
+  banner.textContent = '✅ 報名開放中，歡迎各隊填寫報名表（尚餘 ' + remaining + ' 個名額）';
 }
 
 // ── Tab 切換 ─────────────────────────────────
