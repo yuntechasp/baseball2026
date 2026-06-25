@@ -275,10 +275,10 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
 <script>
 // ── State ──
 let settings = {}, drawData = [], matchData = [], approvedTeams = [];
-let drawState = { spinning:false, open:false, done:false, approvedCount:0, groupCount:2 };
+let drawState = { spinning:false, open:false, done:false, approvedCount:0, groupCount:4 };
 let verifiedTeam = null;
 let spinTimer = null;
-let groupCount = 2, approvedCount = 0;
+let groupCount = 4, approvedCount = 0;
 
 async function api(params) {
   const r = await fetch(API_URL + '?' + new URLSearchParams(params));
@@ -471,7 +471,7 @@ function renderBracket() {
   sec.style.display='block';
   const n=drawState.approvedCount, slotMap={};
   drawData.forEach(d=>{ slotMap[d.slot]=d.teamname; });
-  const gc=drawState.groupCount||2;
+  const gc=drawState.groupCount||4;
   const labels=['A','B','C','D','E','F'];
   const base=Math.floor(n/gc), extra=n%gc;
   let html='', slotStart=1;
@@ -499,7 +499,7 @@ function buildMatches() {
   const s=settings;
   const startDate=new Date(s.gamedate||'2026-08-17');
   const timeSlots=['09:00','11:00','13:30','15:30'], courts=['A場','B場'];
-  const gc=drawState.groupCount||2, labels=['A','B','C','D'];
+  const gc=drawState.groupCount||4, labels=['A','B','C','D'];
   const base=Math.floor(sorted.length/gc), extra=sorted.length%gc;
   let groups=[],aidx=0;
   for(let g=0;g<gc;g++){const sz=base+(g<extra?1:0);groups.push(sorted.slice(aidx,aidx+sz));aidx+=sz;}
@@ -537,7 +537,7 @@ function renderScheduleTab() {
   const slotMap={};
   drawData.forEach(d=>{slotMap[d.slot]=d.teamname;});
   const n=approvedCount||drawData.length;
-  const gc=drawState.groupCount||2;
+  const gc=drawState.groupCount||4;
   const base=Math.floor(n/gc),extra=n%gc;
   const labels=['A','B','C','D','E','F'];
   let groups=[],slotStart=1;
