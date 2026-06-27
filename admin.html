@@ -475,7 +475,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
 
         <!-- ── 輸出文件 ── -->
         <div id="page-output" class="page">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
             <div class="card" style="margin:0">
               <div class="card-body">
                 <div style="font-size:28px;margin-bottom:10px">📊</div>
@@ -489,17 +489,23 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
             <div class="card" style="margin:0">
               <div class="card-body">
                 <div style="font-size:28px;margin-bottom:10px">📖</div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:6px">列印秩序冊</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:6px">秩序冊（對外版）</div>
                 <div style="font-size:12px;color:var(--gray-400);line-height:1.6;margin-bottom:14px">
-                  產生正式秩序冊（含封面、名單、對戰表），可直接列印或另存 PDF。
+                  含封面、競賽規程、隊職員名單（無學號）、賽程圖、賽程時間表。
                 </div>
-                <button class="btn btn-primary" onclick="printOrderBook()" style="width:100%;justify-content:center">🖨 列印 / 另存 PDF</button>
+                <button class="btn btn-primary" onclick="printOrderBook('public')" style="width:100%;justify-content:center">🖨 列印 / 另存 PDF</button>
               </div>
             </div>
-          </div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">👁 秩序冊預覽</div></div>
-            <div class="card-body" id="order-preview"></div>
+            <div class="card" style="margin:0">
+              <div class="card-body">
+                <div style="font-size:28px;margin-bottom:10px">🔒</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:6px">秩序冊（核對版）</div>
+                <div style="font-size:12px;color:var(--gray-400);line-height:1.6;margin-bottom:14px">
+                  含學號、背號，供比賽現場核對球員資格使用，請妥善保管。
+                </div>
+                <button class="btn" onclick="printOrderBook('verify')" style="width:100%;justify-content:center;background:#a32d2d;color:#fff">🔒 列印核對版</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1817,72 +1823,403 @@ function exportBracketExcel() {
   toast('賽程 Excel 已下載','ok');
 }
 
-function printOrderBook() {
-  const s = DB.settings;
-  const teams = DB.teams.filter(t=>t.status==='approved');
+async function printOrderBook(ver) {
+  ver = ver || 'public';
+  const teams = DB.teams.filter(t => t.status === 'approved');
   if (!teams.length) { toast('尚無核准隊伍'); return; }
-  let teamsHTML = teams.map(t => {
-    const mems = DB.members[t.teamId] || [];
-    const rows = mems.map(m=>`<tr>
-      <td style="padding:6px 8px;border:1px solid #ddd">${esc(m.role)}</td>
-      <td style="padding:6px 8px;border:1px solid #ddd">${esc(m.name)}</td>
-      <td style="padding:6px 8px;border:1px solid #ddd">${esc(m.number)}</td>
-      <td style="padding:6px 8px;border:1px solid #ddd">${esc(m.studentId)}</td>
-    </tr>`).join('');
-    return `<div style="margin-bottom:24px">
-      <h3 style="color:#0d3b6e;border-left:4px solid #1a5fa8;padding-left:10px;margin-bottom:8px">${esc(t.teamname)}</h3>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#1a5fa8;color:white">
-          <th style="padding:7px 8px;border:1px solid #1a5fa8">角色</th>
-          <th style="padding:7px 8px;border:1px solid #1a5fa8">姓名</th>
-          <th style="padding:7px 8px;border:1px solid #1a5fa8">背號</th>
-          <th style="padding:7px 8px;border:1px solid #1a5fa8">學號</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
-  }).join('');
 
-  let matchHTML = '';
-  if (DB.matches.length) {
-    const rows = DB.matches.map(m=>`<tr>
-      <td style="padding:7px 10px;border:1px solid #ddd">${m.gameNum}</td>
-      <td style="padding:7px 10px;border:1px solid #ddd;font-weight:600">${esc(m.teamA)}</td>
-      <td style="padding:7px 10px;border:1px solid #ddd;text-align:center">VS</td>
-      <td style="padding:7px 10px;border:1px solid #ddd;font-weight:600">${esc(m.teamB)}</td>
-      <td style="padding:7px 10px;border:1px solid #ddd">${m.date}</td>
-      <td style="padding:7px 10px;border:1px solid #ddd">${m.time}</td>
-      <td style="padding:7px 10px;border:1px solid #ddd">${m.court}</td>
-    </tr>`).join('');
-    matchHTML = `<div style="page-break-before:always">
-      <h2 style="color:#0d3b6e;margin-bottom:16px">對戰時間表</h2>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#1a5fa8;color:white">
-          <th style="padding:8px 10px">場次</th><th style="padding:8px 10px">隊伍A</th>
-          <th style="padding:8px 10px"></th><th style="padding:8px 10px">隊伍B</th>
-          <th style="padding:8px 10px">日期</th><th style="padding:8px 10px">時間</th><th style="padding:8px 10px">場地</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
+  toast('準備秩序冊資料中…');
+
+  // 確保所有隊伍球員資料都已載入
+  for (const t of teams) {
+    if (!DB.members[t.teamId]) await loadMembers(t.teamId);
   }
 
+  // 抽籤資料
+  let draws = [], matches = [];
+  try {
+    const dr = await api({ action:'getDrawData' });
+    if (dr.ok) draws = dr.draws || [];
+    const mr = await api({ action:'getMatches' });
+    if (mr.ok) matches = mr.data || [];
+  } catch(e) {}
+
+  // 組裝資料物件（供秩序冊函式使用）
+  const BK = {
+    settings: DB.settings,
+    teams,
+    members: DB.members,
+    draws,
+    matches,
+    ver,
+  };
+
+  // ── 秩序冊 CSS ──────────────────────────
+  const bookletCSS = `
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#fff;color:#1c1c1a}
+    @media print{@page{size:A4;margin:0}body{margin:0}.page{page-break-after:always;margin:0;box-shadow:none}.page:last-child{page-break-after:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    .page{width:794px;min-height:1123px;position:relative;overflow:hidden;background:#fff}
+    .cover{background:linear-gradient(160deg,#004d40 0%,#00695C 40%,#00897B 70%,#004d40 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 40px;min-height:1123px}
+    .cover-year{font-size:28px;font-weight:300;letter-spacing:.3em;opacity:.8;margin-bottom:8px}
+    .cover-title-zh{font-size:52px;font-weight:900;line-height:1.2;margin-bottom:8px;text-shadow:0 2px 12px rgba(0,0,0,.3)}
+    .cover-title-en{font-size:18px;font-weight:400;letter-spacing:.15em;opacity:.7;margin-bottom:48px}
+    .cover-divider{width:80px;height:3px;background:rgba(255,255,255,.5);margin:0 auto 40px}
+    .cover-info{display:flex;flex-direction:column;gap:12px}
+    .cover-info-item{display:flex;align-items:center;justify-content:center;gap:12px;font-size:16px;opacity:.9}
+    .cover-icon{font-size:20px}
+    .cover-badge{margin-top:48px;padding:12px 32px;border:2px solid rgba(255,255,255,.4);border-radius:40px;font-size:14px;letter-spacing:.1em;opacity:.8}
+    .cover-baseball{font-size:120px;margin-bottom:24px;opacity:.9}
+    .toc-page{padding:60px}
+    .toc-title{font-size:26px;font-weight:700;color:#00695C;border-bottom:3px solid #00695C;padding-bottom:12px;margin-bottom:36px}
+    .toc-item{display:flex;align-items:baseline;margin-bottom:20px;font-size:16px}
+    .toc-num{color:#00695C;font-weight:700;min-width:32px}
+    .toc-name{flex:1;color:#1c1c1a;font-weight:500}
+    .toc-dots{flex:1;border-bottom:2px dotted #ccc;margin:0 12px 4px}
+    .toc-pg{color:#888;font-size:14px;min-width:28px;text-align:right}
+    .org-info{margin-top:48px;background:#f7f6f3;border-radius:10px;padding:24px 28px}
+    .org-row{display:flex;margin-bottom:10px;font-size:14px}
+    .org-label{color:#888;min-width:80px}
+    .org-val{color:#1c1c1a;font-weight:500}
+    .rules-page{padding:44px 56px}
+    .section-title{font-size:22px;font-weight:700;color:#fff;background:#00695C;padding:10px 20px;border-radius:6px;margin-bottom:20px}
+    .rule-main{font-size:14.5px;font-weight:700;color:#00695C;margin-bottom:5px;margin-top:10px}
+    .team-page{padding:36px 44px}
+    .team-header{background:#E0F5F2;border:1.5px solid #9FD9CE;border-bottom:none;padding:10px 18px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:12px}
+    .team-num{background:#00695C;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
+    .team-name{font-size:16px;font-weight:700;color:#00695C;flex:1}
+    .team-staff-row{background:#E0F5F2;padding:8px 14px;font-size:12.5px;color:#00695C;display:flex;flex-wrap:wrap;border-bottom:2px solid #9FD9CE}
+    .team-staff-item{display:flex;gap:4px;margin-right:20px}
+    .team-staff-item .lbl{color:#00876f;font-weight:700}
+    .players-cols{display:grid;grid-template-columns:repeat(5,1fr);gap:0 8px;margin-top:4px}
+    .verify-cols{grid-template-columns:repeat(3,1fr);gap:0 10px}
+    .players-col-cell{display:flex;align-items:center;padding:3px;border-bottom:1px solid #f0f0f0;font-size:13px}
+    .players-col-cell .num{width:28px;text-align:center;font-weight:700;color:#00695C;flex-shrink:0;border-right:1px solid #e0e0e0;margin-right:5px}
+    .players-col-cell.cap .num{color:#F47920}
+    .players-col-cell.cap .nm{color:#F47920;font-weight:700}
+    .players-col-cell .nm{flex:1}
+    .players-col-cell .sid{font-size:11.5px;color:#555;display:block}
+    .verify-cols .players-col-cell{font-size:13.5px;padding:4px 3px}
+    .verify-cols .players-col-cell .num{font-size:13.5px;width:30px}
+    .cap-tag{background:#F47920;color:#fff;border-radius:8px;padding:0 5px;font-size:9px;font-weight:700;margin-left:4px;vertical-align:middle}
+    .verify-badge{background:#a32d2d;color:#fff;font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px}
+    .cert-imgs{display:flex;gap:40px;align-items:center;justify-content:center;margin:10px 0 6px}
+    .cert-img-box{text-align:center}
+    .cert-img-box span{font-size:11px;font-weight:700;color:#1c1c1a}
+    .bracket-page{padding:40px 50px}
+    .schedule-page{padding:40px 50px}
+    .sched-date-header{background:#00695C;color:#fff;font-size:14px;font-weight:700;padding:8px 16px;border-radius:6px;margin:16px 0 8px}
+    .sched-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:4px}
+    .sched-table th{background:#004d40;color:#fff;padding:7px 12px;font-size:12px;text-align:center}
+    .sched-table td{padding:7px 12px;border-bottom:1px solid #ededea;text-align:center}
+    .sched-table tr:nth-child(even) td{background:#f7f6f3}
+    .vs-tag{color:#888;font-size:11px;font-weight:700;margin:0 8px}
+    .page-footer{position:absolute;bottom:24px;left:0;right:0;text-align:center;font-size:11px;color:#aaa}
+    .page-num{display:inline-block;background:#00695C;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;font-weight:700}
+  `;
+
+  // ── 產生各頁 HTML ────────────────────────
+  function bkEsc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function zhNum(n){return ['一','二','三','四','五','六','七','八','九','十'][n-1]||n;}
+
+  const s = BK.settings;
+  const title = s.title || '2026全國大專校院夏季棒球錦標賽';
+  const isVerify = ver === 'verify';
+
+  // 封面
+  const coverHtml = `<div class="page cover">
+    <div class="cover-baseball">⚾</div>
+    <div class="cover-year">2026</div>
+    <div class="cover-title-zh">${bkEsc(title)}</div>
+    <div class="cover-title-en">SUMMER BASEBALL CHAMPIONSHIP</div>
+    <div class="cover-divider"></div>
+    <div class="cover-info">
+      <div class="cover-info-item"><span class="cover-icon">📅</span><span>${s.gamedate||''}${s.gameend?' ～ '+s.gameend:''}</span></div>
+      <div class="cover-info-item"><span class="cover-icon">🏟</span><span>${bkEsc(s.venue||'雲林科技大學棒球場')}</span></div>
+      <div class="cover-info-item"><span class="cover-icon">🎓</span><span>主辦：雲林科技大學體育室</span></div>
+    </div>
+    <div class="cover-badge">秩序冊${isVerify?' ｜ 核對版（內含學號，請妥善保管）':''}</div>
+  </div>`;
+
+  // 目錄
+  const tocHtml = `<div class="page toc-page">
+    <div class="toc-title">目　錄</div>
+    <div class="toc-item"><span class="toc-num">一、</span><span class="toc-name">競賽規程</span><span class="toc-dots"></span><span class="toc-pg">3</span></div>
+    <div class="toc-item"><span class="toc-num">二、</span><span class="toc-name">參賽隊職員名單</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
+    <div class="toc-item"><span class="toc-num">三、</span><span class="toc-name">賽程圖</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
+    <div class="toc-item"><span class="toc-num">四、</span><span class="toc-name">賽程時間表</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
+    <div class="org-info">
+      <div class="org-row"><span class="org-label">指導單位</span><span class="org-val">教育部</span></div>
+      <div class="org-row"><span class="org-label">主辦單位</span><span class="org-val">雲林科技大學</span></div>
+      <div class="org-row"><span class="org-label">承辦單位</span><span class="org-val">雲林科技大學體育室</span></div>
+      <div class="org-row"><span class="org-label">協辦單位</span><span class="org-val">雲林科技大學棒球隊</span></div>
+      <div class="org-row"><span class="org-label">比賽地點</span><span class="org-val">${bkEsc(s.venue||'雲林科技大學棒球場')}</span></div>
+      <div class="org-row"><span class="org-label">比賽日期</span><span class="org-val">${s.gamedate||''}${s.gameend?' ～ '+s.gameend:''}</span></div>
+      <div class="org-row"><span class="org-label">聯絡方式</span><span class="org-val">蔡小姐　05-5342601#2704　wanjan@yuntech.edu.tw</span></div>
+    </div>
+    <div class="page-footer"><span class="page-num">2</span></div>
+  </div>`;
+
+  // 競賽規程（完整）
+  const bbcorSvg = `<svg width="120" height="55" viewBox="0 0 120 55" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="55" fill="black" rx="4"/><text x="8" y="22" fill="white" font-size="14" font-weight="900" font-family="Arial">BBCOR</text><text x="8" y="38" fill="white" font-size="11" font-weight="700" font-family="Arial">CERTIFIED</text><text x="72" y="42" fill="white" font-size="22" font-weight="900" font-family="Arial">.50</text></svg>`;
+  const sgSvg = `<svg width="70" height="70" viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg"><rect width="70" height="70" fill="white" stroke="#1a7a1a" stroke-width="4" rx="6"/><rect x="5" y="5" width="60" height="60" fill="white" stroke="#1a7a1a" stroke-width="2" rx="4"/><text x="35" y="48" text-anchor="middle" fill="#1a7a1a" font-size="38" font-weight="900" font-family="Arial">S</text></svg>`;
+
+  const ruleSections = [
+    {head:'一、競賽宗旨',lines:[{t:'（一）推廣大專棒球運動。',i:1},{t:'（二）提供學生選手交流與競賽平台，促進校際合作。',i:1},{t:'（三）增進周邊縣市地區大專校院與社區連結。',i:1}]},
+    {head:'二、指導單位',lines:[{t:'教育部',i:1}]},
+    {head:'三、主辦單位',lines:[{t:'雲林科技大學',i:1}]},
+    {head:'四、承辦單位',lines:[{t:'雲林科技大學體育室',i:1}]},
+    {head:'五、協辦單位',lines:[{t:'雲林科技大學棒球隊',i:1}]},
+    {head:'六、隊職員註冊及報名',lines:[
+      {t:'（一）日期：即日起至 7 月 15 日（星期五）下午 5 時整截止。',i:1},
+      {t:'（二）方式：',i:1},
+      {t:'1. 採網路線上報名，掃 QRCODE 點選「立即報名」。',i:2},
+      {t:'2. 完成後請列印報名表加蓋校印後，以電子郵件方式傳送至 yuntechasp@gmail.com',i:2},
+      {t:'3. 繳交本次參賽保證金新臺幣 5,000 元整，保證金於應完成之賽程結束後返還。',i:2},
+      {t:'4. 完成報名表及保證金繳交後，始完成報名程序。',i:2},
+      {t:'5. 每隊可報職員至多 8 名（含領隊、總教練、教練、管理、訓練員及運動防護員），運動員（含隊長）25 名。',i:2},
+      {t:'6. 匯款資訊：',i:2},
+      {t:'戶名：蔡宛臻　　銀行：臺灣銀行　　帳號：031008618581',i:3},
+      {t:'匯款後請備註學校名稱，並於網站進行「繳費回報」。',i:3},
+      {t:'7. 報名隊數：16 隊為限（若超過 16 隊進行線上報名，則依繳費順序審核）。',i:2},
+    ]},
+    {head:'七、比賽日期',lines:[{t:'2026 年 08 月 17 日起至 09 月 13 日（依實際隊數抽籤後安排）',i:1}]},
+    {head:'八、比賽地點',lines:[{t:'雲林科技大學棒球場',i:1}]},
+    {head:'九、參加單位',lines:[{t:'中華民國各公立及已立案之私立大專校院均得組隊報名參加。',i:1}]},
+    {head:'十、參賽資格',lines:[
+      {t:'（一）運動員資格：',i:1},
+      {t:'1. 各校日、夜間部或研究院（所）學生仍於 114 學年度仍有正式學籍者應屆畢業生（選讀生、先修生、補習生、空中補校、僑生專修班及各種短期訓練班學生不得參加）。',i:2},
+      {t:'2. 於大專棒球聯賽報名公開二級以上之球員，不得報名參加。',i:2},
+      {t:'3. 球員得兼任教練。',i:2},
+    ]},
+    {head:'十一、抽籤方式及日期',lines:[
+      {t:'（一）抽籤方式：線上抽籤，抽籤時請輸入報名隊名及隊長學號，即可進行抽籤。',i:1},
+      {t:'（二）抽籤時間為 2026 年 7 月 17 日上午 9 時至 12 時，屆時若無進行線上抽籤，則由系統亂數代抽。',i:1},
+    ]},
+    {head:'十二、比賽規則',lines:[{t:'採中華民國棒球協會審定之最新棒球比賽規則。',i:1}]},
+    {head:'十三、比賽用球',lines:[{t:'採用華櫻 BB980 比賽用球。',i:1}]},
+    {head:'十四、競賽辦法',lines:[
+      {t:'（一）預賽以小組循環賽，取二名晉級決賽。',i:1},
+      {t:'（二）決賽採單淘汰賽。',i:1},
+      {t:'（三）循環賽名次之判定：',i:1},
+      {t:'1. 各場次若遇賽完正規局數或規定時間仍未分出勝負，採 WBSC 突破僵局制分出勝負。',i:2},
+      {t:'2. 各場勝隊得 3 分，敗隊得 0 分，積分多者獲勝。',i:2},
+      {t:'3. 積分相同球隊名次決定之優先序：',i:2},
+      {t:'（1）積分相同球隊相互比賽中，勝隊為先。',i:3},
+      {t:'（2）優質率（TQB）最佳者為先。（TQB：得分率－失分率＝高者）',i:3},
+      {t:'（3）責失優質率（ER-TQB）最佳者為先。（ER-TQB：得責失－失責失＝高者）',i:3},
+      {t:'（4）積分相同球隊相互比賽中，打擊率最高者為先。',i:3},
+      {t:'（5）擲銅板。',i:3},
+    ]},
+    {head:'十五、獎勵',lines:[
+      {t:'（一）團體獎：取前三名',i:1},
+      {t:'1. 第一名：獎座乙座、棒球 18 打及球棒 3 隻。',i:2},
+      {t:'2. 第二名：獎座乙座、棒球 12 打及球棒 2 隻。',i:2},
+      {t:'3. 第三名：獎座乙座、棒球 6 打及球棒 1 隻。',i:2},
+      {t:'（二）個人獎：投手獎、打點獎、最有價值球員獎各 1 名及打擊獎前三名，頒發紀念獎牌及獎勵。',i:1},
+      {t:'1. 打擊獎：每一打者須達 2.1 打席 × 場次；打擊率相同時，以長打率、上壘率較高者依序決定之。',i:2},
+      {t:'2. 投手獎：每一投手之投球局數須達 1 局 × 場次以上；防禦率相同時，以投球局數較多者、被安打數較少者依序決定之。',i:2},
+      {t:'3. 打點獎：打點相同時，以打數較少者、壘打數較多者依序決定之。',i:2},
+    ]},
+    {head:'十六、競賽規定',lines:[
+      {t:'（一）比賽局數：採 7 局制，因雨或不可抗拒之因素，比賽滿 5 局以上，即裁定比賽。',i:1},
+      {t:'（二）比賽用球棒：',i:1},
+      {t:'1. 可採用木、竹棒（經 WBSC 認定或中華民國棒球協會認證）或鋁棒（由合格廠商生產或合法進口商所進口之球棒）。',i:2},
+      {t:'2. 鋁棒相關規範如下：',i:2},
+      {t:'（1）美規球棒：長度不得超過 34 吋，直徑不超過 2 5/8 吋，重量不得低於長度減 3（-3）盎司，禁止合成棒（Composite），須印有 BBCOR 認證標章且為 -3 才可於比賽中使用。',i:3},
+      {t:'BBCOR_CERT_IMG',i:3},
+      {t:'（2）日規球棒：長度不得超過 86 公分，直徑不超過 6.7 公分，禁止合成棒（Composite），須印有 SG 認證標章且有「硬式用」字樣才可於比賽中使用。',i:3},
+      {t:'（3）以上球棒重量不得低於長度減 3（-3）盎司（例：34 吋不得低於 31 盎司；33 吋不得低於 30 盎司）。',i:3},
+      {t:'（三）鋁棒檢驗流程：球隊於每場比賽賽前 30 分鐘繳交攻守名單、學生證正本及比賽用球棒一併送交大會檢驗，若不合格由大會保留，賽後歸還。',i:1},
+      {t:'（四）運動員應準時到場比賽並攜帶學生證正本於現場進行查驗。',i:1},
+      {t:'（五）比賽時間：採時間截止制，比賽時間限 2 小時內完成；當比賽離截止時間不足 10 分鐘時不進行下 1 局比賽，即截止比賽。',i:1},
+      {t:'（六）加速比賽特別規定：',i:1},
+      {t:'1. 欲四壞球保送可告知主審，但累計投球數。',i:2},
+      {t:'2. 野手集會含投捕交談每局限 1 次，時間以 45 秒為限；每場限 3 次野手集會，第 4 次（含）則每次都計教練技術暫停 1 次。延長賽時則每 3 局限 1 次。',i:2},
+      {t:'3. 教練滯留投手丘時均視為技術暫停，每位投手一局中允許 1 次（45 秒），第 2 次則須更換投手。每場第 4 次（含）技術暫停時，則每次都須更換投手。',i:2},
+      {t:'4. 攻守交換限於 90 秒內完成，若遇捕手著裝則可再延長 20 秒。',i:2},
+      {t:'5. 更換投手時含捕手交談，限於 100 秒內完成。',i:2},
+      {t:'6. 教練技術暫停後更換投手含投捕交談，限於 120 秒內完成。',i:2},
+      {t:'7. 壘上無跑壘員時，投手從接到回傳球後 15 秒內必須投球；擊球員應在 10 秒內進入打擊區。違規第一次警告，再違規第二次分別判壞球/好球一顆。',i:2},
+      {t:'8. 嚴禁使用汽笛、擴音器、大聲公、鑼鼓、音響、哨子及雷射光束等相關物品。',i:2},
+      {t:'9. 球衣樣式、顏色須一致，號碼清晰，學校名稱以中文標示於胸前，內衣不得為白色；背號 0-99 號，不得使用白貼、膠帶黏貼號碼。',i:2},
+      {t:'10. 比賽場域（含休息區）禁止抽煙（包括電子煙）及脫序行為，如有違反者，即扣除全額保證金。',i:2},
+    ]},
+    {head:'十七、罰則',lines:[
+      {t:'（一）球隊違規：',i:1},
+      {t:'1. 球隊在該場比賽開賽時，須有秩序冊上報名之教練或職員到場方可比賽。',i:2},
+      {t:'2. 被判定棄權之球隊，取消其未賽之賽程，且在循環賽中已賽之結果不予計算。',i:2},
+      {t:'3. 球隊一經報名，除因天然災害或不可抗拒因素外，不得棄權；棄權者則扣除全額保證金。',i:2},
+      {t:'4. 球隊如有不合於規定之運動員出賽，經查證屬實者，取消該隊所獲之成績，並收回已發給之獎勵。',i:2},
+      {t:'5. 如有未登錄運動員下場比賽，經發現查證屬實者，採單場沒收比賽。',i:2},
+      {t:'6. 球隊未到現場者視為棄權，人數或證件不足或逾表定時間未到場者，採單場沒收比賽，以 0：7（7 局）裁定。',i:2},
+      {t:'（二）運動員違規：',i:1},
+      {t:'1. 比賽中有運動員發生嚴重違反運動道德之情事，經裁判員判決毆人或互毆確定後，該運動員立即喪失比賽資格，且得移送司法機關處置。',i:2},
+      {t:'2. 比賽中如發生球隊集體（同隊二人以上）鬥毆事件，除取消繼續比賽權利及已賽成績不計，將函文通知所屬學校，且得移送司法機關處置。',i:2},
+      {t:'（三）職員違規：',i:1},
+      {t:'1. 指導運動員發生不當管教行為時，視情節輕重，不得於後續比賽繼續擔任其職務。',i:2},
+      {t:'2. 故意干擾比賽，係屬累犯或情節嚴重者取消該校球隊繼續參賽資格。',i:2},
+    ]},
+    {head:'十八、個資法與肖像使用說明',lines:[
+      {t:'1. 本會將依個資法規定處理參賽者個人資料，上述個人資料之蒐集、處理及利用，將僅限本會及其業務往來機構之業務需要使用。',i:2},
+      {t:'2. 主辦單位有權將此項比賽之錄影、相片及成績公告於網站，參賽者並應同意肖像與成績，用於相關之宣傳與播放活動上。',i:2},
+    ]},
+    {head:'十九、保險',lines:[
+      {t:'本次賽事針對場地進行公共意外險投保，請各參賽學校務必自行保險，若無保險，風險請自行負責。',i:1},
+    ]},
+  ];
+
+  let ruleContent = '';
+  ruleSections.forEach(sec => {
+    ruleContent += `<div style="margin-bottom:8px"><div class="rule-main">${bkEsc(sec.head)}</div>`;
+    sec.lines.forEach(l => {
+      if (l.t === 'BBCOR_CERT_IMG') {
+        ruleContent += `<div class="cert-imgs" style="display:flex;gap:40px;align-items:center;justify-content:center;margin:8px 0">
+          <div style="text-align:center">${bbcorSvg}<div style="font-size:11px;font-weight:700;margin-top:4px">BBCOR認證標章</div></div>
+          <div style="text-align:center">${sgSvg}<div style="font-size:11px;font-weight:700;margin-top:4px">硬式用</div></div>
+        </div>`;
+        return;
+      }
+      const fw = l.i===0?'700':'400', col = l.i===0?'#00695C':'#1c1c1a';
+      if (l.i===1) {
+        const m = l.t.match(/^(（[一二三四五六七八九十]+）)\s*(.*)/s);
+        if (m) { ruleContent += `<div style="display:flex;margin-left:16px;font-size:13px;line-height:1.75;margin-bottom:2px"><span style="flex-shrink:0;width:32px">${bkEsc(m[1])}</span><span style="flex:1">${bkEsc(m[2])}</span></div>`; }
+        else { ruleContent += `<div style="margin-left:16px;font-size:13px;font-weight:${fw};color:${col};line-height:1.75;margin-bottom:2px">${bkEsc(l.t)}</div>`; }
+      } else if (l.i===2) {
+        const m = l.t.match(/^(\d+\.\s*)(.*)/s);
+        if (m) { const w=m[1].trim().length>2?36:28; ruleContent += `<div style="display:flex;margin-left:32px;font-size:13px;line-height:1.75;margin-bottom:2px"><span style="flex-shrink:0;width:${w}px">${bkEsc(m[1])}</span><span style="flex:1">${bkEsc(m[2])}</span></div>`; }
+        else { ruleContent += `<div style="margin-left:32px;font-size:13px;line-height:1.75;margin-bottom:2px">${bkEsc(l.t)}</div>`; }
+      } else if (l.i===3) {
+        const m = l.t.match(/^(（\d+）)\s*(.*)/s);
+        if (m) { ruleContent += `<div style="display:flex;margin-left:48px;font-size:13px;line-height:1.75;margin-bottom:2px"><span style="flex-shrink:0;width:36px">${bkEsc(m[1])}</span><span style="flex:1">${bkEsc(m[2])}</span></div>`; }
+        else { ruleContent += `<div style="margin-left:48px;font-size:13px;line-height:1.75;margin-bottom:2px">${bkEsc(l.t)}</div>`; }
+      } else {
+        ruleContent += `<div style="font-size:13px;font-weight:${fw};color:${col};line-height:1.75;margin-bottom:2px">${bkEsc(l.t)}</div>`;
+      }
+    });
+    ruleContent += '<div style="height:4px"></div></div>';
+  });
+  const rulesHtml = `<div class="page rules-page" style="min-height:auto">
+    <div class="section-title">競賽規程</div>${ruleContent}
+    <div style="height:40px"></div>
+  </div>`;
+
+  // 隊伍名單
+  const slotMap = {};
+  BK.draws.forEach(d => { slotMap[d.teamId] = d.slot; });
+  const sortedTeams = [...BK.teams].sort((a,b) => a.teamname.localeCompare(b.teamname,'zh-TW-u-co-stroke'));
+  const staffRoles = ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'];
+  const PAGE_H = 960;
+  let teamPages = [], pageHtml2 = '', pageH2 = 0, isFirstTeamPage = true;
+
+  const flushTP = () => {
+    if (!pageHtml2) return;
+    const titleH = isFirstTeamPage ? '<div class="section-title">隊職員名單</div>' : '';
+    teamPages.push(`<div class="page team-page">${isVerify?'<div class="verify-badge">🔒 核對版 — 含學號，請妥善保管</div>':''} ${titleH}${pageHtml2}<div class="page-footer"><span class="page-num">—</span></div></div>`);
+    pageHtml2=''; pageH2=0; isFirstTeamPage=false;
+  };
+
+  sortedTeams.forEach((team, idx) => {
+    const mems = BK.members[team.teamId] || [];
+    const staff = mems.filter(m => staffRoles.includes(m.role) && m.name && m.name.trim());
+    const allP  = mems.filter(m => !staffRoles.includes(m.role));
+    const cap   = allP.find(m => m.role==='隊長');
+    const athl  = allP.filter(m => m.role!=='隊長');
+    const ordered = cap ? [cap,...athl] : athl;
+    const slot = slotMap[team.teamId];
+    const cols = isVerify ? 3 : 5;
+    const colClass = isVerify ? 'players-cols verify-cols' : 'players-cols';
+
+    const staffHtml2 = staff.map(s=>`<span class="team-staff-item"><span class="lbl">${bkEsc(s.role)}</span>${bkEsc(s.name)}</span>`).join('');
+    const cells = ordered.map(p=>{
+      const isCap=p.role==='隊長';
+      const sid=isVerify?`<span class="sid">${bkEsc(p.studentId||'')}</span>`:'';
+      return `<div class="players-col-cell${isCap?' cap':''}"><span class="num">${bkEsc(p.number||'—')}</span><span class="nm">${bkEsc(p.name)}${isCap?'<span class="cap-tag">C</span>':''}</span>${sid}</div>`;
+    }).join('');
+
+    const playerRows = Math.ceil(ordered.length / cols);
+    const estH = 44 + (staff.length?28:0) + playerRows*22 + 20;
+    if (pageH2+estH > PAGE_H && pageH2>0) flushTP();
+
+    pageHtml2 += `<div style="margin-bottom:16px">
+      <div class="team-header"><div class="team-num">${slot||idx+1}</div><div class="team-name">校名　${bkEsc(team.teamname)}</div></div>
+      <div style="background:#9FD9CE;color:#00695C;font-size:12px;font-weight:700;padding:4px 18px;border-left:1.5px solid #9FD9CE;border-right:1.5px solid #9FD9CE">隊職員名單</div>
+      ${staff.length?`<div class="team-staff-row">${staffHtml2}</div>`:''}
+      <div class="${colClass}">${cells}</div>
+    </div>`;
+    pageH2 += estH;
+  });
+  flushTP();
+
+  // 賽程圖
+  function bkGroupSVG(teams, label) {
+    const W=280,H=240,pos=[{x:50,y:40},{x:230,y:40},{x:230,y:200},{x:50,y:200}];
+    const pairs=[[0,1],[1,2],[2,3],[3,0],[0,2],[1,3]],diags={'0,2':true,'1,3':true,'2,0':true,'3,1':true};
+    let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%"><rect width="${W}" height="${H}" fill="#f9f9f9" rx="6"/>`;
+    svg+=`<text x="${W/2}" y="${H/2+6}" text-anchor="middle" font-size="40" font-weight="900" fill="#00695C" opacity=".08">${label}</text>`;
+    pairs.forEach(p=>{const k=p[0]+','+p[1],d=!!diags[k];svg+=`<line x1="${pos[p[0]].x}" y1="${pos[p[0]].y}" x2="${pos[p[1]].x}" y2="${pos[p[1]].y}" stroke="${d?'#9FD9CE':'#00695C'}" stroke-width="1.5"${d?' stroke-dasharray="5,4"':''}/>`; });
+    const lbl=[{x:50,y:40,dy:-16},{x:230,y:40,dy:-16},{x:230,y:200,dy:20},{x:50,y:200,dy:20}];
+    lbl.forEach((l,i)=>{const name=teams[i]||('第'+(i+1)+'籤'),short=name.length>7?name.slice(0,7)+'…':name;svg+=`<circle cx="${l.x}" cy="${l.y}" r="5" fill="#00695C"/><text x="${l.x}" y="${l.y+l.dy}" text-anchor="middle" font-size="11" font-weight="700" fill="#00695C">${bkEsc(short)}</text>`;});
+    svg+='</svg>';
+    return `<div style="border:1.5px solid #9FD9CE;border-radius:8px;overflow:hidden"><div style="background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:6px 12px">⚾ ${label} 組</div><div style="padding:8px">${svg}</div></div>`;
+  }
+
+  function bkElimSVG() {
+    const W=700,H=280,q8=[{x:48,label:'A1',display:'A組第1名'},{x:136,label:'D2',display:'D組第2名'},{x:224,label:'B1',display:'B組第1名'},{x:312,label:'C2',display:'C組第2名'},{x:400,label:'C1',display:'C組第1名'},{x:488,label:'B2',display:'B組第2名'},{x:576,label:'D1',display:'D組第1名'},{x:664,label:'A2',display:'A組第2名'}];
+    const y8=255,y4=180,yS=115,yF=42;
+    let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:500px"><rect width="${W}" height="${H}" fill="#f9f9f9" rx="8"/>`;
+    q8.forEach(t=>{const short=t.display.length>5?t.display.slice(0,5)+'…':t.display;svg+=`<rect x="${t.x-36}" y="${y8-16}" width="72" height="30" rx="4" fill="white" stroke="#9FD9CE" stroke-width="1.5"/><text x="${t.x}" y="${y8-4}" text-anchor="middle" font-size="8" fill="#aaa">${t.label}</text><text x="${t.x}" y="${y8+10}" text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">${bkEsc(short)}</text>`;});
+    const pairs4=[[0,1],[2,3],[4,5],[6,7]],q4x=pairs4.map(p=>(q8[p[0]].x+q8[p[1]].x)/2),yQ=y8-16-18;
+    pairs4.forEach((pair,i)=>{const mx=q4x[i];svg+=`<rect x="${mx-14}" y="${yQ-10}" width="28" height="18" rx="3" fill="#E0F5F2" stroke="#00876f" stroke-width="1"/><text x="${mx}" y="${yQ+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">Q${i+1}</text><line x1="${q8[pair[0]].x}" y1="${y8-16}" x2="${q8[pair[0]].x}" y2="${yQ}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${q8[pair[1]].x}" y1="${y8-16}" x2="${q8[pair[1]].x}" y2="${yQ}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${q8[pair[0]].x}" y1="${yQ}" x2="${q8[pair[1]].x}" y2="${yQ}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${mx}" y1="${yQ-10}" x2="${mx}" y2="${y4+15}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${mx-36}" y="${y4-15}" width="72" height="28" rx="4" fill="white" stroke="#00876f" stroke-width="1.5"/><text x="${mx}" y="${y4-3}" text-anchor="middle" font-size="8" fill="#aaa">Q${i+1}</text><text x="${mx}" y="${y4+10}" text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">Q${i+1}勝</text>`;});
+    const pairs2=[[0,1],[2,3]],sfx=pairs2.map(p=>(q4x[p[0]]+q4x[p[1]])/2),yS2=y4-15-16;
+    pairs2.forEach((pair,i)=>{const xa=q4x[pair[0]],xb=q4x[pair[1]],mx=sfx[i];svg+=`<line x1="${xa}" y1="${y4-15}" x2="${xa}" y2="${yS2}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${xb}" y1="${y4-15}" x2="${xb}" y2="${yS2}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${xa}" y1="${yS2}" x2="${xb}" y2="${yS2}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${mx-14}" y="${yS2-10}" width="28" height="18" rx="3" fill="#E0F5F2" stroke="#00876f" stroke-width="1"/><text x="${mx}" y="${yS2+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">${i===0?'S1':'S2'}</text><line x1="${mx}" y1="${yS2-10}" x2="${mx}" y2="${yS+13}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${mx-36}" y="${yS-13}" width="72" height="28" rx="4" fill="white" stroke="#F47920" stroke-width="1.5"/><text x="${mx}" y="${yS-1}" text-anchor="middle" font-size="8" fill="#aaa">${i===0?'S1勝→決賽':'S2勝→決賽'}</text><text x="${mx}" y="${yS+12}" text-anchor="middle" font-size="10" font-weight="700" fill="#c4601a">${i===0?'S1勝':'S2勝'}</text>`;});
+    const bx=W/2;
+    svg+=`<line x1="${sfx[0]+36}" y1="${yS}" x2="${bx-40}" y2="${yS}" stroke="#F47920" stroke-width="1.2" stroke-dasharray="4,3"/><line x1="${bx+40}" y1="${yS}" x2="${sfx[1]-36}" y2="${yS}" stroke="#F47920" stroke-width="1.2" stroke-dasharray="4,3"/><rect x="${bx-40}" y="${yS-13}" width="80" height="28" rx="4" fill="#fff0e6" stroke="#F47920" stroke-width="1.5"/><text x="${bx}" y="${yS-1}" text-anchor="middle" font-size="8" fill="#c4601a">S1敗 vs S2敗</text><text x="${bx}" y="${yS+12}" text-anchor="middle" font-size="10" font-weight="700" fill="#c4601a">🥉 季軍賽</text>`;
+    const fx=W/2;
+    svg+=`<line x1="${sfx[0]}" y1="${yS-13}" x2="${sfx[0]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${sfx[1]}" y1="${yS-13}" x2="${sfx[1]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${sfx[0]}" y1="${yF+18}" x2="${sfx[1]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${fx-44}" y="${yF-18}" width="88" height="36" rx="6" fill="#00695C"/><text x="${fx}" y="${yF-3}" text-anchor="middle" font-size="10" fill="white">🏆 決賽</text><text x="${fx}" y="${yF+13}" text-anchor="middle" font-size="11" font-weight="700" fill="white">冠亞軍</text></svg>`;
+    return svg;
+  }
+
+  const drawSlotMap={};
+  BK.draws.forEach(d=>{drawSlotMap[d.slot]=d.teamname;});
+  const gt={A:[1,2,3,4].map(n=>drawSlotMap[n]||`A組第${n}籤`),B:[5,6,7,8].map(n=>drawSlotMap[n]||`B組第${n-4}籤`),C:[9,10,11,12].map(n=>drawSlotMap[n]||`C組第${n-8}籤`),D:[13,14,15,16].map(n=>drawSlotMap[n]||`D組第${n-12}籤`)};
+  const bracketHtml = `<div class="page bracket-page">
+    <div class="section-title">賽程圖</div>
+    <div style="font-size:13px;color:#00695C;font-weight:600;margin-bottom:16px">⚾ 預賽：各組循環賽，取前二名晉級複賽　｜　🏆 複賽：單淘汰制</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+      ${bkGroupSVG(gt.A,'A')}${bkGroupSVG(gt.B,'B')}${bkGroupSVG(gt.C,'C')}${bkGroupSVG(gt.D,'D')}
+    </div>
+    <div style="font-size:14px;font-weight:700;color:#00695C;margin-bottom:12px">🏆 複賽對戰圖</div>
+    <div style="overflow-x:auto">${bkElimSVG()}</div>
+    <div class="page-footer"><span class="page-num">—</span></div>
+  </div>`;
+
+  // 賽程時間表
+  let schedHtml = '<div class="page schedule-page"><div class="section-title">賽程時間表</div>';
+  if (!BK.matches.length) {
+    schedHtml += '<div style="text-align:center;padding:60px;color:#888">賽程尚未公布，待抽籤完成後產生。</div>';
+  } else {
+    const byDate={};
+    BK.matches.forEach(m=>{const d=m.date||'日期未定';if(!byDate[d])byDate[d]=[];byDate[d].push(m);});
+    const resolve=name=>{if(!name)return name;const mt=String(name).match(/([A-D])組第(\d+)籤/);if(!mt)return name;const labels=['A','B','C','D'];let ss=1;for(let g=0;g<4;g++){if(labels[g]===mt[1]){return drawSlotMap[ss+parseInt(mt[2])-1]||name;}ss+=4;}return name;};
+    Object.keys(byDate).sort().forEach(date=>{
+      const day=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+      schedHtml+=`<div class="sched-date-header">📅 ${date}</div><table class="sched-table"><thead><tr><th style="width:55px">場次</th><th style="width:75px">組別</th><th>隊伍 A</th><th style="width:30px"></th><th>隊伍 B</th><th style="width:65px">時間</th></tr></thead><tbody>`;
+      day.forEach(m=>{const tA=resolve(m.teamA),tB=resolve(m.teamB),ph=(m.phase||'').replace('分組賽 ','預賽 ');const hs=m.scoreA!==undefined&&m.scoreA!=='';const sc=hs?`<td colspan="3" style="text-align:center;font-weight:700;color:#00695C">${m.scoreA} : ${m.scoreB}</td>`:`<td style="font-weight:600">${bkEsc(tA)}</td><td class="vs-tag">VS</td><td style="font-weight:600">${bkEsc(tB)}</td>`;schedHtml+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:11px;color:#666">${bkEsc(ph)}</td>${sc}<td>${m.time||''}</td></tr>`;});
+      schedHtml+='</tbody></table>';
+    });
+  }
+  schedHtml += '<div class="page-footer"><span class="page-num">—</span></div></div>';
+
+  // ── 開啟列印視窗 ────────────────────────────
+  const allPages = [coverHtml, tocHtml, rulesHtml, ...teamPages, bracketHtml, schedHtml].join('');
   const w = window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
-    <title>${s.title||'比賽'} 秩序冊</title>
-    <style>body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;padding:32px;color:#333;max-width:900px;margin:0 auto}
-    @media print{@page{margin:1.5cm}.no-print{display:none}}<\/style>
-    <\/head><body>
-    <div style="text-align:center;padding:40px 0 28px;border-bottom:2px solid #0d3b6e;margin-bottom:32px">
-      <h1 style="font-size:26px;color:#0d3b6e;margin-bottom:8px">${esc(s.title||'')}</h1>
-      <h2 style="font-size:16px;font-weight:400;color:#555">秩序冊</h2>
-      <p style="color:#888;font-size:13px;margin-top:8px">${esc(s.subtitle||'')} ｜ ${esc(s.venue||'')} ｜ 比賽日期：${s.gamedate||''}</p>
-    </div>
-    <h2 style="color:#0d3b6e;margin-bottom:20px">參賽隊伍名單</h2>
-    ${teamsHTML}${matchHTML}
-    <p style="text-align:right;font-size:11px;color:#aaa;margin-top:32px">列印日期：${new Date().toLocaleDateString('zh-TW')}</p>
-    <script>window.onload=()=>window.print()<\/script>
-    <\/body><\/html>`);
+    <title>${bkEsc(title)} 秩序冊${isVerify?' (核對版)':''}</title>
+    <style>${bookletCSS}</style></head><body>${allPages}
+    <script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script>
+    </body></html>`);
+  w.document.close();
 }
 
 // ═══════════════════════════════════════════
