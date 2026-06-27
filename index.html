@@ -357,9 +357,10 @@ const REGISTER_URL = 'register.html';
             <tr>
               <th style="width:44px">序</th>
               <th>學校／隊伍名稱</th>
-              <th style="width:110px;text-align:center">報名狀態</th>
-              <th style="width:110px;text-align:center">匯款時間</th>
-              <th style="width:120px;text-align:center">報名表繳交</th>
+              <th style="width:100px;text-align:center">報名狀態</th>
+              <th style="width:130px;text-align:center">匯款時間</th>
+              <th style="width:130px;text-align:center">報名表繳交</th>
+              <th style="width:100px;text-align:center">報名完成</th>
             </tr>
           </thead>
           <tbody id="teams-tbody">
@@ -731,8 +732,45 @@ function renderStats() {
   const statusLabel = { approved:'已核准', waitlist:'備取', pending:'待審核', rejected:'退件' };
   const statusCls   = { approved:'status-approved', waitlist:'status-waitlist', pending:'status-pending', rejected:'status-rejected' };
 
-  tbody.innerHTML = teamsData.map((t, i) => `
-    <tr>
+  // 計算完成順位：兩個條件都達到的隊伍，依「較晚的那個時間」排序
+  const parseDate = str => str ? new Date(str.replace(' ', 'T')) : null;
+  const completedTeams = teamsData
+    .filter(t => t.paymentDate && t.formDate)
+    .map(t => {
+      const d1 = parseDate(t.paymentDate);
+      const d2 = parseDate(t.formDate);
+      const later = (d1 && d2) ? (d1 > d2 ? d1 : d2) : (d1 || d2);
+      return { teamId: t.teamId, later };
+    })
+    .sort((a, b) => a.later - b.later);
+  const rankMap = {};
+  completedTeams.forEach((t, i) => { rankMap[t.teamId] = i + 1; });
+
+  tbody.innerHTML = teamsData.map((t, i) => {
+    const hasPay  = !!(t.paymentDate && t.paymentDate !== '—');
+    const hasForm = !!(t.formDate    && t.formDate    !== '—');
+    const isDone  = hasPay && hasForm;
+    const rank    = rankMap[t.teamId];
+    const maxTeams = parseInt(settings.maxTeams) || 16;
+
+    let completeCls, completeText;
+    if (isDone && rank) {
+      if (rank <= maxTeams) {
+        completeCls  = 'status-approved';
+        completeText = '第 ' + rank + ' 順位';
+      } else {
+        completeCls  = 'status-waitlist';
+        completeText = '備取第 ' + (rank - maxTeams) + ' 順位';
+      }
+    } else if (hasPay || hasForm) {
+      completeCls  = 'status-pending';
+      completeText = '⚠️ 待補件';
+    } else {
+      completeCls  = '';
+      completeText = '—';
+    }
+
+    return `<tr>
       <td style="color:var(--gray-400);font-weight:600">${i+1}</td>
       <td style="font-weight:500;color:var(--gray-900)">${esc(t.teamname)}</td>
       <td style="text-align:center">
@@ -740,9 +778,17 @@ function renderStats() {
           ${statusLabel[t.status]||'待審核'}
         </span>
       </td>
-      <td style="text-align:center;font-size:12px;color:var(--gray-600)">${esc(t.paymentDate||'—')}</td>
-      <td style="text-align:center;font-size:12px;color:var(--gray-600)">${esc(t.formDate||'—')}</td>
-    </tr>`).join('');
+      <td style="text-align:center;font-size:12px;color:${hasPay?'var(--yt-teal-dark)':'var(--gray-400)'}">
+        ${hasPay ? esc(t.paymentDate) : '—'}
+      </td>
+      <td style="text-align:center;font-size:12px;color:${hasForm?'var(--yt-teal-dark)':'var(--gray-400)'}">
+        ${hasForm ? esc(t.formDate) : '—'}
+      </td>
+      <td style="text-align:center">
+        ${completeCls ? `<span class="${completeCls}" style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${completeText}</span>` : completeText}
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 
