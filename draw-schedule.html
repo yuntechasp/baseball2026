@@ -395,14 +395,16 @@ function applySettings() {
   const drawTime = s.drawtime || '';
   if (drawDate) {
     // 轉換成民國年顯示
-    const d = new Date(drawDate);
+    const dateOnly = String(drawDate).slice(0,10);
+    const d = new Date(dateOnly);
     const rokYear = d.getFullYear() - 1911;
     const mo = d.getMonth() + 1;
     const day = d.getDate();
-    const endTime = s.drawendtime || '12:00';
-    const timeStr = (drawTime || '09:00') + ' 至 ' + endTime;
+    // 只取 HH:mm 部分（避免完整日期字串）
+    const startHM = (drawTime||'09:00').slice(0,5);
+    const endHM   = (s.drawendtime||'12:00').slice(0,5);
     document.getElementById('page-sub').textContent =
-      '線上抽籤時間：民國' + rokYear + '年' + mo + '月' + day + '日 ' + timeStr;
+      '線上抽籤時間：民國' + rokYear + '年' + mo + '月' + day + '日 ' + startHM + ' 至 ' + endHM;
   } else {
     document.getElementById('page-sub').textContent =
       (s.gamedate ? '比賽日期：'+s.gamedate+(s.gameend?' ～ '+s.gameend:'') : '') +
@@ -459,15 +461,17 @@ function renderDraw() {
   tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#fff0e6;color:var(--accent)';
   // 檢查是否在抽籤時間內（drawdate + drawtime）
   const ds = settings.drawdate || '';
-  const dt = settings.drawtime || '09:00';
+  const dt = (settings.drawtime || '09:00').slice(0,5);
+  const et = (settings.drawendtime || '12:00').slice(0,5);
   if (ds) {
-    const drawStart = new Date(ds + 'T' + dt + ':00');
-    const endTime   = settings.drawendtime || '12:00';
-    const drawEnd   = new Date(ds + 'T' + endTime + ':00');
+    // ds 可能是完整日期字串，取前10碼
+    const dateOnly = String(ds).slice(0,10);
+    const drawStart = new Date(dateOnly + 'T' + dt + ':00');
+    const drawEnd   = new Date(dateOnly + 'T' + et + ':00');
     const now = new Date();
     tabBadge.style.display = (now >= drawStart && now <= drawEnd) ? '' : 'none';
   } else {
-    tabBadge.style.display = '';
+    tabBadge.style.display = 'none';
   }
 
   if (!verifiedTeam) {
