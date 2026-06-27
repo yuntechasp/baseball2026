@@ -237,7 +237,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 
 <script>
 // ── 設定：換成您的 Apps Script 網址 ──
-const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0moc322x0N3igfZqWBA-qNiAdLalNOoxjDzl5Go3GJYix/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKqT9gMboDs3_l0_pfattRc-7pmcQ1MVtIJpz_ijClORWs/exec';
 </script>
 
 <!-- ══ 登入畫面 ══ -->
@@ -2395,7 +2395,27 @@ async function deleteRule(ruleId) {
 async function loadPayments() {
   try {
     const res = await api({ action:'getPayments' });
-    if (res.ok) { DB.payments = res.data || []; renderPayments(); updatePaymentBadge(); }
+    if (res.ok) {
+      DB.payments = res.data || [];
+      renderPayments();
+      updatePaymentBadge();
+
+      // 自動把已確認的繳費時間填入對應隊伍的「匯款時間」
+      const confirmed = DB.payments.filter(p => p.status === 'confirmed' && p.createdAt);
+      for (const p of confirmed) {
+        const team = (DB.teams||[]).find(t => t.teamname === p.teamname);
+        if (team && !team.paymentDate && p.createdAt) {
+          // 從繳費時間取日期部分（YYYY-MM-DD）
+          const dateStr = String(p.createdAt).slice(0,10);
+          team.paymentDate = dateStr;
+          try {
+            await apiPost({ action:'updateStatus', teamId:team.teamId,
+              status:team.status, note:team.note||'',
+              paymentDate:dateStr, formDate:team.formDate||'' });
+          } catch(e){}
+        }
+      }
+    }
   } catch(e) { renderPayments(); }
 }
 
