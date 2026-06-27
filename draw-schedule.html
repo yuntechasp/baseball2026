@@ -753,6 +753,33 @@ function switchBracketGroup(label) {
   }
 }
 
+// ── 籤號文字 → 隊名對應（處理舊資料）──
+function resolveTeamName(name) {
+  if (!name) return name;
+  // 格式如「A組第1籤」「預賽 A組第2籤」→ 找 slotMap
+  const m = String(name).match(/([A-D])組第(\d+)籤/);
+  if (!m) return name; // 已是隊名，直接回傳
+  const groupLabel = m[1];
+  const posInGroup = parseInt(m[2]); // 組內第幾個
+  const gc = drawState.groupCount || 4;
+  const n  = approvedCount || drawData.length;
+  const base = Math.floor(n/gc), extra = n%gc;
+  const labels = ['A','B','C','D','E','F'];
+  // 算出該組的全域 slot 起始
+  let slotStart = 1;
+  for (let g = 0; g < gc; g++) {
+    const sz = base + (g < extra ? 1 : 0);
+    if (labels[g] === groupLabel) {
+      const slot = slotStart + posInGroup - 1;
+      const slotMap = {};
+      drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
+      return slotMap[slot] || name;
+    }
+    slotStart += sz;
+  }
+  return name;
+}
+
 function renderGroupTable(group, groupMatches) {
   if (!groupMatches.length) {
     return '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px">賽程尚未產生</div>';
@@ -762,6 +789,8 @@ function renderGroupTable(group, groupMatches) {
     '<th>隊伍 B</th><th style="width:80px">日期</th><th style="width:65px">時間</th><th style="width:60px">場地</th>' +
     '</tr></thead><tbody>';
   groupMatches.forEach(m => {
+    const teamA = resolveTeamName(m.teamA);
+    const teamB = resolveTeamName(m.teamB);
     const hasScore = m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==undefined&&m.scoreB!=='';
     const isWinA = hasScore && Number(m.scoreA) > Number(m.scoreB);
     const isWinB = hasScore && Number(m.scoreB) > Number(m.scoreA);
@@ -770,9 +799,9 @@ function renderGroupTable(group, groupMatches) {
       : '<span class="pending-tag">待賽</span>';
     html += '<tr>' +
       '<td><strong>'+esc(m.matchNum)+'</strong></td>' +
-      '<td class="'+(isWinA?'win-team':'')+'">'+esc(m.teamA)+'</td>' +
+      '<td class="'+(isWinA?'win-team':'')+'">'+esc(teamA)+'</td>' +
       '<td style="text-align:center">'+scoreCell+'</td>' +
-      '<td class="'+(isWinB?'win-team':'')+'">'+esc(m.teamB)+'</td>' +
+      '<td class="'+(isWinB?'win-team':'')+'">'+esc(teamB)+'</td>' +
       '<td>'+fmtDate(m.date)+'</td><td>'+fmtTime(m.time)+'</td><td>'+esc(m.court)+'</td></tr>';
   });
   html += '</tbody></table></div>';
@@ -796,40 +825,61 @@ function renderTotalSchedule() {
     return;
   }
 
-  // 依日期分組顯示
+  // 依日期分組
   const byDate = {};
   matchData.forEach(m => {
-    const d = fmtDate(m.date) || m.date || '日期未定';
+    const d = fmtDate(m.date) || String(m.date) || '日期未定';
     if (!byDate[d]) byDate[d] = [];
     byDate[d].push(m);
   });
+  const dates = Object.keys(byDate).sort();
 
-  let html = '';
-  Object.keys(byDate).sort().forEach(date => {
+  // 日期快速跳轉列
+  const jumpBar = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">' +
+    dates.map(d =>
+      '<a href="#date-'+d.replace('/','_')+'" style="padding:6px 16px;background:var(--yt-teal-light);' +
+      'border:1px solid var(--yt-teal-border);border-radius:20px;font-size:13px;font-weight:600;' +
+      'color:var(--yt-teal-dark);text-decoration:none;transition:all .15s" ' +
+      'onmouseover="this.style.background=\'var(--yt-teal-dark)\';this.style.color=\'#fff\'" ' +
+      'onmouseout="this.style.background=\'var(--yt-teal-light)\';this.style.color=\'var(--yt-teal-dark)\'">'+
+      '📅 '+d+'</a>'
+    ).join('') +
+    '</div>';
+
+  let html = jumpBar;
+  dates.forEach(date => {
     const dayMatches = byDate[date].sort((a,b) => (fmtTime(a.time)||'').localeCompare(fmtTime(b.time)||''));
-    html += '<div style="margin-bottom:24px">' +
-      '<div style="font-size:14px;font-weight:700;color:var(--yt-teal-dark);padding:8px 14px;' +
+    const anchorId = 'date-' + date.replace('/','_');
+    html += '<div id="'+anchorId+'" style="margin-bottom:28px;scroll-margin-top:110px">' +
+      '<div style="font-size:14px;font-weight:700;color:var(--yt-teal-dark);padding:10px 16px;' +
       'background:var(--yt-teal-light);border-radius:var(--radius) var(--radius) 0 0;' +
-      'border:1px solid var(--yt-teal-border)">📅 ' + date + '</div>' +
-      '<div style="overflow-x:auto;border:1px solid var(--gray-100);border-radius:0 0 var(--radius-lg) var(--radius-lg)">' +
+      'border:1px solid var(--yt-teal-border);display:flex;align-items:center;gap:8px">' +
+      '📅 '+date+
+      '<span style="font-size:11px;font-weight:400;color:var(--yt-teal-dark);opacity:.7">（'+dayMatches.length+' 場）</span>' +
+      '</div>' +
+      '<div style="overflow-x:auto;border:1px solid var(--gray-100);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg)">' +
       '<table class="match-table"><thead><tr>' +
-      '<th style="width:55px">場次</th><th style="width:90px">組別</th>' +
+      '<th style="width:55px">場次</th><th style="width:80px">組別</th>' +
       '<th>隊伍 A</th><th style="width:90px;text-align:center">比分</th><th>隊伍 B</th>' +
       '<th style="width:65px">時間</th><th style="width:60px">場地</th>' +
       '</tr></thead><tbody>';
     dayMatches.forEach(m => {
+      const teamA = resolveTeamName(m.teamA);
+      const teamB = resolveTeamName(m.teamB);
       const hasScore = m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==undefined&&m.scoreB!=='';
       const isWinA = hasScore && Number(m.scoreA) > Number(m.scoreB);
       const isWinB = hasScore && Number(m.scoreB) > Number(m.scoreA);
       const scoreCell = hasScore
         ? '<span class="score-cell">'+m.scoreA+' : '+m.scoreB+'</span>'
         : '<span class="pending-tag">待賽</span>';
+      // 組別標籤顏色
+      const phaseLabel = (m.phase||'').replace('分組賽 ','預賽 ');
       html += '<tr>' +
         '<td><strong>'+esc(m.matchNum)+'</strong></td>' +
-        '<td style="font-size:12px;color:var(--gray-600)">'+esc(m.phase||'')+'</td>' +
-        '<td class="'+(isWinA?'win-team':'')+'">'+esc(m.teamA)+'</td>' +
+        '<td><span style="font-size:11px;color:var(--gray-600)">'+esc(phaseLabel)+'</span></td>' +
+        '<td class="'+(isWinA?'win-team':'')+'">'+esc(teamA)+'</td>' +
         '<td style="text-align:center">'+scoreCell+'</td>' +
-        '<td class="'+(isWinB?'win-team':'')+'">'+esc(m.teamB)+'</td>' +
+        '<td class="'+(isWinB?'win-team':'')+'">'+esc(teamB)+'</td>' +
         '<td>'+fmtTime(m.time)+'</td><td>'+esc(m.court)+'</td></tr>';
     });
     html += '</tbody></table></div></div>';
