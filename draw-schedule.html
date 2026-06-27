@@ -357,11 +357,12 @@ async function api(params) {
     }
     if (drawRes.ok) {
       drawData              = drawRes.draws || [];
-      drawState.open        = drawRes.drawOpen === true;
       drawState.approvedCount = drawRes.approvedCount || approvedTeams.length;
-      drawState.groupCount  = drawRes.groupCount || 2;
+      drawState.groupCount  = drawRes.groupCount || 4;
       groupCount            = drawState.groupCount;
       approvedCount         = drawState.approvedCount;
+      // drawOpen 由前端時間判斷，不依賴後端設定
+      drawState.open = getDrawPhase() === 'open';
       drawState.done = drawData.length > 0 && drawData.length >= drawState.approvedCount && drawState.approvedCount > 0;
     }
     if (matchRes.ok && matchRes.data) {
@@ -390,26 +391,9 @@ function applySettings() {
   const title = s.title || '比賽報名系統';
   document.getElementById('nav-title').textContent    = title;
   document.getElementById('footer-title').textContent = title;
-  // 顯示抽籤時間（drawdate + drawtime）
-  const drawDate = s.drawdate || '';
-  const drawTime = s.drawtime || '';
-  if (drawDate) {
-    // 轉換成民國年顯示
-    const dateOnly = String(drawDate).slice(0,10);
-    const d = new Date(dateOnly);
-    const rokYear = d.getFullYear() - 1911;
-    const mo = d.getMonth() + 1;
-    const day = d.getDate();
-    // 只取 HH:mm 部分（避免完整日期字串）
-    const startHM = (drawTime||'09:00').slice(0,5);
-    const endHM   = (s.drawendtime||'12:00').slice(0,5);
-    document.getElementById('page-sub').textContent =
-      '線上抽籤時間：民國' + rokYear + '年' + mo + '月' + day + '日 ' + startHM + ' 至 ' + endHM;
-  } else {
-    document.getElementById('page-sub').textContent =
-      (s.gamedate ? '比賽日期：'+s.gamedate+(s.gameend?' ～ '+s.gameend:'') : '') +
-      (s.venue ? '  ·  '+s.venue : '');
-  }
+  // 抽籤時間固定顯示：民國 114 年 7 月 17 日 09:00 至 12:00
+  document.getElementById('page-sub').textContent =
+    '線上抽籤時間：民國114年7月17日 09:00 至 12:00';
 }
 
 // ── Tab 切換 ──
@@ -425,26 +409,29 @@ function switchTab(tab) {
 // ════════════════════════════════
 // DRAW
 // ════════════════════════════════
+// ── 抽籤時間設定（固定 7/17 09:00–12:00）──
+const DRAW_START = new Date('2026-07-17T09:00:00+08:00');
+const DRAW_END   = new Date('2026-07-17T12:00:00+08:00');
+
+function getDrawPhase() {
+  const now = new Date();
+  if (now < DRAW_START)  return 'before';   // 尚未開始
+  if (now <= DRAW_END)   return 'open';     // 抽籤進行中
+  return 'after';                           // 抽籤時間結束
+}
+
 function renderDraw() {
   const body = document.getElementById('draw-body');
   const tag  = document.getElementById('draw-status-tag');
   const verifyArea = document.getElementById('verify-area');
   const tabBadge = document.getElementById('draw-tab-badge');
+  const phase = getDrawPhase();
 
-  if (!drawState.open && !drawState.done) {
-    tag.textContent = '抽籤未開放';
-    tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--gray-100);color:var(--gray-400)';
-    tabBadge.style.display = 'none';
-    verifyArea.style.display = 'none';
-    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)"><div style="font-size:36px;margin-bottom:12px">🔒</div>抽籤尚未開放，請待主辦單位公告。</div>';
-    return;
-  }
-
+  // ── 抽籤已全部完成（不管時間）──
   if (drawState.done) {
     tag.textContent = '抽籤已完成';
     tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#eaf3de;color:#3b6d11';
     tabBadge.style.display = 'none';
-    // 移除「抽籤進行中」標籤
     verifyArea.style.display = 'none';
     let html = '<div class="draw-done-all">✅ 所有隊伍抽籤完成！請點上方「賽程資訊」查看對戰表。</div>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
@@ -456,23 +443,33 @@ function renderDraw() {
     return;
   }
 
-  // 進行中 - 只在開放時間內顯示「抽籤進行中」
+  // ── 尚未開始 ──
+  if (phase === 'before') {
+    tag.textContent = '尚未開始抽籤';
+    tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--gray-100);color:var(--gray-400)';
+    tabBadge.style.display = 'none';
+    verifyArea.style.display = 'none';
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)"><div style="font-size:36px;margin-bottom:12px">🔒</div>抽籤尚未開始，預定於 <strong>7月17日 09:00</strong> 開放。</div>';
+    return;
+  }
+
+  // ── 抽籤時間結束（且未全部完成）──
+  if (phase === 'after') {
+    tag.textContent = '抽籤時間結束';
+    tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--gray-100);color:var(--gray-600)';
+    tabBadge.style.display = 'none';
+    verifyArea.style.display = 'none';
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)"><div style="font-size:36px;margin-bottom:12px">⏰</div>抽籤時間已結束，未完成抽籤之隊伍將由系統自動補抽。</div>';
+    // 觸發後端自動補抽（只呼叫一次，有回應才重新渲染）
+    autoFillIfNeeded();
+    return;
+  }
+
+  // ── 抽籤進行中 ──
   tag.textContent = '抽籤進行中';
   tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#fff0e6;color:var(--accent)';
-  // 檢查是否在抽籤時間內（drawdate + drawtime）
-  const ds = settings.drawdate || '';
-  const dt = (settings.drawtime || '09:00').slice(0,5);
-  const et = (settings.drawendtime || '12:00').slice(0,5);
-  if (ds) {
-    // ds 可能是完整日期字串，取前10碼
-    const dateOnly = String(ds).slice(0,10);
-    const drawStart = new Date(dateOnly + 'T' + dt + ':00');
-    const drawEnd   = new Date(dateOnly + 'T' + et + ':00');
-    const now = new Date();
-    tabBadge.style.display = (now >= drawStart && now <= drawEnd) ? '' : 'none';
-  } else {
-    tabBadge.style.display = 'none';
-  }
+  tabBadge.style.display = '';
+  tabBadge.textContent = '進行中';
 
   if (!verifiedTeam) {
     verifyArea.style.display = 'block';
@@ -496,6 +493,26 @@ function renderDraw() {
     '<div class="draw-display" id="draw-display"><div class="draw-hint">點擊按鈕開始抽籤</div></div>' +
     '<div style="font-size:12px;color:var(--gray-400);text-align:center;margin-bottom:14px">已完成 '+done+' / '+total+' 隊</div>' +
     '<div style="text-align:center"><button onclick="startDraw()" style="padding:12px 40px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">🎰 開始抽籤</button></div>';
+}
+
+// ── 時間結束後觸發後端自動補抽 ──
+let autoFillCalled = false;
+async function autoFillIfNeeded() {
+  if (autoFillCalled) return;
+  autoFillCalled = true;
+  try {
+    const res = await api({ action: 'autoFillDraw', payload: encodeURIComponent(JSON.stringify({ action: 'autoFillDraw' })) });
+    if (res.ok && res.filled > 0) {
+      // 重新載入抽籤資料後刷新畫面
+      const drawRes = await api({ action: 'getDrawData' });
+      if (drawRes.ok) {
+        drawData = drawRes.draws || [];
+        drawState.approvedCount = drawRes.approvedCount || approvedTeams.length;
+        drawState.done = drawData.length >= drawState.approvedCount && drawState.approvedCount > 0;
+      }
+      renderDraw(); renderBracket(); renderScheduleTab();
+    }
+  } catch(e) { console.error('autoFill error', e); }
 }
 
 async function verifyAndDraw() {
@@ -522,34 +539,63 @@ async function verifyAndDraw() {
   btn.disabled=false; btn.textContent='確認身份並抽籤';
 }
 
-function startDraw() {
+async function startDraw() {
   if (drawState.spinning || !verifiedTeam) return;
+  if (getDrawPhase() !== 'open') { toast('抽籤時間未開放'); return; }
   drawState.spinning = true;
+
   const disp = document.getElementById('draw-display');
   if (disp) disp.innerHTML = '<div class="draw-team-label">'+esc(verifiedTeam.teamname)+'</div><div class="draw-num" id="spin-num">-</div>';
-  const taken = new Set(drawData.map(d=>d.slot));
+
+  // 先跑視覺動畫（前端假跑），再向後端取得真正籤號
   const avail = [];
-  for (let i=1;i<=drawState.approvedCount;i++) { if(!taken.has(i)) avail.push(i); }
-  if (!avail.length) { drawState.spinning=false; return; }
-  let frame=0, frames=22+Math.floor(Math.random()*16);
-  spinTimer = setInterval(async()=>{
-    const rand=avail[Math.floor(Math.random()*avail.length)];
-    const el=document.getElementById('spin-num');
-    if(el){el.textContent='第 '+rand+' 籤';el.className='draw-num num-flash';}
+  const taken = new Set(drawData.map(d => d.slot));
+  for (let i = 1; i <= drawState.approvedCount; i++) { if (!taken.has(i)) avail.push(i); }
+  if (!avail.length) { drawState.spinning = false; return; }
+
+  let frame = 0, frames = 22 + Math.floor(Math.random() * 16);
+  let apiResult = null;
+
+  // 同步呼叫後端（在動畫期間取得結果）
+  api({ action: 'saveDraw', payload: encodeURIComponent(JSON.stringify({ action: 'saveDraw', teamId: verifiedTeam.teamId, teamname: verifiedTeam.teamname })) })
+    .then(res => { apiResult = res; })
+    .catch(() => { apiResult = { ok: false, error: '網路錯誤' }; });
+
+  spinTimer = setInterval(async () => {
+    const rand = avail[Math.floor(Math.random() * avail.length)];
+    const el = document.getElementById('spin-num');
+    if (el) { el.textContent = '第 ' + rand + ' 籤'; el.className = 'draw-num num-flash'; }
     frame++;
-    if(frame>=frames){
+
+    // 動畫跑完且 API 已回應
+    if (frame >= frames && apiResult !== null) {
       clearInterval(spinTimer);
-      const picked=avail[Math.floor(Math.random()*avail.length)];
-      const el2=document.getElementById('spin-num');
-      if(el2){el2.textContent='第 '+picked+' 籤 ✓';el2.className='draw-num';}
-      const entry={teamId:verifiedTeam.teamId,teamname:verifiedTeam.teamname,slot:picked};
-      drawData.push(entry);
-      try{await api({action:'saveDraw',payload:encodeURIComponent(JSON.stringify({action:'saveDraw',teamId:verifiedTeam.teamId,teamname:verifiedTeam.teamname,slot:picked}))});}catch(e){}
-      drawState.spinning=false;
-      if(drawData.length>=drawState.approvedCount&&drawState.approvedCount>0){drawState.done=true;buildMatches();}
-      setTimeout(()=>{renderDraw();renderBracket();renderScheduleTab();},1200);
+      drawState.spinning = false;
+
+      if (!apiResult.ok) {
+        // 已抽過或錯誤
+        const el2 = document.getElementById('spin-num');
+        if (el2) el2.textContent = apiResult.error || '抽籤失敗';
+        if (apiResult.alreadyDrawn) {
+          drawData.push({ teamId: verifiedTeam.teamId, teamname: verifiedTeam.teamname, slot: apiResult.slot });
+        }
+        toast(apiResult.error || '抽籤失敗，請稍後再試');
+        setTimeout(() => { renderDraw(); renderBracket(); }, 1500);
+        return;
+      }
+
+      const picked = apiResult.slot;
+      const el2 = document.getElementById('spin-num');
+      if (el2) { el2.textContent = '第 ' + picked + ' 籤 ✓'; el2.className = 'draw-num'; }
+
+      drawData.push({ teamId: verifiedTeam.teamId, teamname: verifiedTeam.teamname, slot: picked });
+      if (drawData.length >= drawState.approvedCount && drawState.approvedCount > 0) {
+        drawState.done = true;
+        buildMatches();
+      }
+      setTimeout(() => { renderDraw(); renderBracket(); renderScheduleTab(); }, 1200);
     }
-  },80);
+  }, 80);
 }
 
 function renderBracket() {
@@ -735,30 +781,44 @@ function drawBrackets() {
 }
 
 function drawGroupSVG(teams) {
-  var W = 280, H = 230;
-  var pos = [{x:30,y:30},{x:250,y:30},{x:250,y:200},{x:30,y:200}];
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:280px">';
-  // 對角虛線
-  svg += '<line x1="30" y1="30" x2="250" y2="200" stroke="#9FD9CE" stroke-width="1.5" stroke-dasharray="5,4"/>';
-  svg += '<line x1="250" y1="30" x2="30" y2="200" stroke="#9FD9CE" stroke-width="1.5" stroke-dasharray="5,4"/>';
-  // 四邊實線
-  svg += '<line x1="30" y1="30" x2="250" y2="30" stroke="#00695C" stroke-width="1.5"/>';
-  svg += '<line x1="250" y1="30" x2="250" y2="200" stroke="#00695C" stroke-width="1.5"/>';
-  svg += '<line x1="250" y1="200" x2="30" y2="200" stroke="#00695C" stroke-width="1.5"/>';
-  svg += '<line x1="30" y1="200" x2="30" y2="30" stroke="#00695C" stroke-width="1.5"/>';
-  // 四個角的隊伍
+  var W = 300, H = 260;
+  // 四隊放在正方形四角（順時針：左上、右上、右下、左下）
+  var pos = [
+    {x: 58,  y: 52},
+    {x: 242, y: 52},
+    {x: 242, y: 208},
+    {x: 58,  y: 208},
+  ];
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:300px">';
+
+  // 所有隊伍兩兩之間都畫連線（循環賽 = 6 場）
+  var pairs = [[0,1],[1,2],[2,3],[3,0],[0,2],[1,3]];
+  var isDiag = {[0+','+2]: true, [1+','+3]: true, [2+','+0]: true, [3+','+1]: true};
+  pairs.forEach(function(p) {
+    var key = p[0]+','+p[1];
+    var diag = !!isDiag[key];
+    svg += '<line x1="' + pos[p[0]].x + '" y1="' + pos[p[0]].y +
+           '" x2="' + pos[p[1]].x + '" y2="' + pos[p[1]].y +
+           '" stroke="' + (diag ? '#9FD9CE' : '#00695C') +
+           '" stroke-width="1.5"' + (diag ? ' stroke-dasharray="5,4"' : '') + '/>';
+  });
+
+  // 四個角的隊伍標籤
   var labels = [
-    {x:30,  y:30,  ax:'start', ay:-10},
-    {x:250, y:30,  ax:'end',   ay:-10},
-    {x:250, y:200, ax:'end',   ay:20},
-    {x:30,  y:200, ax:'start', ay:20},
+    {x: 58,  y: 52,  ax: 'middle', dx: 0,   dy: -18},
+    {x: 242, y: 52,  ax: 'middle', dx: 0,   dy: -18},
+    {x: 242, y: 208, ax: 'middle', dx: 0,   dy: 22},
+    {x: 58,  y: 208, ax: 'middle', dx: 0,   dy: 22},
   ];
   labels.forEach(function(l, i) {
-    var name = teams[i] || ('第'+(i+1)+'籤');
-    var short = name.length > 6 ? name.slice(0,6) + '…' : name;
+    var name = teams[i] || ('第' + (i+1) + '籤');
+    var short = name.length > 6 ? name.slice(0, 6) + '…' : name;
     svg += '<circle cx="' + l.x + '" cy="' + l.y + '" r="5" fill="#00695C"/>';
-    svg += '<text x="' + (l.x + (l.ax==='start'?8:-8)) + '" y="' + (l.y + l.ay/2 + 5) + '" text-anchor="' + l.ax + '" font-size="12" font-weight="700" fill="#00695C">' + esc(short) + '</text>';
+    svg += '<text x="' + (l.x + l.dx) + '" y="' + (l.y + l.dy) +
+           '" text-anchor="' + l.ax + '" font-size="12" font-weight="700" fill="#00695C">' +
+           esc(short) + '</text>';
   });
+
   svg += '</svg>';
   return svg;
 }
