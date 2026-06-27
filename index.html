@@ -100,6 +100,20 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .news-title{font-size:14px;font-weight:500;color:var(--gray-900);margin-bottom:2px}
 .news-date{font-size:12px;color:var(--gray-400)}
 .news-empty{padding:24px;text-align:center;color:var(--gray-400);font-size:13px}
+.news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.news-card{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);
+  padding:14px 16px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow-sm);
+  display:flex;flex-direction:column;gap:6px}
+.news-card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+.news-card.expandable-card:hover{border-color:var(--yt-teal-border)}
+.news-card-header{display:flex;align-items:center;gap:8px}
+.news-card-title{font-size:13px;font-weight:600;color:var(--gray-900);line-height:1.4}
+.news-card-date{font-size:11px;color:var(--gray-400)}
+.news-card-body{display:none;margin-top:6px;padding-top:8px;border-top:1px solid var(--gray-100)}
+.news-card-body.open{display:block}
+.nb-new-card{background:#fff0e6;border-top:3px solid var(--accent)}
+.nb-imp-card{background:#fcebeb;border-top:3px solid #a32d2d}
+.nb-info-card{background:var(--yt-teal-light);border-top:3px solid var(--yt-teal)}
 .skel{background:linear-gradient(90deg,var(--gray-100) 25%,var(--gray-50) 50%,var(--gray-100) 75%);
   background-size:200% 100%;animation:skel-wave 1.4s infinite;border-radius:6px}
 @keyframes skel-wave{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -550,36 +564,37 @@ function newsImgSrc(val) {
 function renderNews() {
   const el = document.getElementById('news-list');
   if (!newsData.length) { el.innerHTML = '<div class="news-empty">目前沒有公告</div>'; return; }
-  el.innerHTML = newsData.map((n, i) => {
+
+  // 卡片方塊排列
+  const cardColors = { new:'nb-new-card', imp:'nb-imp-card', info:'nb-info-card' };
+  el.innerHTML = '<div class="news-grid">' + newsData.map((n, i) => {
     const hasMore = !!(n.body || n.imageData);
     const imgId   = 'news-img-' + i;
     const bodyHtml = hasMore ? (
-      (n.body ? '<div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap;line-height:1.7;margin-bottom:8px">' + esc(n.body) + '</div>' : '') +
-      (n.imageData ? '<div id="' + imgId + '"><div style="color:var(--gray-400);font-size:12px">圖片載入中…</div></div>' : '')
+      (n.body ? '<div style="font-size:12px;color:var(--gray-600);white-space:pre-wrap;line-height:1.6">' + esc(n.body) + '</div>' : '') +
+      (n.imageData ? '<div id="' + imgId + '" style="margin-top:8px"><div style="color:var(--gray-400);font-size:12px">圖片載入中…</div></div>' : '')
     ) : '';
-    return '<div class="news-item' + (hasMore ? ' expandable' : '') + '" data-idx="' + i + '" data-imgkey="' + esc(n.imageData||'') + '" data-imgid="' + imgId + '">' +
-      '<div class="news-item-header">' +
+    return '<div class="news-card ' + (cardColors[n.type]||'nb-info-card') + (hasMore?' expandable-card':'') + '" data-idx="' + i + '" data-imgkey="' + esc(n.imageData||'') + '" data-imgid="' + imgId + '">' +
+      '<div class="news-card-header">' +
         '<span class="news-badge ' + (NB[n.type]||'nb-info') + '">' + (NL[n.type]||'公告') + '</span>' +
-        '<div style="flex:1;min-width:0">' +
-          '<div class="news-title">' + esc(n.title) + '</div>' +
-          '<div class="news-date">' + (n.date||'') + (hasMore ? ' &nbsp;▼' : '') + '</div>' +
-        '</div>' +
+        (hasMore ? '<span style="font-size:11px;color:var(--gray-400);margin-left:auto">▼</span>' : '') +
       '</div>' +
-      (hasMore ? '<div class="news-expand-body">' + bodyHtml + '</div>' : '') +
+      '<div class="news-card-title">' + esc(n.title) + '</div>' +
+      '<div class="news-card-date">' + (n.date||'') + '</div>' +
+      (hasMore ? '<div class="news-card-body">' + bodyHtml + '</div>' : '') +
     '</div>';
-  }).join('');
+  }).join('') + '</div>';
 
   // Bind click + lazy load image
-  el.querySelectorAll('.news-item.expandable').forEach(item => {
+  el.querySelectorAll('.news-card.expandable-card').forEach(item => {
     item.addEventListener('click', function() {
-      const body    = this.querySelector('.news-expand-body');
-      const dateEl  = this.querySelector('.news-date');
+      const body    = this.querySelector('.news-card-body');
+      const arrow   = this.querySelector('.news-card-header span:last-child');
       if (!body) return;
       const isOpen  = body.classList.contains('open');
       body.classList.toggle('open');
-      if (dateEl) dateEl.innerHTML = dateEl.innerHTML.replace(/ &nbsp;[▼▲]/, '') + ' &nbsp;' + (isOpen ? '▼' : '▲');
+      if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
 
-      // Load image on first open
       if (!isOpen) {
         const imgKey = this.dataset.imgkey;
         const imgId  = this.dataset.imgid;
