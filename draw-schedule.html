@@ -215,7 +215,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
       🏆 賽程圖
     </button>
     <button class="tab-btn" id="tab-schedule-btn" onclick="switchTab('schedule')">
-      🗓 賽程時間表
+      🗓 總時間表
     </button>
   </div>
 </div>
@@ -284,43 +284,17 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
         預賽：各組循環賽，每組取前二名晉級複賽 ｜ 複賽：單淘汰制
       </div>
 
-      <!-- 預賽四組 -->
-      <div class="bracket-section-title">⚾ 預賽分組</div>
-      <div class="groups-row">
-        <div class="group-box">
-          <div class="group-box-title">⚾ A 組</div>
-          <div class="group-svg-wrap" id="svg-group-a"></div>
-        </div>
-        <div class="group-box">
-          <div class="group-box-title">⚾ B 組</div>
-          <div class="group-svg-wrap" id="svg-group-b"></div>
-        </div>
-      </div>
-      <div class="groups-row">
-        <div class="group-box">
-          <div class="group-box-title">⚾ C 組</div>
-          <div class="group-svg-wrap" id="svg-group-c"></div>
-        </div>
-        <div class="group-box">
-          <div class="group-box-title">⚾ D 組</div>
-          <div class="group-svg-wrap" id="svg-group-d"></div>
-        </div>
-      </div>
-
-      <!-- 複賽淘汰圖 -->
-      <div class="bracket-section-title" style="margin-top:8px">🏆 複賽對戰圖</div>
-      <div class="elim-box">
-        <div class="elim-box-title">🏆 八強 → 四強 → 季軍賽 / 決賽</div>
-        <div class="elim-svg-wrap" id="svg-elim"></div>
-      </div>
+      <!-- 分組頁籤（A/B/C/D + 複決賽）-->
+      <div class="grp-tab-bar" id="bracket-grp-tabs"></div>
+      <div id="bracket-grp-panel"></div>
     </div>
 
-    <!-- ══ Tab 三：賽程時間表 ══ -->
+    <!-- ══ Tab 三：總時間表 ══ -->
     <div id="tab-schedule" class="tab-panel">
       <div style="text-align:center;margin-bottom:20px">
         <span class="status-tag" id="sched-status-tag">載入中</span>
       </div>
-      <div id="groups-area">
+      <div id="total-schedule-area">
         <div class="loading"><div class="spinner"></div><div>載入賽程中…</div></div>
       </div>
     </div>
@@ -387,10 +361,9 @@ async function api(params) {
   document.getElementById('loading-main').style.display = 'none';
   document.getElementById('main-content').style.display = 'block';
   renderDraw();
-  renderBracket();
-  renderScheduleTab();
+  renderScheduleTab(); // 總時間表
 
-  // 若 URL 帶 #schedule 則切到賽程頁
+  // 若 URL 帶 #schedule 則切到總時間表
   if (location.hash === '#schedule') switchTab('schedule');
   else if (location.hash === '#bracket') switchTab('bracket');
 })();
@@ -440,7 +413,8 @@ function switchTab(tab) {
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('tab-'+tab+'-btn').classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  if (tab === 'bracket') setTimeout(drawBrackets, 50);
+  if (tab === 'bracket') setTimeout(renderBracketTab, 50);
+  if (tab === 'schedule') renderTotalSchedule();
 }
 
 // ════════════════════════════════
@@ -702,66 +676,175 @@ function buildMatches() {
 }
 
 // ════════════════════════════════
-// SCHEDULE TAB (分組頁籤版)
+// TAB 二：賽程圖（分組SVG + 該組賽程）
 // ════════════════════════════════
-let schedGroups = []; // 暫存分組資料供切換用
+let bracketActiveGroup = 'A';
+
+function renderBracketTab() {
+  const slotMap = {};
+  drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
+  const gc = drawState.groupCount || 4;
+  const labels = ['A','B','C','D','E','F'];
+  const n = approvedCount || drawData.length;
+  const base = Math.floor(n/gc), extra = n%gc;
+
+  // 建立各組資料
+  const groups = [];
+  let slotStart = 1;
+  for (let g = 0; g < gc; g++) {
+    const size = base + (g < extra ? 1 : 0);
+    const slots = [];
+    for (let s = slotStart; s < slotStart+size; s++)
+      slots.push({ slot: s, teamname: slotMap[s] || null });
+    groups.push({ label: labels[g], slots });
+    slotStart += size;
+  }
+
+  // 建頁籤（A/B/C/D + 複決賽）
+  const tabsHtml = [
+    ...groups.map(g => '<button class="grp-tab-btn" id="btab-'+g.label+'" onclick="switchBracketGroup(\''+g.label+'\')">⚾ '+g.label+' 組</button>'),
+    '<button class="grp-tab-btn" id="btab-elim" onclick="switchBracketGroup(\'elim\')">🏆 複決賽</button>'
+  ].join('');
+
+  document.getElementById('bracket-grp-tabs').innerHTML = tabsHtml;
+  document.getElementById('bracket-grp-panel').innerHTML = '';
+
+  // 儲存給切換用
+  window._bracketGroups = groups;
+
+  const init = groups.find(g => g.label === bracketActiveGroup) ? bracketActiveGroup : 'A';
+  switchBracketGroup(init);
+}
+
+function switchBracketGroup(label) {
+  bracketActiveGroup = label;
+  document.querySelectorAll('.grp-tab-btn[id^="btab-"]').forEach(b =>
+    b.classList.toggle('active', b.id === 'btab-'+label)
+  );
+
+  const panel = document.getElementById('bracket-grp-panel');
+  if (label === 'elim') {
+    // 複決賽淘汰圖
+    const slotMap = {};
+    drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
+    const groupTeams = {
+      A: [slotMap[1]||'A組第1籤', slotMap[2]||'A組第2籤', slotMap[3]||'A組第3籤', slotMap[4]||'A組第4籤'],
+      B: [slotMap[5]||'B組第1籤', slotMap[6]||'B組第2籤', slotMap[7]||'B組第3籤', slotMap[8]||'B組第8籤'],
+      C: [slotMap[9]||'C組第1籤', slotMap[10]||'C組第2籤', slotMap[11]||'C組第3籤', slotMap[12]||'C組第4籤'],
+      D: [slotMap[13]||'D組第1籤', slotMap[14]||'D組第2籤', slotMap[15]||'D組第3籤', slotMap[16]||'D組第4籤'],
+    };
+    panel.innerHTML =
+      '<div class="elim-box" style="margin-top:8px">' +
+      '<div class="elim-box-title">🏆 八強 → 四強 → 季軍賽 / 決賽</div>' +
+      '<div class="elim-svg-wrap">' + drawElimSVG(groupTeams, {}) + '</div>' +
+      '</div>';
+  } else {
+    const group = (window._bracketGroups || []).find(g => g.label === label);
+    if (!group) return;
+    const groupMatches = matchData.filter(m => m.phase && m.phase.includes(label+'組'));
+    panel.innerHTML =
+      // SVG 循環賽圖
+      '<div class="group-box" style="margin-bottom:16px">' +
+      '<div class="group-box-title">⚾ ' + label + ' 組</div>' +
+      '<div class="group-svg-wrap">' + buildSVG(group, groupMatches) + '</div>' +
+      '</div>' +
+      // 賽程時間表
+      renderGroupTable(group, groupMatches);
+  }
+}
+
+function renderGroupTable(group, groupMatches) {
+  if (!groupMatches.length) {
+    return '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px">賽程尚未產生</div>';
+  }
+  let html = '<div class="match-table-wrap"><table class="match-table"><thead><tr>' +
+    '<th style="width:55px">場次</th><th>隊伍 A</th><th style="width:100px;text-align:center">比分</th>' +
+    '<th>隊伍 B</th><th style="width:80px">日期</th><th style="width:65px">時間</th><th style="width:60px">場地</th>' +
+    '</tr></thead><tbody>';
+  groupMatches.forEach(m => {
+    const hasScore = m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==undefined&&m.scoreB!=='';
+    const isWinA = hasScore && Number(m.scoreA) > Number(m.scoreB);
+    const isWinB = hasScore && Number(m.scoreB) > Number(m.scoreA);
+    const scoreCell = hasScore
+      ? '<span class="score-cell">'+m.scoreA+' : '+m.scoreB+'</span>'+(m.winner&&m.winner!=='平局'?'<br><span style="font-size:11px;color:var(--green)">✅ '+esc(m.winner)+'</span>':'')
+      : '<span class="pending-tag">待賽</span>';
+    html += '<tr>' +
+      '<td><strong>'+esc(m.matchNum)+'</strong></td>' +
+      '<td class="'+(isWinA?'win-team':'')+'">'+esc(m.teamA)+'</td>' +
+      '<td style="text-align:center">'+scoreCell+'</td>' +
+      '<td class="'+(isWinB?'win-team':'')+'">'+esc(m.teamB)+'</td>' +
+      '<td>'+fmtDate(m.date)+'</td><td>'+fmtTime(m.time)+'</td><td>'+esc(m.court)+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ════════════════════════════════
+// TAB 三：總時間表
+// ════════════════════════════════
+function renderTotalSchedule() {
+  const tag  = document.getElementById('sched-status-tag');
+  const area = document.getElementById('total-schedule-area');
+  const done = drawData.length >= approvedCount && approvedCount > 0;
+
+  if (done) { tag.className='status-tag st-done'; tag.textContent='✅ 抽籤已完成'; }
+  else if (drawState.open) { tag.className='status-tag st-open'; tag.textContent='🎰 抽籤進行中'; }
+  else { tag.className='status-tag st-closed'; tag.textContent='⏳ 抽籤尚未開放'; }
+
+  if (!matchData.length) {
+    area.innerHTML = '<div style="text-align:center;padding:48px;color:var(--gray-400)">賽程尚未公布，請待抽籤完成後查看。</div>';
+    return;
+  }
+
+  // 依日期分組顯示
+  const byDate = {};
+  matchData.forEach(m => {
+    const d = fmtDate(m.date) || m.date || '日期未定';
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(m);
+  });
+
+  let html = '';
+  Object.keys(byDate).sort().forEach(date => {
+    const dayMatches = byDate[date].sort((a,b) => (fmtTime(a.time)||'').localeCompare(fmtTime(b.time)||''));
+    html += '<div style="margin-bottom:24px">' +
+      '<div style="font-size:14px;font-weight:700;color:var(--yt-teal-dark);padding:8px 14px;' +
+      'background:var(--yt-teal-light);border-radius:var(--radius) var(--radius) 0 0;' +
+      'border:1px solid var(--yt-teal-border)">📅 ' + date + '</div>' +
+      '<div style="overflow-x:auto;border:1px solid var(--gray-100);border-radius:0 0 var(--radius-lg) var(--radius-lg)">' +
+      '<table class="match-table"><thead><tr>' +
+      '<th style="width:55px">場次</th><th style="width:90px">組別</th>' +
+      '<th>隊伍 A</th><th style="width:90px;text-align:center">比分</th><th>隊伍 B</th>' +
+      '<th style="width:65px">時間</th><th style="width:60px">場地</th>' +
+      '</tr></thead><tbody>';
+    dayMatches.forEach(m => {
+      const hasScore = m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==undefined&&m.scoreB!=='';
+      const isWinA = hasScore && Number(m.scoreA) > Number(m.scoreB);
+      const isWinB = hasScore && Number(m.scoreB) > Number(m.scoreA);
+      const scoreCell = hasScore
+        ? '<span class="score-cell">'+m.scoreA+' : '+m.scoreB+'</span>'
+        : '<span class="pending-tag">待賽</span>';
+      html += '<tr>' +
+        '<td><strong>'+esc(m.matchNum)+'</strong></td>' +
+        '<td style="font-size:12px;color:var(--gray-600)">'+esc(m.phase||'')+'</td>' +
+        '<td class="'+(isWinA?'win-team':'')+'">'+esc(m.teamA)+'</td>' +
+        '<td style="text-align:center">'+scoreCell+'</td>' +
+        '<td class="'+(isWinB?'win-team':'')+'">'+esc(m.teamB)+'</td>' +
+        '<td>'+fmtTime(m.time)+'</td><td>'+esc(m.court)+'</td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+  });
+  area.innerHTML = html;
+}
+
+// ════════════════════════════════
+// SCHEDULE TAB（舊，保留renderGroup供buildSVG用）
+// ════════════════════════════════
+let schedGroups = [];
 let activeGroup = 'A';
 
 function renderScheduleTab() {
-  const tag  = document.getElementById('sched-status-tag');
-  const area = document.getElementById('groups-area');
-  const done = drawData.length>=approvedCount&&approvedCount>0;
-  const open = drawState.open;
-
-  if(done){tag.className='status-tag st-done';tag.textContent='✅ 抽籤已完成';}
-  else if(open){tag.className='status-tag st-open';tag.textContent='🎰 抽籤進行中（'+drawData.length+' / '+approvedCount+' 隊）';}
-  else{tag.className='status-tag st-closed';tag.textContent='⏳ 抽籤尚未開放';}
-
-  if(!approvedCount&&!open){
-    area.innerHTML='<div style="text-align:center;padding:48px;color:var(--gray-400)">賽程尚未公布，請待抽籤完成後查看。</div>';
-    return;
-  }
-  const slotMap={};
-  drawData.forEach(d=>{slotMap[d.slot]=d.teamname;});
-  const n=approvedCount||drawData.length;
-  const gc=drawState.groupCount||4;
-  const base=Math.floor(n/gc),extra=n%gc;
-  const labels=['A','B','C','D','E','F'];
-  schedGroups=[];let slotStart=1;
-  for(let g=0;g<gc;g++){
-    const size=base+(g<extra?1:0),slots=[];
-    for(let s=slotStart;s<slotStart+size;s++) slots.push({slot:s,teamname:slotMap[s]||null});
-    schedGroups.push({label:labels[g],slots});
-    slotStart+=size;
-  }
-
-  // 建立分組頁籤列
-  const tabsHtml = schedGroups.map(g => {
-    const gMatches = matchData.filter(m=>m.phase&&m.phase.includes(g.label+'組'));
-    const doneCount = gMatches.filter(m=>m.scoreA!==undefined&&m.scoreA!=='').length;
-    const badge = doneCount>0 ? '<span style="background:var(--yt-teal);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px">'+doneCount+'/'+gMatches.length+'</span>' : '';
-    return '<button class="grp-tab-btn" id="grp-tab-'+g.label+'" onclick="switchGroup(\''+g.label+'\')">' +
-      '⚾ '+g.label+' 組'+badge+'</button>';
-  }).join('');
-
-  area.innerHTML =
-    '<div class="grp-tab-bar">'+tabsHtml+'</div>' +
-    '<div id="grp-panel"></div>';
-
-  // 預設顯示第一組（或保留上次選的）
-  const initLabel = schedGroups.find(g=>g.label===activeGroup) ? activeGroup : (schedGroups[0]||{label:'A'}).label;
-  switchGroup(initLabel);
-}
-
-function switchGroup(label) {
-  activeGroup = label;
-  // 更新頁籤樣式
-  document.querySelectorAll('.grp-tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.id === 'grp-tab-'+label);
-  });
-  const group = schedGroups.find(g=>g.label===label);
-  if (!group) return;
-  document.getElementById('grp-panel').innerHTML = renderGroup(group);
+  renderTotalSchedule();
 }
 
 function renderGroup(group) {
@@ -836,25 +919,8 @@ function buildSVG(group,matches){
   return svg;
 }
 
-// ── 賽程圖繪製 ──────────────────────────────
 function drawBrackets() {
-  const slotMap = {};
-  drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
-
-  const groupTeams = {
-    A: [slotMap[1]||'A組第1籤', slotMap[2]||'A組第2籤', slotMap[3]||'A組第3籤', slotMap[4]||'A組第4籤'],
-    B: [slotMap[5]||'B組第1籤', slotMap[6]||'B組第2籤', slotMap[7]||'B組第3籤', slotMap[8]||'B組第8籤'],
-    C: [slotMap[9]||'C組第1籤', slotMap[10]||'C組第2籤', slotMap[11]||'C組第3籤', slotMap[12]||'C組第4籤'],
-    D: [slotMap[13]||'D組第1籤', slotMap[14]||'D組第2籤', slotMap[15]||'D組第3籤', slotMap[16]||'D組第4籤'],
-  };
-
-  ['A','B','C','D'].forEach(g => {
-    const el = document.getElementById('svg-group-' + g.toLowerCase());
-    if (el) el.innerHTML = drawGroupSVG(groupTeams[g]);
-  });
-
-  const elimEl = document.getElementById('svg-elim');
-  if (elimEl) elimEl.innerHTML = drawElimSVG(groupTeams, {});
+  renderBracketTab();
 }
 
 function drawGroupSVG(teams) {
