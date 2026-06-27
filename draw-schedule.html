@@ -163,6 +163,15 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   transition:all .3s;pointer-events:none;z-index:999}
 .toast.show{transform:translateY(0);opacity:1}
 
+/* ── 賽程分組頁籤 ── */
+.grp-tab-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.grp-tab-btn{padding:10px 24px;border:2px solid var(--yt-teal-border);background:var(--white);
+  border-radius:var(--radius-lg);font-size:14px;font-weight:600;cursor:pointer;
+  color:var(--gray-600);font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:4px}
+.grp-tab-btn:hover{border-color:var(--yt-teal);color:var(--yt-teal);background:var(--yt-teal-light)}
+.grp-tab-btn.active{background:var(--yt-teal-dark);color:#fff;border-color:var(--yt-teal-dark)}
+.grp-tab-btn.active span{background:rgba(255,255,255,.3)!important;color:#fff!important}
+
 /* ── Footer ── */
 .footer{background:var(--yt-teal-dark);color:rgba(255,255,255,.6);text-align:center;padding:20px;font-size:12px}
 .footer a{color:rgba(255,255,255,.8);text-decoration:none}
@@ -654,8 +663,11 @@ function buildMatches() {
 }
 
 // ════════════════════════════════
-// SCHEDULE TAB (SVG 版)
+// SCHEDULE TAB (分組頁籤版)
 // ════════════════════════════════
+let schedGroups = []; // 暫存分組資料供切換用
+let activeGroup = 'A';
+
 function renderScheduleTab() {
   const tag  = document.getElementById('sched-status-tag');
   const area = document.getElementById('groups-area');
@@ -676,14 +688,41 @@ function renderScheduleTab() {
   const gc=drawState.groupCount||4;
   const base=Math.floor(n/gc),extra=n%gc;
   const labels=['A','B','C','D','E','F'];
-  let groups=[],slotStart=1;
+  schedGroups=[];let slotStart=1;
   for(let g=0;g<gc;g++){
     const size=base+(g<extra?1:0),slots=[];
     for(let s=slotStart;s<slotStart+size;s++) slots.push({slot:s,teamname:slotMap[s]||null});
-    groups.push({label:labels[g],slots});
+    schedGroups.push({label:labels[g],slots});
     slotStart+=size;
   }
-  area.innerHTML=groups.map(g=>renderGroup(g)).join('');
+
+  // 建立分組頁籤列
+  const tabsHtml = schedGroups.map(g => {
+    const gMatches = matchData.filter(m=>m.phase&&m.phase.includes(g.label+'組'));
+    const doneCount = gMatches.filter(m=>m.scoreA!==undefined&&m.scoreA!=='').length;
+    const badge = doneCount>0 ? '<span style="background:var(--yt-teal);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px">'+doneCount+'/'+gMatches.length+'</span>' : '';
+    return '<button class="grp-tab-btn" id="grp-tab-'+g.label+'" onclick="switchGroup(\''+g.label+'\')">' +
+      '⚾ '+g.label+' 組'+badge+'</button>';
+  }).join('');
+
+  area.innerHTML =
+    '<div class="grp-tab-bar">'+tabsHtml+'</div>' +
+    '<div id="grp-panel"></div>';
+
+  // 預設顯示第一組（或保留上次選的）
+  const initLabel = schedGroups.find(g=>g.label===activeGroup) ? activeGroup : (schedGroups[0]||{label:'A'}).label;
+  switchGroup(initLabel);
+}
+
+function switchGroup(label) {
+  activeGroup = label;
+  // 更新頁籤樣式
+  document.querySelectorAll('.grp-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === 'grp-tab-'+label);
+  });
+  const group = schedGroups.find(g=>g.label===label);
+  if (!group) return;
+  document.getElementById('grp-panel').innerHTML = renderGroup(group);
 }
 
 function renderGroup(group) {
