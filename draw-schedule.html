@@ -389,8 +389,6 @@ async function api(params) {
   renderDraw();
   renderBracket();
   renderScheduleTab();
-  // 載入積分以供淘汰賽圖使用
-  loadStandingsForBracket();
 
   // 若 URL 帶 #schedule 則切到賽程頁
   if (location.hash === '#schedule') switchTab('schedule');
@@ -402,9 +400,21 @@ function applySettings() {
   const title = s.title || '比賽報名系統';
   document.getElementById('nav-title').textContent    = title;
   document.getElementById('footer-title').textContent = title;
-  // 抽籤時間固定顯示：民國 114 年 7 月 17 日 09:00 至 12:00
-  document.getElementById('page-sub').textContent =
-    '線上抽籤時間：民國114年7月17日 09:00 至 12:00';
+
+  // 從 Sheets 讀抽籤時間顯示
+  const drawDate    = s.drawdate    || '';
+  const drawTime    = (s.drawtime    || '09:00').slice(0,5);
+  const drawEndTime = (s.drawendtime || '12:00').slice(0,5);
+  if (drawDate) {
+    const d = new Date(String(drawDate).slice(0,10));
+    const rokYear = d.getFullYear() - 1911;
+    const mo  = d.getMonth() + 1;
+    const day = d.getDate();
+    document.getElementById('page-sub').textContent =
+      '線上抽籤時間：民國' + rokYear + '年' + mo + '月' + day + '日 ' + drawTime + ' 至 ' + drawEndTime;
+  } else {
+    document.getElementById('page-sub').textContent = '線上抽籤時間：請待主辦單位公告';
+  }
 }
 
 // ── Tab 切換 ──
@@ -420,15 +430,26 @@ function switchTab(tab) {
 // ════════════════════════════════
 // DRAW
 // ════════════════════════════════
-// ── 抽籤時間設定（固定 7/17 09:00–12:00）──
-const DRAW_START = new Date('2026-07-17T09:00:00+08:00');
-const DRAW_END   = new Date('2026-07-17T12:00:00+08:00');
+// ── 抽籤時間從 settings 動態取得 ──
+function getDrawTimes() {
+  const s = settings;
+  const dateStr     = String(s.drawdate    || '').slice(0,10);
+  const drawTime    = (s.drawtime    || '09:00').slice(0,5);
+  const drawEndTime = (s.drawendtime || '12:00').slice(0,5);
+  if (!dateStr) return { start: null, end: null };
+  return {
+    start: new Date(dateStr + 'T' + drawTime + ':00+08:00'),
+    end:   new Date(dateStr + 'T' + drawEndTime + ':00+08:00'),
+  };
+}
 
 function getDrawPhase() {
+  const { start, end } = getDrawTimes();
+  if (!start || !end) return 'before'; // 尚未設定時間
   const now = new Date();
-  if (now < DRAW_START)  return 'before';   // 尚未開始
-  if (now <= DRAW_END)   return 'open';     // 抽籤進行中
-  return 'after';                           // 抽籤時間結束
+  if (now < start)  return 'before';
+  if (now <= end)   return 'open';
+  return 'after';
 }
 
 function renderDraw() {
@@ -800,36 +821,16 @@ function buildSVG(group,matches){
 }
 
 // ── 賽程圖繪製 ──────────────────────────────
-let standingsForBracket = {}; // 從後端取得積分排名
-
-async function loadStandingsForBracket() {
-  try {
-    const res = await api({ action:'getStandings' });
-    if (res.ok && res.standings) standingsForBracket = res.standings;
-  } catch(e) {}
-}
-
 function drawBrackets() {
   const slotMap = {};
   drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
 
-  // 各組隊伍名稱（抽籤後顯示，否則顯示籤號）
   const groupTeams = {
     A: [slotMap[1]||'A組第1籤', slotMap[2]||'A組第2籤', slotMap[3]||'A組第3籤', slotMap[4]||'A組第4籤'],
-    B: [slotMap[5]||'B組第1籤', slotMap[6]||'B組第2籤', slotMap[7]||'B組第3籤', slotMap[8]||'B組第4籤'],
+    B: [slotMap[5]||'B組第1籤', slotMap[6]||'B組第2籤', slotMap[7]||'B組第3籤', slotMap[8]||'B組第8籤'],
     C: [slotMap[9]||'C組第1籤', slotMap[10]||'C組第2籤', slotMap[11]||'C組第3籤', slotMap[12]||'C組第4籤'],
     D: [slotMap[13]||'D組第1籤', slotMap[14]||'D組第2籤', slotMap[15]||'D組第3籤', slotMap[16]||'D組第4籤'],
   };
-
-  // 從積分排名取晉級隊伍（第1、第2名）
-  // 若積分資料存在且有出賽紀錄才覆蓋，否則顯示預設
-  const advance = {}; // { A: {first:'XX', second:'YY'}, ... }
-  ['A','B','C','D'].forEach(g => {
-    const st = standingsForBracket[g];
-    if (st && st.length >= 2 && st[0].played > 0) {
-      advance[g] = { first: st[0].teamname, second: st[1].teamname };
-    }
-  });
 
   ['A','B','C','D'].forEach(g => {
     const el = document.getElementById('svg-group-' + g.toLowerCase());
@@ -837,7 +838,7 @@ function drawBrackets() {
   });
 
   const elimEl = document.getElementById('svg-elim');
-  if (elimEl) elimEl.innerHTML = drawElimSVG(groupTeams, advance);
+  if (elimEl) elimEl.innerHTML = drawElimSVG(groupTeams, {});
 }
 
 function drawGroupSVG(teams) {
@@ -926,30 +927,13 @@ function drawElimSVG(groupTeams, advance) {
     svg += '<line x1="' + mx + '" y1="' + (yQLabel-12) + '" x2="' + mx + '" y2="' + (y4+17) + '" stroke="#9FD9CE" stroke-width="1.2"/>';
   });
 
-  // 準決賽框（Q勝者 → 有積分時顯示實際晉級隊）
-  // Q1=A1vsD2 → A1晉(A第1), Q2=B1vsC2 → B第1, Q3=C1vsB2 → C第1, Q4=D1vsA2 → D第1
-  // 但實際上是對戰後勝者，預賽結束前還不知道，所以顯示「預計」晉級隊
-  var qWinners = [
-    advance.A && advance.A.first  ? advance.A.first  + '??' : 'Q1勝',
-    advance.B && advance.B.first  ? advance.B.first  + '??' : 'Q2勝',
-    advance.C && advance.C.first  ? advance.C.first  + '??' : 'Q3勝',
-    advance.D && advance.D.first  ? advance.D.first  + '??' : 'Q4勝',
-  ];
-  // 若積分已有完整結果（每隊都出賽過）則直接顯示隊名
-  var qFinal = [
-    advance.A && advance.A.first  ? advance.A.first  : 'Q1勝',
-    advance.B && advance.B.first  ? advance.B.first  : 'Q2勝',
-    advance.C && advance.C.first  ? advance.C.first  : 'Q3勝',
-    advance.D && advance.D.first  ? advance.D.first  : 'Q4勝',
-  ];
+  // 準決賽框（Q勝者）
+  var qLabels = ['Q1勝','Q2勝','Q3勝','Q4勝'];
   pairs4.forEach(function(pair, i) {
     var mx = q4x[i];
-    var label = qFinal[i];
-    var short = label.length > 5 ? label.slice(0,5)+'…' : label;
-    var isReal = !!(advance[['A','B','C','D'][i]] && advance[['A','B','C','D'][i]].first);
-    svg += '<rect x="' + (mx-42) + '" y="' + (y4-17) + '" width="84" height="34" rx="5" fill="' + (isReal?'#eaf3de':'white') + '" stroke="' + (isReal?'#3b6d11':'#00876f') + '" stroke-width="1.5"/>';
-    svg += '<text x="' + mx + '" y="' + (y4-4) + '" text-anchor="middle" font-size="9" fill="' + (isReal?'#3b6d11':'#aaa') + '">Q' + (i+1) + (isReal?' ✓':'') + '</text>';
-    svg += '<text x="' + mx + '" y="' + (y4+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + (isReal?'#3b6d11':'#00695C') + '">' + esc(short) + '</text>';
+    svg += '<rect x="' + (mx-42) + '" y="' + (y4-17) + '" width="84" height="34" rx="5" fill="white" stroke="#00876f" stroke-width="1.5"/>';
+    svg += '<text x="' + mx + '" y="' + (y4-4) + '" text-anchor="middle" font-size="9" fill="#aaa">Q' + (i+1) + '</text>';
+    svg += '<text x="' + mx + '" y="' + (y4+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#00695C">' + qLabels[i] + '</text>';
   });
 
   // 四強（S1/S2）── 加場次標籤 + 對戰說明
