@@ -1858,7 +1858,7 @@ async function printOrderBook(ver) {
   const bookletCSS = `
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#fff;color:#1c1c1a}
-    @media print{@page{size:A4;margin:1.5cm;marks:none}body{margin:0}.page{page-break-after:always;margin:0;box-shadow:none}.page:last-child{page-break-after:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    @media print{@page{size:A4;margin:1.5cm;marks:none}body{margin:0}.page{page-break-after:always;margin:0;box-shadow:none}.page:last-child{page-break-after:avoid}.page[style*="page-break-after:auto"]{page-break-after:auto}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
     .page{min-height:auto;position:relative;overflow:hidden;background:#fff}
     .cover{background:linear-gradient(160deg,#004d40 0%,#00695C 40%,#00897B 70%,#004d40 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 40px;min-height:90vh}
     .cover-year{font-size:28px;font-weight:300;letter-spacing:.3em;opacity:.8;margin-bottom:8px}
@@ -2109,16 +2109,8 @@ async function printOrderBook(ver) {
   BK.draws.forEach(d => { slotMap[d.teamId] = d.slot; });
   const sortedTeams = [...BK.teams].sort((a,b) => a.teamname.localeCompare(b.teamname,'zh-TW-u-co-stroke'));
   const staffRoles = ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'];
-  const PAGE_H = 1100;
-  let teamPages = [], pageHtml2 = '', pageH2 = 0, isFirstTeamPage = true;
 
-  const flushTP = () => {
-    if (!pageHtml2) return;
-    const titleH = isFirstTeamPage ? '<div class="section-title">隊職員名單</div>' : '';
-    teamPages.push(`<div class="page team-page">${isVerify?'<div class="verify-badge">🔒 核對版 — 含學號，請妥善保管</div>':''} ${titleH}${pageHtml2}<div class="page-footer"><span class="page-num">—</span></div></div>`);
-    pageHtml2=''; pageH2=0; isFirstTeamPage=false;
-  };
-
+  let allTeamsHtml = '';
   sortedTeams.forEach((team, idx) => {
     const mems = BK.members[team.teamId] || [];
     const staff = mems.filter(m => staffRoles.includes(m.role) && m.name && m.name.trim());
@@ -2137,19 +2129,20 @@ async function printOrderBook(ver) {
       return `<div class="players-col-cell${isCap?' cap':''}"><span class="num">${bkEsc(p.number||'—')}</span><span class="nm">${bkEsc(p.name)}${isCap?'<span class="cap-tag">C</span>':''}</span>${sid}</div>`;
     }).join('');
 
-    const playerRows = Math.ceil(ordered.length / cols);
-    const estH = 44 + (staff.length?28:0) + playerRows*22 + 20;
-    if (pageH2+estH > PAGE_H && pageH2>0) flushTP();
-
-    pageHtml2 += `<div style="margin-bottom:16px;page-break-inside:avoid">
+    allTeamsHtml += `<div style="margin-bottom:16px;page-break-inside:avoid">
       <div class="team-header"><div class="team-num">${slot||idx+1}</div><div class="team-name">校名　${bkEsc(team.teamname)}</div></div>
       <div style="background:#9FD9CE;color:#00695C;font-size:12px;font-weight:700;padding:4px 18px;border-left:1.5px solid #9FD9CE;border-right:1.5px solid #9FD9CE">隊職員名單</div>
       ${staff.length?`<div class="team-staff-row">${staffHtml2}</div>`:''}
       <div class="${colClass}">${cells}</div>
     </div>`;
-    pageH2 += estH;
   });
-  flushTP();
+
+  // 全部隊伍放在一個不強制分頁的容器，讓 CSS 自動處理斷頁
+  const teamPages = [`<div class="page team-page" style="page-break-after:auto;min-height:auto">
+    ${isVerify?'<div class="verify-badge">🔒 核對版 — 含學號，請妥善保管</div>':''}
+    <div class="section-title">隊職員名單</div>
+    ${allTeamsHtml}
+  </div>`];
 
   // 賽程圖
   function bkGroupSVG(teams, label) {
