@@ -2442,8 +2442,23 @@ async function setPayStatus(payId, status) {
   const p = (DB.payments||[]).find(x=>x.payId===payId);
   if (p) p.status = status;
   try { await apiPost({ action:'updatePaymentStatus', payId, status }); } catch(e){}
+
+  // 確認繳費時，自動把今天日期填入該隊的「匯款時間」
+  if (status === 'confirmed' && p && p.teamname) {
+    const today = new Date().toISOString().slice(0,10);
+    const team  = (DB.teams||[]).find(t => t.teamname === p.teamname);
+    if (team && !team.paymentDate) {
+      team.paymentDate = today;
+      try {
+        await apiPost({ action:'updateStatus', teamId:team.teamId,
+          status:team.status, note:team.note||'',
+          paymentDate:today, formDate:team.formDate||'' });
+      } catch(e){}
+    }
+  }
+
   renderPayments(); updatePaymentBadge();
-  toast(status==='confirmed'?'✅ 已確認繳費':'⚠️ 已標記為有問題');
+  toast(status==='confirmed'?'✅ 已確認繳費，匯款時間已記錄':'⚠️ 已標記為有問題');
 }
 
 async function deletePayment(payId) {
