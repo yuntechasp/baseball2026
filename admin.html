@@ -1858,7 +1858,16 @@ async function printOrderBook(ver) {
   const bookletCSS = `
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#fff;color:#1c1c1a}
-    @media print{@page{size:A4;margin:1.5cm;marks:none}body{margin:0}.page{page-break-after:always;margin:0;box-shadow:none}.page:last-child{page-break-after:avoid}.page[style*="page-break-after:auto"]{page-break-after:auto}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    @media print{
+      @page{size:A4;margin:1.5cm;marks:none;@bottom-center{content:counter(page);font-family:'Noto Sans TC',sans-serif;font-size:11px;color:#888}}
+      body{margin:0;counter-reset:pagenum}
+      .page{page-break-after:always;margin:0;box-shadow:none;counter-increment:pagenum}
+      .page:last-child{page-break-after:avoid}
+      .page[style*="page-break-after:auto"]{page-break-after:auto}
+      .cover-page{counter-increment:none}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+    .page-num-auto::after{content:counter(pagenum);display:inline-block;background:#00695C;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;font-weight:700;text-align:center}
     .page{min-height:auto;position:relative;overflow:hidden;background:#fff}
     .cover{background:linear-gradient(160deg,#004d40 0%,#00695C 40%,#00897B 70%,#004d40 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 40px;min-height:90vh}
     .cover-year{font-size:28px;font-weight:300;letter-spacing:.3em;opacity:.8;margin-bottom:8px}
@@ -1927,7 +1936,7 @@ async function printOrderBook(ver) {
   const isVerify = ver === 'verify';
 
   // 封面
-  const coverHtml = `<div class="page cover">
+  const coverHtml = `<div class="page cover" style="counter-increment:none">
     <div class="cover-baseball">⚾</div>
     <div class="cover-year">2026</div>
     <div class="cover-title-zh">${bkEsc(title)}</div>
@@ -1957,7 +1966,7 @@ async function printOrderBook(ver) {
       <div class="org-row"><span class="org-label">比賽日期</span><span class="org-val">${s.gamedate||''}${s.gameend?' ～ '+s.gameend:''}</span></div>
       <div class="org-row"><span class="org-label">聯絡方式</span><span class="org-val">蔡小姐　05-5342601#2704　wanjan@yuntech.edu.tw</span></div>
     </div>
-    <div class="page-footer"><span class="page-num">2</span></div>
+    <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
   </div>`;
 
   // 競賽規程（完整）
@@ -2126,7 +2135,7 @@ async function printOrderBook(ver) {
     const cells = ordered.map(p=>{
       const isCap=p.role==='隊長';
       const sid=isVerify?`<span class="sid">${bkEsc(p.studentId||'')}</span>`:'';
-      return `<div class="players-col-cell${isCap?' cap':''}"><span class="num">${bkEsc(p.number||'—')}</span><span class="nm">${bkEsc(p.name)}${isCap?'<span class="cap-tag">C</span>':''}</span>${sid}</div>`;
+      return `<div class="players-col-cell${isCap?' cap':''}"><span class="num">${bkEsc(p.number||'—')}</span><span class="nm">${bkEsc(p.name)}${isCap?' ©':''}</span>${sid}</div>`;
     }).join('');
 
     allTeamsHtml += `<div style="margin-bottom:16px;page-break-inside:avoid">
@@ -2138,7 +2147,7 @@ async function printOrderBook(ver) {
   });
 
   // 全部隊伍放在一個不強制分頁的容器，讓 CSS 自動處理斷頁
-  const teamPages = [`<div class="page team-page" style="page-break-after:auto;min-height:auto">
+  const teamPages = [`<div class="page team-page" style="page-break-after:auto;min-height:auto;padding-bottom:40px">
     ${isVerify?'<div class="verify-badge">🔒 核對版 — 含學號，請妥善保管</div>':''}
     <div class="section-title">隊職員名單</div>
     ${allTeamsHtml}
@@ -2176,7 +2185,8 @@ async function printOrderBook(ver) {
   const drawSlotMap={};
   BK.draws.forEach(d=>{drawSlotMap[d.slot]=d.teamname;});
   const gt={A:[1,2,3,4].map(n=>drawSlotMap[n]||`A組第${n}籤`),B:[5,6,7,8].map(n=>drawSlotMap[n]||`B組第${n-4}籤`),C:[9,10,11,12].map(n=>drawSlotMap[n]||`C組第${n-8}籤`),D:[13,14,15,16].map(n=>drawSlotMap[n]||`D組第${n-12}籤`)};
-  const bracketHtml = `<div class="page bracket-page">
+  // 賽程圖（強制另起新頁）
+  const bracketHtml = `<div class="page bracket-page" style="page-break-before:always">
     <div class="section-title">賽程圖</div>
     <div style="font-size:13px;color:#00695C;font-weight:600;margin-bottom:16px">⚾ 預賽：各組循環賽，取前二名晉級複賽　｜　🏆 複賽：單淘汰制</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
@@ -2184,7 +2194,6 @@ async function printOrderBook(ver) {
     </div>
     <div style="font-size:14px;font-weight:700;color:#00695C;margin-bottom:12px">🏆 複賽對戰圖</div>
     <div style="overflow-x:auto">${bkElimSVG()}</div>
-    <div class="page-footer"><span class="page-num">—</span></div>
   </div>`;
 
   // 賽程時間表
@@ -2202,7 +2211,7 @@ async function printOrderBook(ver) {
       schedHtml+='</tbody></table>';
     });
   }
-  schedHtml += '<div class="page-footer"><span class="page-num">—</span></div></div>';
+  schedHtml += '<div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div></div>';
 
   // ── 開啟列印視窗 ────────────────────────────
   const allPages = [coverHtml, tocHtml, rulesHtml, ...teamPages, bracketHtml, schedHtml].join('');
