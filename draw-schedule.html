@@ -824,7 +824,7 @@ function drawGroupSVG(teams) {
 }
 
 function drawElimSVG(groupTeams) {
-  var W = 800, H = 300;
+  var W = 800, H = 330;
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:560px">';
   svg += '<rect width="' + W + '" height="' + H + '" fill="#f7f6f3" rx="10"/>';
 
@@ -840,7 +840,7 @@ function drawElimSVG(groupTeams) {
     {x:755, name:'A2', team: groupTeams.A[1]},
   ];
 
-  var y8 = 265, y4 = 175, yS = 100, yF = 35;
+  var y8 = 295, y4 = 205, yS = 130, yF = 45;
 
   // 繪製8強隊伍
   q8.forEach(function(t) {
@@ -850,15 +850,25 @@ function drawElimSVG(groupTeams) {
     svg += '<text x="' + t.x + '" y="' + (y8+11) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#00695C">' + esc(short) + '</text>';
   });
 
-  // 準決賽（Q1-Q4）連線與框
+  // Q1–Q4 場次標籤（八強兩兩中間）
   var pairs4 = [[0,1],[2,3],[4,5],[6,7]];
   var q4x = pairs4.map(function(p) { return (q8[p[0]].x + q8[p[1]].x) / 2; });
+  var yQLabel = y8 - 18 - 22; // 八強框上方
+  pairs4.forEach(function(pair, i) {
+    var mx = q4x[i];
+    svg += '<rect x="' + (mx-18) + '" y="' + (yQLabel-12) + '" width="36" height="20" rx="4" fill="#E0F5F2" stroke="#00876f" stroke-width="1"/>';
+    svg += '<text x="' + mx + '" y="' + (yQLabel+2) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#00695C">Q' + (i+1) + '</text>';
+    // 連線：從 Q label 往下到兩隊框頂
+    svg += '<line x1="' + q8[pair[0]].x + '" y1="' + (y8-18) + '" x2="' + q8[pair[0]].x + '" y2="' + yQLabel + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+    svg += '<line x1="' + q8[pair[1]].x + '" y1="' + (y8-18) + '" x2="' + q8[pair[1]].x + '" y2="' + yQLabel + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+    svg += '<line x1="' + q8[pair[0]].x + '" y1="' + yQLabel + '" x2="' + q8[pair[1]].x + '" y2="' + yQLabel + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+    svg += '<line x1="' + mx + '" y1="' + (yQLabel-12) + '" x2="' + mx + '" y2="' + (y4+17) + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+  });
+
+  // 準決賽框（Q勝者）
   var qLabels = ['Q1勝','Q2勝','Q3勝','Q4勝'];
   pairs4.forEach(function(pair, i) {
-    var xa = q8[pair[0]].x, xb = q8[pair[1]].x, mx = q4x[i];
-    svg += '<line x1="' + xa + '" y1="' + (y8-18) + '" x2="' + xa + '" y2="' + (y4+17) + '" stroke="#9FD9CE" stroke-width="1.2"/>';
-    svg += '<line x1="' + xb + '" y1="' + (y8-18) + '" x2="' + xb + '" y2="' + (y4+17) + '" stroke="#9FD9CE" stroke-width="1.2"/>';
-    svg += '<line x1="' + xa + '" y1="' + (y4+17) + '" x2="' + xb + '" y2="' + (y4+17) + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+    var mx = q4x[i];
     svg += '<rect x="' + (mx-42) + '" y="' + (y4-17) + '" width="84" height="34" rx="5" fill="white" stroke="#00876f" stroke-width="1.5"/>';
     svg += '<text x="' + mx + '" y="' + (y4-4) + '" text-anchor="middle" font-size="9" fill="#aaa">Q' + (i+1) + '</text>';
     svg += '<text x="' + mx + '" y="' + (y4+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#00695C">' + qLabels[i] + '</text>';
@@ -878,10 +888,13 @@ function drawElimSVG(groupTeams) {
     svg += '<text x="' + mx + '" y="' + (yS+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#c4601a">' + sfLabels[i] + '</text>';
   });
 
-  // 季軍賽框（S1敗 vs S2敗，連到四強敗隊）
+  // 季軍賽框（含左右橫線連到 S1/S2）
   var bronze_x = W/2;
+  // 左側：從 S1框右邊 → 季軍賽框左邊，同高度 yS 中線
+  svg += '<line x1="' + (sfx[0]+42) + '" y1="' + yS + '" x2="' + (bronze_x-42) + '" y2="' + yS + '" stroke="#F47920" stroke-width="1.2" stroke-dasharray="5,3"/>';
+  // 右側：從季軍賽框右邊 → S2框左邊
+  svg += '<line x1="' + (bronze_x+42) + '" y1="' + yS + '" x2="' + (sfx[1]-42) + '" y2="' + yS + '" stroke="#F47920" stroke-width="1.2" stroke-dasharray="5,3"/>';
   svg += '<rect x="' + (bronze_x-42) + '" y="' + (yS-17) + '" width="84" height="34" rx="5" fill="#fff0e6" stroke="#F47920" stroke-width="1.5"/>';
-  // 注意：季軍賽位置獨立，不連線（簡化）
   svg += '<text x="' + bronze_x + '" y="' + (yS-4) + '" text-anchor="middle" font-size="9" fill="#c4601a">季軍賽</text>';
   svg += '<text x="' + bronze_x + '" y="' + (yS+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#c4601a">第3名</text>';
 
