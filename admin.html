@@ -2109,7 +2109,7 @@ async function printOrderBook(ver) {
   BK.draws.forEach(d => { slotMap[d.teamId] = d.slot; });
   const sortedTeams = [...BK.teams].sort((a,b) => a.teamname.localeCompare(b.teamname,'zh-TW-u-co-stroke'));
   const staffRoles = ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'];
-  const PAGE_H = 960;
+  const PAGE_H = 1100;
   let teamPages = [], pageHtml2 = '', pageH2 = 0, isFirstTeamPage = true;
 
   const flushTP = () => {
@@ -2141,7 +2141,7 @@ async function printOrderBook(ver) {
     const estH = 44 + (staff.length?28:0) + playerRows*22 + 20;
     if (pageH2+estH > PAGE_H && pageH2>0) flushTP();
 
-    pageHtml2 += `<div style="margin-bottom:16px">
+    pageHtml2 += `<div style="margin-bottom:16px;page-break-inside:avoid">
       <div class="team-header"><div class="team-num">${slot||idx+1}</div><div class="team-name">校名　${bkEsc(team.teamname)}</div></div>
       <div style="background:#9FD9CE;color:#00695C;font-size:12px;font-weight:700;padding:4px 18px;border-left:1.5px solid #9FD9CE;border-right:1.5px solid #9FD9CE">隊職員名單</div>
       ${staff.length?`<div class="team-staff-row">${staffHtml2}</div>`:''}
