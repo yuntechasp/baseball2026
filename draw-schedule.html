@@ -395,6 +395,22 @@ async function api(params) {
   else if (location.hash === '#bracket') switchTab('bracket');
 })();
 
+// ── 從 Sheets 時間欄位取出 HH:MM ──
+// Sheets 時間欄位傳回格式可能是 "09:00"、"9:00" 或 "Sat Dec 30 1899 09:00:00 GMT+0800"
+function parseSheetTime(val) {
+  if (!val) return null;
+  const s = String(val).trim();
+  // 已是 HH:MM 格式
+  const hhmm = s.match(/^(\d{1,2}):(\d{2})/);
+  if (hhmm) return String(hhmm[1]).padStart(2,'0') + ':' + hhmm[2];
+  // Date 字串格式（Sheets 時間欄位）：取 HH:MM 部分
+  const d = new Date(s);
+  if (!isNaN(d)) {
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  return null;
+}
+
 function applySettings() {
   const s = settings;
   const title = s.title || '比賽報名系統';
@@ -403,8 +419,8 @@ function applySettings() {
 
   // 從 Sheets 讀抽籤時間顯示
   const drawDate    = s.drawdate    || '';
-  const drawTime    = (s.drawtime    || '09:00').slice(0,5);
-  const drawEndTime = (s.drawendtime || '12:00').slice(0,5);
+  const drawTime    = parseSheetTime(s.drawtime)    || '09:00';
+  const drawEndTime = parseSheetTime(s.drawendtime) || '12:00';
   if (drawDate) {
     const d = new Date(String(drawDate).slice(0,10));
     const rokYear = d.getFullYear() - 1911;
@@ -433,9 +449,9 @@ function switchTab(tab) {
 // ── 抽籤時間從 settings 動態取得 ──
 function getDrawTimes() {
   const s = settings;
-  const dateStr     = String(s.drawdate    || '').slice(0,10);
-  const drawTime    = (s.drawtime    || '09:00').slice(0,5);
-  const drawEndTime = (s.drawendtime || '12:00').slice(0,5);
+  const dateStr     = String(s.drawdate || '').slice(0,10);
+  const drawTime    = parseSheetTime(s.drawtime)    || '09:00';
+  const drawEndTime = parseSheetTime(s.drawendtime) || '12:00';
   if (!dateStr) return { start: null, end: null };
   return {
     start: new Date(dateStr + 'T' + drawTime + ':00+08:00'),
