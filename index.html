@@ -138,6 +138,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .status-approved{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
 .status-pending{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#fff0e6;color:#c4601a;border:1px solid #fbcfa4}
 .status-rejected{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#fcebeb;color:#a32d2d;border:1px solid #f5c1c1}
+.status-waitlist{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#e8f0fe;color:#1a56db;border:1px solid #a4c1f4}
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
 .stat-box{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);
   padding:16px 18px;box-shadow:var(--shadow-sm);text-align:center}
@@ -727,8 +728,8 @@ function renderStats() {
     return;
   }
 
-  const statusLabel = { approved:'已核准', pending:'待審核', rejected:'退件' };
-  const statusCls   = { approved:'status-approved', pending:'status-pending', rejected:'status-rejected' };
+  const statusLabel = { approved:'已核准', waitlist:'備取', pending:'待審核', rejected:'退件' };
+  const statusCls   = { approved:'status-approved', waitlist:'status-waitlist', pending:'status-pending', rejected:'status-rejected' };
 
   tbody.innerHTML = teamsData.map((t, i) => `
     <tr>

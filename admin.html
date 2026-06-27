@@ -106,6 +106,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   padding:3px 9px;border-radius:20px}
 .badge-pending{background:#faeeda;color:var(--amber);border:1px solid #f0d090}
 .badge-approved{background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.badge-waitlist{background:#e8f0fe;color:#1a56db;border:1px solid #a4c1f4}
 .badge-rejected{background:#fcebeb;color:var(--red);border:1px solid #f7c1c1}
 
 /* ── Buttons ── */
@@ -721,6 +722,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
       <label>審核結果</label>
       <select id="rv-status">
         <option value="approved">✅ 核准</option>
+        <option value="waitlist">🔵 備取</option>
         <option value="rejected">❌ 退件</option>
         <option value="pending">⏳ 待審核</option>
       </select>
@@ -1926,7 +1928,7 @@ function esc(s) {
 }
 function today() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
 function statusBadge(s) {
-  const m={approved:'badge-approved ✅ 核准',pending:'badge-pending ⏳ 待審核',rejected:'badge-rejected ❌ 退件'};
+  const m={approved:'badge-approved ✅ 核准',waitlist:'badge-waitlist 🔵 備取',pending:'badge-pending ⏳ 待審核',rejected:'badge-rejected ❌ 退件'};
   const [cls,...rest]=(m[s]||'badge-pending ⏳ 待審核').split(' ');
   return `<span class="badge ${cls}">${rest.join(' ')}</span>`;
 }
