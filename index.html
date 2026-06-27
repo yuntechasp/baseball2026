@@ -402,7 +402,7 @@ let settings = {}, newsData = [], teamsData = [], rulesData = [];
 
 async function api(params) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000); // 10秒 timeout
+  const timer = setTimeout(() => controller.abort(), 20000); // 20秒 timeout
   try {
     const r = await fetch(API_URL + '?' + new URLSearchParams(params), { signal: controller.signal });
     return r.json();
@@ -412,7 +412,7 @@ async function api(params) {
 }
 
 // ── 快取 Key ──────────────────────────────────
-const CACHE_KEY = 'baseball2026_cache_v3'; // 版本號更新時自動清除舊快取
+const CACHE_KEY = 'baseball2026_cache_v4'; // 版本號更新時自動清除舊快取
 
 function loadFromCache() {
   try {
@@ -445,15 +445,16 @@ function applyData(res) {
 
 // ── 初始化 ──────────────────────────────────
 (async () => {
-  // 先顯示快取資料（秒開）
-  const cached = loadFromCache();
-  // 先讓頁面顯示出來（骨架或快取）
+  // 頁面立即顯示，不等 API
   document.getElementById('loading-main').style.display = 'none';
   document.getElementById('main-content').style.display = 'block';
+
+  // 有快取先顯示舊資料
+  const cached = loadFromCache();
   if (cached) {
     applyData(cached);
   } else {
-    // 沒有快取時顯示骨架畫面
+    // 顯示骨架畫面
     document.getElementById('news-list').innerHTML =
       [1,2,3].map(() => `<div class="news-item">
         <div class="news-item-header">
@@ -468,28 +469,17 @@ function applyData(res) {
       `<div class="rule-card"><div class="skel" style="width:40px;height:40px;border-radius:8px;margin-bottom:10px"></div>
        <div class="skel skel-line med" style="margin-bottom:8px"></div>
        <div class="skel skel-line full"></div><div class="skel skel-line full"></div></div>`;
-    document.getElementById('loading-main').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
   }
 
-  // 背景更新最新資料
+  // 背景靜默更新（失敗不影響頁面）
   try {
     const res = await api({ action:'getAllData' });
-    if (res.ok) {
+    if (res && res.ok) {
       saveToCache(res);
       applyData(res);
     }
-  } catch(e) { console.error('getAllData error:', e); }
-
-  // 若 rules 還是空的，單獨再試一次
-  if (!rulesData.length) {
-    try {
-      const rulesRes = await api({ action:'getRules' });
-      if (rulesRes && Array.isArray(rulesRes.data) && rulesRes.data.length > 0) {
-        rulesData = rulesRes.data;
-        renderRules();
-      }
-    } catch(e) {}
+  } catch(e) {
+    console.warn('API timeout, using cache');
   }
 })();
 
