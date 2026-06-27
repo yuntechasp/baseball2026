@@ -1023,25 +1023,27 @@ function drawElimSVG(groupTeams, advance) {
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:560px">';
   svg += '<rect width="' + W + '" height="' + H + '" fill="#f7f6f3" rx="10"/>';
 
-  // 8強位置（依賽程：Q1=A1vD2, Q2=B1vC2, Q3=C1vB2, Q4=D1vA2）
+  // 8強位置（Q1=A1vD2, Q2=B1vC2, Q3=C1vB2, Q4=D1vA2）
+  // name 欄：顯示用的標籤（A組第1名等）
+  // label 欄：小字標示（A1/D2等，供識別對應組別）
   var q8 = [
-    {x:55,  name:'A1', team: groupTeams.A[0]},
-    {x:155, name:'D2', team: groupTeams.D[1]},
-    {x:255, name:'B1', team: groupTeams.B[0]},
-    {x:355, name:'C2', team: groupTeams.C[1]},
-    {x:455, name:'C1', team: groupTeams.C[0]},
-    {x:555, name:'B2', team: groupTeams.B[1]},
-    {x:655, name:'D1', team: groupTeams.D[0]},
-    {x:755, name:'A2', team: groupTeams.A[1]},
+    {x:55,  label:'A1', display:'A組第1名'},
+    {x:155, label:'D2', display:'D組第2名'},
+    {x:255, label:'B1', display:'B組第1名'},
+    {x:355, label:'C2', display:'C組第2名'},
+    {x:455, label:'C1', display:'C組第1名'},
+    {x:555, label:'B2', display:'B組第2名'},
+    {x:655, label:'D1', display:'D組第1名'},
+    {x:755, label:'A2', display:'A組第2名'},
   ];
 
   var y8 = 330, y4 = 235, yS = 148, yF = 52;
 
-  // 繪製8強隊伍
+  // 繪製8強隊伍框
   q8.forEach(function(t) {
-    var short = (t.team||t.name).length > 5 ? (t.team||t.name).slice(0,5)+'…' : (t.team||t.name);
+    var short = t.display.length > 6 ? t.display.slice(0,6)+'…' : t.display;
     svg += '<rect x="' + (t.x-42) + '" y="' + (y8-18) + '" width="84" height="34" rx="5" fill="white" stroke="#9FD9CE" stroke-width="1.5"/>';
-    svg += '<text x="' + t.x + '" y="' + (y8-5) + '" text-anchor="middle" font-size="9" fill="#aaa">' + t.name + '</text>';
+    svg += '<text x="' + t.x + '" y="' + (y8-5) + '" text-anchor="middle" font-size="9" fill="#aaa">' + t.label + '</text>';
     svg += '<text x="' + t.x + '" y="' + (y8+11) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#00695C">' + esc(short) + '</text>';
   });
 
