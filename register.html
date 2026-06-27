@@ -161,6 +161,26 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   .code-input{font-size:18px}
   .form-grid{grid-template-columns:1fr}
   .form-group{grid-column:span 1 !important}
+  /* 手機版：球員表格改為卡片式 */
+  .mem-table thead{display:none}
+  .mem-table tr{display:grid;grid-template-columns:1fr 1fr;gap:6px;
+    background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius);
+    padding:10px 12px;margin-bottom:8px}
+  .mem-table td{display:flex;flex-direction:column;gap:3px;padding:0;border:none}
+  .mem-table td:first-child{grid-column:span 2;flex-direction:row;align-items:center;
+    font-size:12px;color:var(--gray-400);font-weight:600;padding-bottom:4px;
+    border-bottom:1px solid var(--gray-100)}
+  .mem-table td::before{content:attr(data-label);font-size:11px;color:var(--gray-400);font-weight:600}
+  .mem-in{width:100%}
+  select.mem-in{width:100%;background:var(--white)}
+}
+
+/* ── 列印報名表 ── */
+@media print {
+  .tab-bar, .header-meta, #reg-alert, button, .tab-panel:not(.active) { display: none !important; }
+  .header { background: #333 !important; -webkit-print-color-adjust: exact; }
+  .card { break-inside: avoid; }
+  body { font-size: 12px; }
 }
 </style>
 </head>
@@ -485,14 +505,14 @@ function buildMemberRows() {
   let shtml = '';
   for (let i = 0; i < 8; i++) {
     shtml += '<tr>' +
-      '<td style="text-align:center;font-size:12px;color:var(--gray-400)">' + (i+1) + '</td>' +
-      '<td><select class="mem-in" id="s'+i+'-title">' +
+      '<td data-label="" style="text-align:center;font-size:12px;color:var(--gray-400)">' + (i+1) + '</td>' +
+      '<td data-label="職稱"><select class="mem-in" id="s'+i+'-title">' +
         ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'].map(t =>
           '<option value="'+t+'"'+(t===staffTitles[i]?' selected':'')+'>'+t+'</option>'
         ).join('') +
       '</select></td>' +
-      '<td><input class="mem-in" type="text" id="s'+i+'-name" placeholder="姓名（選填）"></td>' +
-      '<td><input class="mem-in" type="tel" id="s'+i+'-tel" placeholder="電話（選填）"></td>' +
+      '<td data-label="姓名"><input class="mem-in" type="text" id="s'+i+'-name" placeholder="姓名（選填）"></td>' +
+      '<td data-label="電話"><input class="mem-in" type="tel" id="s'+i+'-tel" placeholder="電話（選填）"></td>' +
       '</tr>';
   }
   stb.innerHTML = shtml;
@@ -500,19 +520,19 @@ function buildMemberRows() {
   // 運動員 (含隊長，25人)
   const tb = document.getElementById('mem-tbody');
   let html = '<tr class="cap">' +
-    '<td style="text-align:center;color:var(--gray-400);font-size:12px">—</td>' +
-    '<td><span class="role-cap">隊長</span></td>' +
-    '<td><input class="mem-in" id="m0-name" placeholder="隊長姓名"></td>' +
-    '<td><input class="mem-in" id="m0-num" placeholder="背號" maxlength="3"></td>' +
-    '<td><input class="mem-in" id="m0-sid" placeholder="學號"></td>' +
+    '<td data-label="" style="text-align:center;color:var(--gray-400);font-size:12px">—</td>' +
+    '<td data-label="角色"><span class="role-cap">隊長</span></td>' +
+    '<td data-label="姓名"><input class="mem-in" id="m0-name" placeholder="隊長姓名"></td>' +
+    '<td data-label="背號"><input class="mem-in" id="m0-num" placeholder="背號" maxlength="3"></td>' +
+    '<td data-label="學號"><input class="mem-in" id="m0-sid" placeholder="學號"></td>' +
     '</tr>';
   for (let i = 1; i <= 24; i++) {
     html += '<tr>' +
-      '<td style="text-align:center;font-size:12px;color:var(--gray-400)">'+i+'</td>' +
-      '<td><span class="role-mem">運動員</span></td>' +
-      '<td><input class="mem-in" id="m'+i+'-name" placeholder="姓名"></td>' +
-      '<td><input class="mem-in" id="m'+i+'-num" placeholder="背號" maxlength="3"></td>' +
-      '<td><input class="mem-in" id="m'+i+'-sid" placeholder="學號"></td>' +
+      '<td data-label="" style="text-align:center;font-size:12px;color:var(--gray-400)">'+i+'</td>' +
+      '<td data-label="角色"><span class="role-mem">運動員</span></td>' +
+      '<td data-label="姓名"><input class="mem-in" id="m'+i+'-name" placeholder="姓名"></td>' +
+      '<td data-label="背號"><input class="mem-in" id="m'+i+'-num" placeholder="背號" maxlength="3"></td>' +
+      '<td data-label="學號"><input class="mem-in" id="m'+i+'-sid" placeholder="學號"></td>' +
       '</tr>';
   }
   tb.innerHTML = html;

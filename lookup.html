@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>隊伍查詢</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --yt-teal:#00A88F;--yt-teal-dark:#00695C;--yt-teal-mid:#00876f;
+  --yt-teal-light:#E0F5F2;--yt-teal-border:#9FD9CE;
+  --yt-orange:#F47920;--yt-orange-light:#FEF0E6;--yt-orange-border:#FBCFA4;
+  --blue:#00A88F;--blue-dark:#00695C;--blue-light:#E0F5F2;
+  --green:#1d9e75;--accent:#F47920;--amber:#ba7517;--red:#a32d2d;
+  --gray-50:#f7f6f3;--gray-100:#ededea;--gray-200:#d5d4ce;
+  --gray-400:#888780;--gray-600:#5f5e5a;--gray-700:#3d3d3a;--gray-900:#1c1c1a;
+  --white:#fff;--radius:8px;--radius-lg:12px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.07);--shadow:0 2px 8px rgba(0,0,0,.10);
+}
+body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
+  background:var(--gray-50);color:var(--gray-700);font-size:14px;line-height:1.7;min-height:100vh}
+
+/* ── Nav ── */
+.nav{background:var(--yt-teal-dark);color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.nav-inner{max-width:1000px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px}
+.nav-logo{font-size:15px;font-weight:700;letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:6px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;
+  color:rgba(255,255,255,.8);cursor:pointer;border:none;background:none;
+  text-decoration:none;transition:all .15s;font-family:inherit}
+.nav-link:hover{background:rgba(255,255,255,.12);color:#fff}
+.nav-link.active{background:rgba(255,255,255,.18);color:#fff}
+.nav-link.cta{background:var(--yt-orange);color:#fff;margin-left:8px;font-weight:600}
+
+/* ── Hero ── */
+.page-hero{background:linear-gradient(135deg,var(--yt-teal-dark) 0%,var(--yt-teal) 60%,#00BFA5 100%);
+  color:#fff;padding:28px 20px 24px;text-align:center}
+.page-hero h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.page-hero p{font-size:13px;opacity:.8}
+
+/* ── Main ── */
+.main{max-width:780px;margin:0 auto;padding:28px 20px 60px}
+
+/* ── Search box ── */
+.search-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);
+  box-shadow:var(--shadow);padding:24px;margin-bottom:24px}
+.search-title{font-size:15px;font-weight:700;color:var(--gray-900);margin-bottom:16px;
+  display:flex;align-items:center;gap:8px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr}}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:5px}
+.form-group input{width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);
+  border-radius:var(--radius);font-size:14px;font-family:inherit;transition:border .15s}
+.form-group input:focus{outline:none;border-color:var(--yt-teal);box-shadow:0 0 0 3px rgba(0,168,143,.1)}
+.search-btn{width:100%;padding:12px;background:var(--yt-teal-dark);color:#fff;border:none;
+  border-radius:var(--radius);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.search-btn:hover{background:var(--blue)}
+.search-btn:disabled{opacity:.6;cursor:not-allowed}
+.err-msg{margin-top:10px;font-size:13px;color:var(--red);background:#fcebeb;
+  border:1px solid #f5c1c1;border-radius:var(--radius);padding:10px 14px;display:none}
+.err-msg.show{display:block}
+
+/* ── Result panels ── */
+.result-section{display:none}
+.result-section.show{display:block}
+
+.info-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);
+  box-shadow:var(--shadow-sm);margin-bottom:16px;overflow:hidden}
+.info-card-header{padding:12px 18px;background:var(--yt-teal-dark);color:#fff;
+  font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.info-card-body{padding:18px}
+
+.info-row{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-label{color:var(--gray-400);font-weight:500;min-width:90px;flex-shrink:0}
+.info-val{color:var(--gray-900);font-weight:500;flex:1}
+
+/* ── Status badges ── */
+.badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.badge-approved{background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.badge-pending{background:#fff0e6;color:#c4601a;border:1px solid #fbcfa4}
+.badge-rejected{background:#fcebeb;color:#a32d2d;border:1px solid #f5c1c1}
+.badge-waitlist{background:#e8f0fe;color:#1a56db;border:1px solid #a4c1f4}
+.badge-paid{background:#eaf3de;color:#3b6d11;border:1px solid #c0dd97}
+.badge-unpaid{background:#fff0e6;color:#c4601a;border:1px solid #fbcfa4}
+.badge-slot{background:var(--yt-teal-light);color:var(--yt-teal-dark);border:1px solid var(--yt-teal-border);font-size:15px}
+
+/* ── Member table ── */
+.mem-table{width:100%;border-collapse:collapse;font-size:13px}
+.mem-table th{background:var(--yt-teal-dark);color:#fff;padding:8px 12px;font-size:12px;text-align:left}
+.mem-table td{padding:8px 12px;border-bottom:1px solid var(--gray-100)}
+.mem-table tr:last-child td{border-bottom:none}
+.mem-table tr:hover td{background:var(--gray-50)}
+.role-captain{background:var(--yt-orange-light);color:#c4601a;border:1px solid var(--yt-orange-border);
+  border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700}
+.role-staff{background:var(--gray-100);color:var(--gray-600);border-radius:10px;padding:2px 8px;font-size:11px}
+.role-player{background:var(--yt-teal-light);color:var(--yt-teal-dark);border-radius:10px;padding:2px 8px;font-size:11px}
+
+/* ── Match table ── */
+.match-table{width:100%;border-collapse:collapse;font-size:13px}
+.match-table th{background:var(--yt-teal-dark);color:#fff;padding:8px 12px;font-size:12px;text-align:left}
+.match-table td{padding:9px 12px;border-bottom:1px solid var(--gray-100)}
+.match-table tr:last-child td{border-bottom:none}
+.match-table tr:hover td{background:var(--gray-50)}
+.score-win{font-weight:700;color:var(--green)}
+.score-lose{color:var(--red)}
+.pending-tag{color:var(--gray-400);font-size:12px}
+.my-team{font-weight:700;color:var(--yt-teal-dark)}
+
+/* ── Draw result ── */
+.draw-result{background:var(--yt-teal-light);border:2px solid var(--yt-teal);
+  border-radius:var(--radius-lg);padding:20px;text-align:center;margin-bottom:8px}
+.draw-slot-num{font-size:52px;font-weight:900;color:var(--yt-teal-dark);line-height:1}
+.draw-slot-label{font-size:13px;color:var(--yt-teal-dark);margin-top:4px}
+.no-draw{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-lg);
+  padding:20px;text-align:center;color:var(--gray-400);font-size:13px}
+
+/* ── Step indicator ── */
+.steps{display:flex;gap:0;margin-bottom:24px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--gray-200)}
+.step{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--gray-400);
+  background:var(--white);border-right:1px solid var(--gray-200);transition:all .2s}
+.step:last-child{border-right:none}
+.step.done{background:var(--yt-teal-light);color:var(--yt-teal-dark)}
+.step.active{background:var(--yt-teal-dark);color:#fff}
+.step-icon{font-size:16px;display:block;margin-bottom:2px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--gray-900);color:#fff;
+  padding:10px 16px;border-radius:var(--radius-lg);font-size:13px;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);transform:translateY(60px);opacity:0;
+  transition:all .3s;pointer-events:none;z-index:999}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── Footer ── */
+.footer{background:var(--yt-teal-dark);color:rgba(255,255,255,.6);text-align:center;padding:20px;font-size:12px}
+.footer a{color:rgba(255,255,255,.8);text-decoration:none}
+
+@media(max-width:640px){
+  .nav-links .nav-link:not(.cta){display:none}
+  .draw-slot-num{font-size:40px}
+}
+</style>
+</head>
+<body>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKqT9gMboDs3_l0_pfattRc-7pmcQ1MVtIJpz_ijClORWs/exec';
+</script>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">⚾ <span id="nav-title">比賽報名系統</span></div>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">🏠 首頁</a>
+      <a class="nav-link" href="index.html#news">最新消息</a>
+      <a class="nav-link" href="draw-schedule.html">🎰 抽籤 &amp; 賽程</a>
+      <a class="nav-link active" href="lookup.html">🔍 隊伍查詢</a>
+      <a class="nav-link cta" href="register.html">✏️ 立即報名</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="page-hero">
+  <h1>🔍 隊伍報名查詢</h1>
+  <p>輸入隊伍名稱與隊長學號，查詢審核狀態、抽籤結果及賽程資訊</p>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- 查詢表單 -->
+  <div class="search-card">
+    <div class="search-title">🔐 身份驗證</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>隊伍名稱 *</label>
+        <input type="text" id="q-teamname" placeholder="請輸入與報名相同的隊伍名稱" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>隊長學號 *</label>
+        <input type="text" id="q-sid" placeholder="請輸入隊長學號" autocomplete="off"
+          onkeydown="if(event.key==='Enter')doLookup()">
+      </div>
+    </div>
+    <button class="search-btn" id="search-btn" onclick="doLookup()">🔍 查詢報名資訊</button>
+    <div class="err-msg" id="err-msg"></div>
+  </div>
+
+  <!-- 查詢結果 -->
+  <div class="result-section" id="result-section">
+
+    <!-- 進度指示 -->
+    <div class="steps">
+      <div class="step" id="step-reg"><span class="step-icon">📝</span>報名送出</div>
+      <div class="step" id="step-review"><span class="step-icon">✅</span>審核通過</div>
+      <div class="step" id="step-pay"><span class="step-icon">💰</span>繳費確認</div>
+      <div class="step" id="step-draw"><span class="step-icon">🎰</span>完成抽籤</div>
+    </div>
+
+    <!-- 基本資料 -->
+    <div class="info-card">
+      <div class="info-card-header">📋 報名基本資料</div>
+      <div class="info-card-body">
+        <div class="info-row"><span class="info-label">隊伍名稱</span><span class="info-val" id="r-teamname">—</span></div>
+        <div class="info-row"><span class="info-label">報名組別</span><span class="info-val" id="r-group">—</span></div>
+        <div class="info-row"><span class="info-label">領 隊</span><span class="info-val" id="r-manager">—</span></div>
+        <div class="info-row"><span class="info-label">教 練</span><span class="info-val" id="r-coach">—</span></div>
+        <div class="info-row"><span class="info-label">聯絡信箱</span><span class="info-val" id="r-email">—</span></div>
+        <div class="info-row"><span class="info-label">報名時間</span><span class="info-val" id="r-created">—</span></div>
+        <div class="info-row"><span class="info-label">審核狀態</span><span class="info-val" id="r-status">—</span></div>
+        <div class="info-row" id="r-note-row" style="display:none">
+          <span class="info-label">備 註</span><span class="info-val" id="r-note" style="color:var(--red)">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 抽籤結果 -->
+    <div class="info-card">
+      <div class="info-card-header">🎰 抽籤結果</div>
+      <div class="info-card-body" id="draw-area">
+        <div class="no-draw">抽籤尚未進行或尚未完成</div>
+      </div>
+    </div>
+
+    <!-- 繳費狀態 -->
+    <div class="info-card">
+      <div class="info-card-header">💰 繳費紀錄</div>
+      <div class="info-card-body" id="pay-area">
+        <div style="color:var(--gray-400);font-size:13px;text-align:center;padding:12px">尚無繳費紀錄</div>
+      </div>
+    </div>
+
+    <!-- 賽程資訊 -->
+    <div class="info-card" id="match-card" style="display:none">
+      <div class="info-card-header">📅 我的賽程</div>
+      <div class="info-card-body" style="padding:0;overflow-x:auto">
+        <table class="match-table">
+          <thead><tr>
+            <th style="width:55px">場次</th>
+            <th>對手</th>
+            <th style="width:90px;text-align:center">比分</th>
+            <th style="width:80px">日期</th>
+            <th style="width:60px">時間</th>
+            <th style="width:50px">場地</th>
+          </tr></thead>
+          <tbody id="match-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 球員名單 -->
+    <div class="info-card">
+      <div class="info-card-header">👥 球員名單</div>
+      <div class="info-card-body" style="padding:0;overflow-x:auto">
+        <table class="mem-table">
+          <thead><tr>
+            <th style="width:50px">序</th>
+            <th style="width:100px">角色</th>
+            <th>姓名</th>
+            <th style="width:60px">背號</th>
+            <th style="width:120px">學號</th>
+          </tr></thead>
+          <tbody id="mem-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <div id="footer-title" style="font-size:14px;font-weight:500;color:white;margin-bottom:10px"></div>
+  <div>雲科大體育室 · 蔡小姐 · 05-5342601#2704 ·
+    <a href="mailto:wanjan@yuntech.edu.tw">wanjan@yuntech.edu.tw</a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+async function api(params) {
+  const r = await fetch(API_URL + '?' + new URLSearchParams(params));
+  return r.json();
+}
+
+// 載入標題
+(async () => {
+  try {
+    const res = await api({ action:'getSettings' });
+    if (res.ok && res.data) {
+      const t = res.data.title || '比賽報名系統';
+      document.getElementById('nav-title').textContent   = t;
+      document.getElementById('footer-title').textContent = t;
+    }
+  } catch(e) {}
+})();
+
+async function doLookup() {
+  const teamname   = document.getElementById('q-teamname').value.trim();
+  const captainSid = document.getElementById('q-sid').value.trim();
+  const errEl      = document.getElementById('err-msg');
+  errEl.className  = 'err-msg';
+
+  if (!teamname || !captainSid) {
+    errEl.textContent = '請填寫隊伍名稱與隊長學號';
+    errEl.className   = 'err-msg show';
+    return;
+  }
+
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true; btn.textContent = '查詢中…';
+
+  try {
+    const res = await api({ action:'lookupTeam', teamname, captainSid });
+    if (!res.ok) {
+      errEl.textContent = res.error || '查詢失敗';
+      errEl.className   = 'err-msg show';
+      document.getElementById('result-section').classList.remove('show');
+      return;
+    }
+    renderResult(res);
+  } catch(e) {
+    errEl.textContent = '網路錯誤，請稍後再試';
+    errEl.className   = 'err-msg show';
+  } finally {
+    btn.disabled = false; btn.textContent = '🔍 查詢報名資訊';
+  }
+}
+
+function renderResult(res) {
+  const team = res.team;
+  document.getElementById('result-section').classList.add('show');
+
+  // 基本資料
+  document.getElementById('r-teamname').textContent = team.teamname;
+  document.getElementById('r-group').textContent    = team.group   || '—';
+  document.getElementById('r-manager').textContent  = team.manager || '—';
+  document.getElementById('r-coach').textContent    = team.coach   || '—';
+  document.getElementById('r-email').textContent    = team.email   || '—';
+  document.getElementById('r-created').textContent  = team.createdAt || '—';
+
+  const statusMap = {
+    approved: '<span class="badge badge-approved">✅ 核准通過</span>',
+    pending:  '<span class="badge badge-pending">⏳ 待審核</span>',
+    rejected: '<span class="badge badge-rejected">❌ 退件</span>',
+    waitlist: '<span class="badge badge-waitlist">🔵 備取</span>',
+  };
+  document.getElementById('r-status').innerHTML = statusMap[team.status] || team.status;
+
+  if (team.note) {
+    document.getElementById('r-note').textContent = team.note;
+    document.getElementById('r-note-row').style.display = 'flex';
+  }
+
+  // 進度步驟
+  updateSteps(team, res.draw, res.payments);
+
+  // 抽籤
+  const drawArea = document.getElementById('draw-area');
+  if (res.draw) {
+    drawArea.innerHTML =
+      '<div class="draw-result">' +
+      '<div class="draw-slot-num">第 ' + res.draw.slot + ' 籤</div>' +
+      '<div class="draw-slot-label">抽籤時間：' + (res.draw.drawnAt||'—') + '</div>' +
+      '</div>';
+  } else {
+    drawArea.innerHTML = '<div class="no-draw">⏳ 尚未抽籤</div>';
+  }
+
+  // 繳費
+  const payArea = document.getElementById('pay-area');
+  if (res.payments && res.payments.length) {
+    payArea.innerHTML = res.payments.map(p => {
+      const isPaid = p.status === 'confirmed' || p.status === 'paid';
+      return '<div class="info-row">' +
+        '<span class="info-label">匯款末五碼</span><span class="info-val"><strong>' + esc(p.code) + '</strong>' +
+        '　金額：NT$ ' + Number(p.amount||0).toLocaleString() +
+        '　<span class="badge ' + (isPaid?'badge-paid':'badge-unpaid') + '">' + (isPaid?'✅ 已確認':'⏳ 待確認') + '</span></span>' +
+        '</div>';
+    }).join('');
+  } else {
+    payArea.innerHTML = '<div style="color:var(--gray-400);font-size:13px;text-align:center;padding:12px">尚無繳費紀錄</div>';
+  }
+
+  // 賽程
+  const myMatches = res.matches || [];
+  if (myMatches.length) {
+    document.getElementById('match-card').style.display = 'block';
+    document.getElementById('match-tbody').innerHTML = myMatches.map(m => {
+      const isA      = m.teamA === team.teamname;
+      const opp      = isA ? m.teamB : m.teamA;
+      const myScore  = isA ? m.scoreA : m.scoreB;
+      const oppScore = isA ? m.scoreB : m.scoreA;
+      const hasScore = myScore !== undefined && myScore !== '' && oppScore !== undefined && oppScore !== '';
+      const isWin    = hasScore && Number(myScore) > Number(oppScore);
+      const isLose   = hasScore && Number(myScore) < Number(oppScore);
+      const scoreHtml = hasScore
+        ? '<span class="' + (isWin?'score-win':isLose?'score-lose':'') + '">' + myScore + '</span> : ' +
+          '<span class="' + (isLose?'score-win':isWin?'score-lose':'') + '">' + oppScore + '</span>' +
+          (m.winner && m.winner!=='平局' ? '<br><span style="font-size:11px;color:var(--green)">✅ ' + esc(m.winner) + '</span>' : '')
+        : '<span class="pending-tag">待賽</span>';
+      return '<tr>' +
+        '<td><strong>' + esc(m.matchNum) + '</strong><br><span style="font-size:11px;color:var(--gray-400)">' + esc(m.phase||'') + '</span></td>' +
+        '<td class="my-team">vs ' + esc(opp) + '</td>' +
+        '<td style="text-align:center">' + scoreHtml + '</td>' +
+        '<td>' + esc(m.date||'') + '</td>' +
+        '<td>' + esc(m.time||'') + '</td>' +
+        '<td>' + esc(m.court||'') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // 球員名單
+  const staffRoles = ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'];
+  document.getElementById('mem-tbody').innerHTML = res.members.map((m, i) => {
+    const isStaff   = staffRoles.includes(m.role);
+    const isCaptain = m.role === '隊長';
+    const roleClass = isCaptain ? 'role-captain' : isStaff ? 'role-staff' : 'role-player';
+    return '<tr>' +
+      '<td style="text-align:center;color:var(--gray-400)">' + (i+1) + '</td>' +
+      '<td><span class="' + roleClass + '">' + esc(m.role) + '</span></td>' +
+      '<td>' + esc(m.name) + '</td>' +
+      '<td style="text-align:center">' + esc(m.number||'—') + '</td>' +
+      '<td>' + esc(m.studentId||'—') + '</td>' +
+      '</tr>';
+  }).join('');
+
+  window.scrollTo({top: document.getElementById('result-section').offsetTop - 20, behavior:'smooth'});
+}
+
+function updateSteps(team, draw, payments) {
+  // Step 1：報名送出（永遠完成）
+  document.getElementById('step-reg').className = 'step done';
+  // Step 2：審核通過
+  const approved = team.status === 'approved';
+  document.getElementById('step-review').className = 'step ' + (approved ? 'done' : team.status === 'pending' ? 'active' : '');
+  // Step 3：繳費確認
+  const paid = payments && payments.some(p => p.status === 'confirmed' || p.status === 'paid');
+  document.getElementById('step-pay').className = 'step ' + (paid ? 'done' : approved && !paid ? 'active' : '');
+  // Step 4：完成抽籤
+  document.getElementById('step-draw').className = 'step ' + (draw ? 'done' : paid ? 'active' : '');
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function toast(msg) {
+  const e = document.getElementById('toast');
+  e.textContent = msg; e.className = 'toast show';
+  setTimeout(() => e.className = 'toast', 2500);
+}
+</script>
+</body>
+</html>
