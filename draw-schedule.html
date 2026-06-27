@@ -885,7 +885,7 @@ function drawGroupSVG(teams) {
 
 function drawElimSVG(groupTeams, advance) {
   advance = advance || {};
-  var W = 800, H = 330;
+  var W = 800, H = 370;
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:560px">';
   svg += '<rect width="' + W + '" height="' + H + '" fill="#f7f6f3" rx="10"/>';
 
@@ -901,7 +901,7 @@ function drawElimSVG(groupTeams, advance) {
     {x:755, name:'A2', team: groupTeams.A[1]},
   ];
 
-  var y8 = 295, y4 = 205, yS = 130, yF = 45;
+  var y8 = 330, y4 = 235, yS = 148, yF = 52;
 
   // 繪製8強隊伍
   q8.forEach(function(t) {
@@ -952,29 +952,35 @@ function drawElimSVG(groupTeams, advance) {
     svg += '<text x="' + mx + '" y="' + (y4+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + (isReal?'#3b6d11':'#00695C') + '">' + esc(short) + '</text>';
   });
 
-  // 四強（S1/S2）── 顯示 Q1vsQ2 勝者 / Q3vsQ4 勝者
+  // 四強（S1/S2）── 加場次標籤 + 對戰說明
   var pairs2 = [[0,1],[2,3]];
   var sfx = pairs2.map(function(p) { return (q4x[p[0]] + q4x[p[1]]) / 2; });
-  var sfLabels = ['S1勝','S2勝'];
+  var ySLabel = y4 - 17 - 22; // S1/S2 場次標籤位置（在 Q 勝者框上方）
+
   pairs2.forEach(function(pair, i) {
     var xa = q4x[pair[0]], xb = q4x[pair[1]], mx = sfx[i];
-    svg += '<line x1="' + xa + '" y1="' + (y4-17) + '" x2="' + xa + '" y2="' + (yS+17) + '" stroke="#9FD9CE" stroke-width="1.2"/>';
-    svg += '<line x1="' + xb + '" y1="' + (y4-17) + '" x2="' + xb + '" y2="' + (yS+17) + '" stroke="#9FD9CE" stroke-width="1.2"/>';
-    svg += '<line x1="' + xa + '" y1="' + (yS+17) + '" x2="' + xb + '" y2="' + (yS+17) + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+    // Q勝者框 → S場次標籤的連線
+    svg += '<line x1="' + xa + '" y1="' + (y4-17) + '" x2="' + xa + '" y2="' + ySLabel + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+    svg += '<line x1="' + xb + '" y1="' + (y4-17) + '" x2="' + xb + '" y2="' + ySLabel + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+    svg += '<line x1="' + xa + '" y1="' + ySLabel + '" x2="' + xb + '" y2="' + ySLabel + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+    // S1/S2 場次標籤（綠色，類似 Q1–Q4）
+    svg += '<rect x="' + (mx-18) + '" y="' + (ySLabel-12) + '" width="36" height="20" rx="4" fill="#E0F5F2" stroke="#00876f" stroke-width="1"/>';
+    svg += '<text x="' + mx + '" y="' + (ySLabel+2) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#00695C">' + (i===0?'S1':'S2') + '</text>';
+    // S 場次標籤 → S結果框的連線
+    svg += '<line x1="' + mx + '" y1="' + (ySLabel-12) + '" x2="' + mx + '" y2="' + (yS+17) + '" stroke="#9FD9CE" stroke-width="1.2"/>';
+    // S1/S2 結果框（「S1勝」/ 「S2勝」進決賽）
     svg += '<rect x="' + (mx-42) + '" y="' + (yS-17) + '" width="84" height="34" rx="5" fill="white" stroke="#F47920" stroke-width="1.5"/>';
-    svg += '<text x="' + mx + '" y="' + (yS-4) + '" text-anchor="middle" font-size="9" fill="#aaa">' + (i===0?'S1':'S2') + '</text>';
-    svg += '<text x="' + mx + '" y="' + (yS+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#c4601a">' + sfLabels[i] + '</text>';
+    svg += '<text x="' + mx + '" y="' + (yS-4) + '" text-anchor="middle" font-size="9" fill="#aaa">' + (i===0?'S1勝 → 決賽':'S2勝 → 決賽') + '</text>';
+    svg += '<text x="' + mx + '" y="' + (yS+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#c4601a">' + (i===0?'S1勝':'S2勝') + '</text>';
   });
 
-  // 季軍賽框（含左右橫線連到 S1/S2）
+  // 季軍賽框（S1敗 vs S2敗，連到兩側）
   var bronze_x = W/2;
-  // 左側：從 S1框右邊 → 季軍賽框左邊，同高度 yS 中線
-  svg += '<line x1="' + (sfx[0]+42) + '" y1="' + yS + '" x2="' + (bronze_x-42) + '" y2="' + yS + '" stroke="#F47920" stroke-width="1.2" stroke-dasharray="5,3"/>';
-  // 右側：從季軍賽框右邊 → S2框左邊
-  svg += '<line x1="' + (bronze_x+42) + '" y1="' + yS + '" x2="' + (sfx[1]-42) + '" y2="' + yS + '" stroke="#F47920" stroke-width="1.2" stroke-dasharray="5,3"/>';
-  svg += '<rect x="' + (bronze_x-42) + '" y="' + (yS-17) + '" width="84" height="34" rx="5" fill="#fff0e6" stroke="#F47920" stroke-width="1.5"/>';
-  svg += '<text x="' + bronze_x + '" y="' + (yS-4) + '" text-anchor="middle" font-size="9" fill="#c4601a">季軍賽</text>';
-  svg += '<text x="' + bronze_x + '" y="' + (yS+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#c4601a">第3名</text>';
+  svg += '<line x1="' + (sfx[0]+42) + '" y1="' + yS + '" x2="' + (bronze_x-46) + '" y2="' + yS + '" stroke="#F47920" stroke-width="1.2" stroke-dasharray="5,3"/>';
+  svg += '<line x1="' + (bronze_x+46) + '" y1="' + yS + '" x2="' + (sfx[1]-42) + '" y2="' + yS + '" stroke="#F47920" stroke-width="1.2" stroke-dasharray="5,3"/>';
+  svg += '<rect x="' + (bronze_x-46) + '" y="' + (yS-17) + '" width="92" height="34" rx="5" fill="#fff0e6" stroke="#F47920" stroke-width="1.5"/>';
+  svg += '<text x="' + bronze_x + '" y="' + (yS-4) + '" text-anchor="middle" font-size="9" fill="#c4601a">S1敗 vs S2敗</text>';
+  svg += '<text x="' + bronze_x + '" y="' + (yS+12) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#c4601a">🥉 季軍賽</text>';
 
   // 決賽
   var fx = W/2;
