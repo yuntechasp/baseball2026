@@ -725,6 +725,16 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwnfhLHpto7inivZqYmNVo0
         <option value="pending">⏳ 待審核</option>
       </select>
     </div>
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>匯款時間</label>
+        <input type="date" id="rv-payment-date" placeholder="yyyy-mm-dd">
+      </div>
+      <div class="form-group">
+        <label>報名表繳交時間</label>
+        <input type="date" id="rv-form-date" placeholder="yyyy-mm-dd">
+      </div>
+    </div>
     <div class="form-group">
       <label>備註（退件原因等）</label>
       <textarea id="rv-note" rows="3" placeholder="可留空"></textarea>
@@ -1043,19 +1053,24 @@ async function batchApprove() {
 }
 
 function openReviewModal(teamId, status, note) {
-  document.getElementById('rv-teamId').value  = teamId;
-  document.getElementById('rv-status').value  = status;
-  document.getElementById('rv-note').value    = note;
+  const t = DB.teams.find(x => x.teamId === teamId);
+  document.getElementById('rv-teamId').value       = teamId;
+  document.getElementById('rv-status').value       = status;
+  document.getElementById('rv-note').value         = note;
+  document.getElementById('rv-payment-date').value = (t && t.paymentDate) || '';
+  document.getElementById('rv-form-date').value    = (t && t.formDate)    || '';
   openModal('review-modal');
 }
 
 async function submitReview() {
-  const teamId = document.getElementById('rv-teamId').value;
-  const status = document.getElementById('rv-status').value;
-  const note   = document.getElementById('rv-note').value.trim();
-  const t = DB.teams.find(t=>t.teamId===teamId);
-  if (t) { t.status = status; t.note = note; }
-  try { await apiPost({ action:'updateStatus', teamId, status, note }); } catch(e){}
+  const teamId     = document.getElementById('rv-teamId').value;
+  const status     = document.getElementById('rv-status').value;
+  const note       = document.getElementById('rv-note').value.trim();
+  const paymentDate = document.getElementById('rv-payment-date').value;
+  const formDate    = document.getElementById('rv-form-date').value;
+  const t = DB.teams.find(t => t.teamId === teamId);
+  if (t) { t.status = status; t.note = note; t.paymentDate = paymentDate; t.formDate = formDate; }
+  try { await apiPost({ action:'updateStatus', teamId, status, note, paymentDate, formDate }); } catch(e){}
   closeModal('review-modal');
   renderAll();
   toast('審核狀態已更新', 'ok');

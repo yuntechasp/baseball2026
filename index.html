@@ -356,7 +356,9 @@ const REGISTER_URL = 'register.html';
             <tr>
               <th style="width:44px">序</th>
               <th>學校／隊伍名稱</th>
-              <th style="width:100px;text-align:center">報名狀態</th>
+              <th style="width:110px;text-align:center">報名狀態</th>
+              <th style="width:110px;text-align:center">匯款時間</th>
+              <th style="width:120px;text-align:center">報名表繳交</th>
             </tr>
           </thead>
           <tbody id="teams-tbody">
@@ -410,7 +412,7 @@ async function api(params) {
 }
 
 // ── 快取 Key ──────────────────────────────────
-const CACHE_KEY = 'baseball2026_cache';
+const CACHE_KEY = 'baseball2026_cache_v3'; // 版本號更新時自動清除舊快取
 
 function loadFromCache() {
   try {
@@ -445,10 +447,11 @@ function applyData(res) {
 (async () => {
   // 先顯示快取資料（秒開）
   const cached = loadFromCache();
+  // 先讓頁面顯示出來（骨架或快取）
+  document.getElementById('loading-main').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
   if (cached) {
     applyData(cached);
-    document.getElementById('loading-main').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
   } else {
     // 沒有快取時顯示骨架畫面
     document.getElementById('news-list').innerHTML =
@@ -691,8 +694,42 @@ function formatRuleContent(text) {
 // ── 報名統計 ────────────────────────────────
 function renderStats() {
   const approved = teamsData.filter(t => t.status === 'approved');
+  const maxTeams = parseInt(settings.maxTeams) || 16;
+  const isFull   = approved.length >= maxTeams;
+
   document.getElementById('stat-total').textContent    = teamsData.length;
   document.getElementById('stat-approved').textContent = approved.length;
+
+  // 額滿標示
+  const statBox = document.getElementById('stat-approved').closest('.stat-box');
+  let fullTag = document.getElementById('full-tag');
+  if (isFull) {
+    if (!fullTag) {
+      fullTag = document.createElement('div');
+      fullTag.id = 'full-tag';
+      fullTag.style.cssText = 'margin-top:4px;font-size:11px;font-weight:700;color:#a32d2d;background:#fcebeb;border:1px solid #f5c1c1;border-radius:20px;padding:2px 10px;display:inline-block';
+      fullTag.textContent = '🔴 已額滿';
+      statBox && statBox.appendChild(fullTag);
+    }
+    // 同時在 stat-box 加紅框提示
+    if (statBox) statBox.style.borderColor = '#f5c1c1';
+  } else {
+    if (fullTag) fullTag.remove();
+    if (statBox) statBox.style.borderColor = '';
+  }
+
+  // 名單表格上方顯示額滿橫幅
+  const existBanner = document.getElementById('full-banner');
+  if (isFull && !existBanner) {
+    const banner = document.createElement('div');
+    banner.id = 'full-banner';
+    banner.style.cssText = 'background:#fcebeb;border:1px solid #f5c1c1;border-radius:var(--radius);padding:10px 16px;margin-bottom:12px;font-size:13px;font-weight:600;color:#a32d2d;text-align:center';
+    banner.innerHTML = '🔴 報名隊伍已達上限（' + maxTeams + ' 隊），報名已額滿';
+    const card = document.getElementById('teams-tbody').closest('.card');
+    if (card) card.parentNode.insertBefore(banner, card);
+  } else if (!isFull && existBanner) {
+    existBanner.remove();
+  }
 
   const tbody = document.getElementById('teams-tbody');
   if (!teamsData.length) {
@@ -712,6 +749,8 @@ function renderStats() {
           ${statusLabel[t.status]||'待審核'}
         </span>
       </td>
+      <td style="text-align:center;font-size:12px;color:var(--gray-600)">${esc(t.paymentDate||'—')}</td>
+      <td style="text-align:center;font-size:12px;color:var(--gray-600)">${esc(t.formDate||'—')}</td>
     </tr>`).join('');
 }
 
