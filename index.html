@@ -399,6 +399,8 @@ const REGISTER_URL = 'register.html';
 
 <script>
 let settings = {}, newsData = [], teamsData = [], rulesData = [];
+const NB = { new:'nb-new', imp:'nb-imp', info:'nb-info' };
+const NL = { new:'最新',   imp:'重要',   info:'公告' };
 
 async function api(params) {
   const controller = new AbortController();
@@ -536,8 +538,6 @@ function applySettings() {
 }
 
 // ── 最新消息 ────────────────────────────────
-const NB = { new:'nb-new', imp:'nb-imp', info:'nb-info' };
-const NL = { new:'最新', imp:'重要', info:'公告' };
 function newsImgSrc(val) {
   if (!val) return '';
   // If it's a stored key (IMG_...), fetch via API; else use directly (URL or base64)
