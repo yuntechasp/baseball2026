@@ -579,10 +579,13 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
                 <div class="form-group">
                   <label>抽籤日期</label>
                   <input type="date" id="cfg-drawdate">
-                  <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
-                    <span style="font-size:12px;color:var(--gray-600);white-space:nowrap">抽籤時間</span>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+                    <span style="font-size:12px;color:var(--gray-600);white-space:nowrap">開始</span>
                     <input type="time" id="cfg-drawtime" value="09:00"
-                      style="flex:1;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                      style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                    <span style="font-size:12px;color:var(--gray-600);white-space:nowrap">結束</span>
+                    <input type="time" id="cfg-drawendtime" value="12:00"
+                      style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
                   </div>
                 </div>
                 <div class="form-group">
@@ -1553,7 +1556,7 @@ async function deleteNews(rowIndex) {
 // ═══════════════════════════════════════════
 function renderSettings() {
   const s = DB.settings;
-  ['title','subtitle','venue','deadline','deadlinetime','gamedate','gameend','drawdate','drawtime','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
+  ['title','subtitle','venue','deadline','deadlinetime','gamedate','gameend','drawdate','drawtime','drawendtime','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
     const el = document.getElementById('cfg-'+k);
     if (el && s[k] !== undefined) el.value = s[k];
   });
@@ -1568,7 +1571,7 @@ async function saveSettings() {
   }
   al.className = 'alert';
   const s = {};
-  ['title','subtitle','venue','deadline','deadlinetime','gamedate','gameend','drawdate','drawtime','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
+  ['title','subtitle','venue','deadline','deadlinetime','gamedate','gameend','drawdate','drawtime','drawendtime','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
     const el = document.getElementById('cfg-'+k);
     if (el) s[k] = el.value;
   });

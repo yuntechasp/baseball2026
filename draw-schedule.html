@@ -388,11 +388,26 @@ async function api(params) {
 function applySettings() {
   const s = settings;
   const title = s.title || '比賽報名系統';
-  document.getElementById('nav-title').textContent   = title;
+  document.getElementById('nav-title').textContent    = title;
   document.getElementById('footer-title').textContent = title;
-  document.getElementById('page-sub').textContent =
-    (s.gamedate ? '比賽日期：'+s.gamedate+(s.gameend?' ～ '+s.gameend:'') : '') +
-    (s.venue ? '  ·  '+s.venue : '');
+  // 顯示抽籤時間（drawdate + drawtime）
+  const drawDate = s.drawdate || '';
+  const drawTime = s.drawtime || '';
+  if (drawDate) {
+    // 轉換成民國年顯示
+    const d = new Date(drawDate);
+    const rokYear = d.getFullYear() - 1911;
+    const mo = d.getMonth() + 1;
+    const day = d.getDate();
+    const endTime = s.drawendtime || '12:00';
+    const timeStr = (drawTime || '09:00') + ' 至 ' + endTime;
+    document.getElementById('page-sub').textContent =
+      '線上抽籤時間：民國' + rokYear + '年' + mo + '月' + day + '日 ' + timeStr;
+  } else {
+    document.getElementById('page-sub').textContent =
+      (s.gamedate ? '比賽日期：'+s.gamedate+(s.gameend?' ～ '+s.gameend:'') : '') +
+      (s.venue ? '  ·  '+s.venue : '');
+  }
 }
 
 // ── Tab 切換 ──
@@ -427,6 +442,7 @@ function renderDraw() {
     tag.textContent = '抽籤已完成';
     tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#eaf3de;color:#3b6d11';
     tabBadge.style.display = 'none';
+    // 移除「抽籤進行中」標籤
     verifyArea.style.display = 'none';
     let html = '<div class="draw-done-all">✅ 所有隊伍抽籤完成！請點上方「賽程資訊」查看對戰表。</div>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
@@ -438,10 +454,21 @@ function renderDraw() {
     return;
   }
 
-  // 進行中
+  // 進行中 - 只在開放時間內顯示「抽籤進行中」
   tag.textContent = '抽籤進行中';
   tag.style.cssText = 'margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#fff0e6;color:var(--accent)';
-  tabBadge.style.display = '';
+  // 檢查是否在抽籤時間內（drawdate + drawtime）
+  const ds = settings.drawdate || '';
+  const dt = settings.drawtime || '09:00';
+  if (ds) {
+    const drawStart = new Date(ds + 'T' + dt + ':00');
+    const endTime   = settings.drawendtime || '12:00';
+    const drawEnd   = new Date(ds + 'T' + endTime + ':00');
+    const now = new Date();
+    tabBadge.style.display = (now >= drawStart && now <= drawEnd) ? '' : 'none';
+  } else {
+    tabBadge.style.display = '';
+  }
 
   if (!verifiedTeam) {
     verifyArea.style.display = 'block';
