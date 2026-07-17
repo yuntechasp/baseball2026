@@ -577,6 +577,18 @@ function applyData(res) {
 })();
 
 // ── 套用設定 ────────────────────────────────
+function parseSheetTime(val) {
+  if (!val) return null;
+  const str = String(val).trim();
+  const hhmm = str.match(/^(\d{1,2}):(\d{2})/);
+  if (hhmm) return String(hhmm[1]).padStart(2,'0') + ':' + hhmm[2];
+  const d = new Date(str);
+  if (!isNaN(d)) {
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  return null;
+}
+
 function applySettings() {
   const s = settings;
   const title = s.title || '比賽報名系統';
@@ -585,8 +597,8 @@ function applySettings() {
   document.getElementById('hero-title').textContent  = title;
   document.getElementById('hero-sub').textContent    = s.subtitle || '';
   document.getElementById('hero-tag').textContent    = '棒球';
-  const deadlineTime = s.deadlinetime ? ' ' + s.deadlinetime : '';
-  document.getElementById('hero-deadline').textContent = s.deadline ? s.deadline + deadlineTime : '—';
+  const dlTime = parseSheetTime(s.deadlinetime);
+  document.getElementById('hero-deadline').textContent = s.deadline ? s.deadline + (dlTime ? ' ' + dlTime : '') : '—';
   document.getElementById('hero-venue').textContent    = s.venue    || '—';
   document.getElementById('hero-gamedate').textContent = s.gamedate || '—';
   document.getElementById('hero-gameend').textContent  = s.gameend  || '—';
@@ -596,10 +608,10 @@ function applySettings() {
   // 報名狀態
   // 判斷是否開放：Sheets設定 + 截止時間雙重判斷
   let isOpen = s.open !== 'false';
-  if (isOpen && s.deadline) {
-    const deadlineStr = s.deadlinetime
-      ? s.deadline + 'T' + s.deadlinetime + ':00'
-      : s.deadline + 'T23:59:59';
+  const deadlineStr = s.deadline
+    ? String(s.deadline).slice(0,10) + 'T' + (dlTime ? dlTime + ':00' : '23:59:59')
+    : null;
+  if (isOpen && deadlineStr) {
     if (new Date(deadlineStr) < new Date()) isOpen = false;
   }
   const indicator = document.getElementById('status-indicator');
@@ -617,10 +629,7 @@ function applySettings() {
   }
 
   // 倒數計時（含時間）
-  if (s.deadline) {
-    const deadlineStr = s.deadlinetime
-      ? s.deadline + 'T' + s.deadlinetime + ':00'
-      : s.deadline + 'T23:59:59';
+  if (deadlineStr) {
     const diff = new Date(deadlineStr) - new Date();
     if (diff > 0) {
       const days  = Math.floor(diff / 86400000);
