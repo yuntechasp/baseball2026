@@ -178,8 +178,21 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 
 @media(max-width:640px){
   .nav-links .nav-link:not(.cta){display:none}
+  .nav-links.open{
+    display:flex;position:fixed;top:52px;left:0;right:0;background:#00695C;
+    flex-direction:column;padding:8px 0;gap:0;z-index:999;
+    box-shadow:0 4px 12px rgba(0,0,0,.2)
+  }
+  .nav-links.open .nav-link{
+    display:flex;padding:13px 20px;border-radius:0;
+    border-bottom:1px solid rgba(255,255,255,.1)
+  }
+  .nav-links.open .nav-link.cta{margin-left:0}
+  .hamburger{display:flex}
   .tab-btn{font-size:13px;padding:12px 8px}
 }
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;margin-left:8px}
+.hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .2s}
 </style>
 </head>
 <body>
@@ -201,8 +214,21 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
       <a class="nav-link" href="register.html#pay">💰 繳費回報</a>
       <a class="nav-link cta" href="register.html">✏️ 立即報名</a>
     </div>
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
   </div>
 </nav>
+<script>
+function toggleMenu(){
+  document.querySelector('.nav-links').classList.toggle('open');
+}
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.nav-link').forEach(function(a){
+    a.addEventListener('click',function(){ document.querySelector('.nav-links').classList.remove('open'); });
+  });
+});
+</script>
 
 <!-- Tab Bar -->
 <div class="tab-bar">
