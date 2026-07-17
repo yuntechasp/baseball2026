@@ -273,6 +273,7 @@ document.addEventListener('DOMContentLoaded',function(){
             <th style="width:80px">日期</th>
             <th style="width:60px">時間</th>
             <th style="width:50px">場地</th>
+            <th style="width:75px;text-align:center">紀錄表</th>
           </tr></thead>
           <tbody id="match-tbody"></tbody>
         </table>
@@ -462,6 +463,9 @@ function renderResult(res) {
         '<td>' + esc(m.date||'') + '</td>' +
         '<td>' + esc(m.time||'') + '</td>' +
         '<td>' + esc(m.court||'') + '</td>' +
+        '<td style="text-align:center">' + (m.recordUrl
+          ? '<a href="' + esc(m.recordUrl) + '" target="_blank" rel="noopener" style="display:inline-block;padding:3px 10px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:12px;font-size:11px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">📄 紀錄表</a>'
+          : '<span style="font-size:11px;color:var(--gray-300)">—</span>') + '</td>' +
         '</tr>';
     }).join('');
   }
