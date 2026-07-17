@@ -960,12 +960,22 @@ function buildSVG(group,matches){
   }
 
   // 依照 Excel 場次順序，計算每場對應的中點位置
+  // 追蹤已使用的中點，對角線兩場會疊在一起，需要錯開
+  const usedCenters = [];
   const matchLabels = matches.map(match => {
     const ai = nameToIdx(match.teamA);
     const bi = nameToIdx(match.teamB);
     const pi = (ai >= 0) ? positions[ai] : {x:cx, y:cy};
     const pj = (bi >= 0) ? positions[bi] : {x:cx, y:cy};
-    return {mx:(pi.x+pj.x)/2, my:(pi.y+pj.y)/2, match};
+    let mx = (pi.x+pj.x)/2, my = (pi.y+pj.y)/2;
+    // 檢查是否與已有的中點重疊（距離<10px 視為重疊）
+    const overlap = usedCenters.find(c => Math.abs(c.x-mx)<10 && Math.abs(c.y-my)<10);
+    if (overlap) {
+      // 第一個往上移，第二個往下移
+      overlap.y -= 32; my += 32;
+    }
+    usedCenters.push({x:mx, y:my});
+    return {mx, my, match};
   });
   let svg='<svg viewBox="0 0 '+size+' '+size+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:440px;display:block;margin:0 auto">';
   svg+='<rect width="'+size+'" height="'+size+'" fill="#f7f6f3" rx="12"/>';
