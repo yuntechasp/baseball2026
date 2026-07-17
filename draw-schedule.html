@@ -756,28 +756,32 @@ function switchBracketGroup(label) {
 // ── 籤號文字 → 隊名對應（處理舊資料）──
 function resolveTeamName(name) {
   if (!name) return name;
-  // 格式如「A組第1籤」「預賽 A組第2籤」→ 找 slotMap
-  const m = String(name).match(/([A-D])組第(\d+)籤/);
-  if (!m) return name; // 已是隊名，直接回傳
-  const groupLabel = m[1];
-  const posInGroup = parseInt(m[2]); // 組內第幾個
-  const gc = drawState.groupCount || 4;
-  const n  = approvedCount || drawData.length;
-  const base = Math.floor(n/gc), extra = n%gc;
-  const labels = ['A','B','C','D','E','F'];
-  // 算出該組的全域 slot 起始
-  let slotStart = 1;
-  for (let g = 0; g < gc; g++) {
-    const sz = base + (g < extra ? 1 : 0);
-    if (labels[g] === groupLabel) {
-      const slot = slotStart + posInGroup - 1;
-      const slotMap = {};
-      drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
-      return slotMap[slot] || name;
+  const slotMap = {};
+  drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
+
+  // 格式一：「第N籤」→ 直接查 slotMap
+  const m1 = String(name).match(/^第(\d+)籤$/);
+  if (m1) return slotMap[parseInt(m1[1])] || name;
+
+  // 格式二：「A組第N籤」→ 換算全局籤號
+  const m2 = String(name).match(/([A-D])組第(\d+)籤/);
+  if (m2) {
+    const gc = drawState.groupCount || 4;
+    const n  = approvedCount || drawData.length;
+    const base = Math.floor(n/gc), extra = n%gc;
+    const labels = ['A','B','C','D','E','F'];
+    let slotStart = 1;
+    for (let g = 0; g < gc; g++) {
+      const sz = base + (g < extra ? 1 : 0);
+      if (labels[g] === m2[1]) {
+        const slot = slotStart + parseInt(m2[2]) - 1;
+        return slotMap[slot] || name;
+      }
+      slotStart += sz;
     }
-    slotStart += sz;
   }
-  return name;
+
+  return name; // 已是隊名或無法解析，直接回傳
 }
 
 function renderGroupTable(group, groupMatches) {
@@ -938,21 +942,10 @@ function buildSVG(group,matches){
   if(n===3){positions=[{x:cx,y:pad-20},{x:pad-10,y:size-pad+20},{x:size-pad+10,y:size-pad+20}];}
   else{positions=[{x:pad,y:pad},{x:size-pad,y:pad},{x:size-pad,y:size-pad},{x:pad,y:size-pad}];
     if(n>4)positions.push({x:cx,y:pad-20});}
-
-  // 建立隊名→位置索引對照
-  const nameToIdx={};
-  slots.forEach((s,i)=>{ if(s.teamname) nameToIdx[s.teamname]=i; });
-
-  // 每對 (i,j) 找對應的比賽
-  const matchLabels=[];
+  const matchLabels=[];let mIdx=0;
   for(let i=0;i<n;i++){for(let j=i+1;j<n;j++){
     const pi=positions[i]||{x:cx,y:cy},pj=positions[j]||{x:cx,y:cy};
-    const ti=slots[i]?.teamname, tj=slots[j]?.teamname;
-    // 找這兩隊之間的比賽
-    const match = matches.find(m=>
-      (m.teamA===ti&&m.teamB===tj)||(m.teamA===tj&&m.teamB===ti)
-    ) || null;
-    matchLabels.push({mx:(pi.x+pj.x)/2,my:(pi.y+pj.y)/2,match});
+    matchLabels.push({mx:(pi.x+pj.x)/2,my:(pi.y+pj.y)/2,match:matches[mIdx]||null});mIdx++;
   }}
   let svg='<svg viewBox="0 0 '+size+' '+size+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:440px;display:block;margin:0 auto">';
   svg+='<rect width="'+size+'" height="'+size+'" fill="#f7f6f3" rx="12"/>';
