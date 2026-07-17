@@ -971,8 +971,8 @@ function buildSVG(group,matches){
     // 若與已有框重疊，第一個往上，第二個往下各50px
     const overlapIdx = usedCenters.findIndex(c => Math.abs(c.x-mx)<30 && Math.abs(c.y-my)<30);
     if (overlapIdx >= 0) {
-      usedCenters[overlapIdx].y -= 50;
-      my += 50;
+      usedCenters[overlapIdx].y -= 70;
+      my += 30;
     }
     usedCenters.push({x:mx, y:my});
     return {mx, my, match};
