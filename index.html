@@ -33,7 +33,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .nav{background:var(--yt-teal-dark);color:#fff;position:sticky;top:0;z-index:100;
   box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .nav-inner{max-width:1000px;margin:0 auto;padding:0 20px;
-  display:flex;align-items:center;justify-content:space-between;height:52px}
+  display:flex;align-items:center;justify-content:space-between;height:52px;gap:8px}
 .nav-logo{font-size:14px;font-weight:700;letter-spacing:.01em;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
 .nav-links{display:flex;gap:4px}
 .nav-link{padding:6px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;
@@ -595,7 +595,14 @@ function applySettings() {
   document.getElementById('stat-max').textContent = s.maxTeams || '—';
 
   // 報名狀態
-  const isOpen = s.open !== 'false';
+  // 判斷是否開放：Sheets設定 + 截止時間雙重判斷
+  let isOpen = s.open !== 'false';
+  if (isOpen && s.deadline) {
+    const deadlineStr = s.deadlinetime
+      ? s.deadline + 'T' + s.deadlinetime + ':00'
+      : s.deadline + 'T23:59:59';
+    if (new Date(deadlineStr) < new Date()) isOpen = false;
+  }
   const indicator = document.getElementById('status-indicator');
   const statusText = document.getElementById('status-text');
   if (isOpen) {
