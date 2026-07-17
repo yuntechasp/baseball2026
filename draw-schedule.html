@@ -950,10 +950,10 @@ function buildSVG(group,matches){
     // 直接找隊名
     let idx = slots.findIndex(sl => sl.teamname === s);
     if (idx >= 0) return idx;
-    // 「第N籤」→ 找 slot 號碼
+    // 「第N籤」→ 找對應的全局籤號
     const m1 = s.match(/^第(\d+)籤$/);
     if (m1) {
-      idx = slots.findIndex(sl => sl.slot === parseInt(m1[1]));
+      idx = slots.findIndex(sl => String(sl.slot) === m1[1]);
       return idx;
     }
     return -1;
@@ -990,7 +990,7 @@ function buildSVG(group,matches){
     if(name.length>maxLen){line1=name.slice(0,maxLen);line2=name.slice(maxLen,maxLen*2);if(name.length>maxLen*2)line2=line2.slice(0,maxLen-1)+'…';}
     const boxH=line2?52:40;
     svg+='<rect x="'+(pos.x-44)+'" y="'+(pos.y-boxH/2)+'" width="88" height="'+boxH+'" rx="8" fill="'+(isEmpty?'#ededea':'var(--yt-teal-light)')+'" stroke="'+(isEmpty?'#d5d4ce':'var(--yt-teal)')+'" stroke-width="1.5"/>';
-    svg+='<text x="'+pos.x+'" y="'+(pos.y-boxH/2+14)+'" text-anchor="middle" font-size="10" fill="#888">T'+(i+1)+'</text>';
+    svg+='<text x="'+pos.x+'" y="'+(pos.y-boxH/2+14)+'" text-anchor="middle" font-size="10" fill="#888">第'+slot.slot+'籤</text>';
     svg+='<text x="'+pos.x+'" y="'+(pos.y-boxH/2+28)+'" text-anchor="middle" font-size="12" font-weight="700" fill="'+(isEmpty?'#888780':'var(--yt-teal-dark)')+'">'+esc(line1)+'</text>';
     if(line2)svg+='<text x="'+pos.x+'" y="'+(pos.y-boxH/2+42)+'" text-anchor="middle" font-size="12" font-weight="700" fill="'+(isEmpty?'#888780':'var(--yt-teal-dark)')+'">'+esc(line2)+'</text>';
   });
