@@ -937,7 +937,7 @@ function renderGroup(group) {
 }
 
 function buildSVG(group,matches){
-  const slots=group.slots,n=slots.length,size=420,pad=70,cx=size/2,cy=size/2;
+  const slots=group.slots,n=slots.length,size=480,pad=80,cx=size/2,cy=size/2;
   let positions=[];
   if(n===3){positions=[{x:cx,y:pad-20},{x:pad-10,y:size-pad+20},{x:size-pad+10,y:size-pad+20}];}
   else{positions=[{x:pad,y:pad},{x:size-pad,y:pad},{x:size-pad,y:size-pad},{x:pad,y:size-pad}];
@@ -960,19 +960,19 @@ function buildSVG(group,matches){
   }
 
   // 依照 Excel 場次順序，計算每場對應的中點位置
-  // 追蹤已使用的中點，對角線兩場會疊在一起，需要錯開
   const usedCenters = [];
   const matchLabels = matches.map(match => {
     const ai = nameToIdx(match.teamA);
     const bi = nameToIdx(match.teamB);
     const pi = (ai >= 0) ? positions[ai] : {x:cx, y:cy};
     const pj = (bi >= 0) ? positions[bi] : {x:cx, y:cy};
-    let mx = (pi.x+pj.x)/2, my = (pi.y+pj.y)/2;
-    // 檢查是否與已有的中點重疊（距離<10px 視為重疊）
-    const overlap = usedCenters.find(c => Math.abs(c.x-mx)<10 && Math.abs(c.y-my)<10);
-    if (overlap) {
-      // 第一個往上移，第二個往下移
-      overlap.y -= 32; my += 32;
+    let mx = Math.round((pi.x+pj.x)/2);
+    let my = Math.round((pi.y+pj.y)/2);
+    // 若與已有框重疊，第一個往上，第二個往下各50px
+    const overlapIdx = usedCenters.findIndex(c => Math.abs(c.x-mx)<30 && Math.abs(c.y-my)<30);
+    if (overlapIdx >= 0) {
+      usedCenters[overlapIdx].y -= 50;
+      my += 50;
     }
     usedCenters.push({x:mx, y:my});
     return {mx, my, match};
