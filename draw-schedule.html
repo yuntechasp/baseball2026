@@ -942,44 +942,11 @@ function buildSVG(group,matches){
   if(n===3){positions=[{x:cx,y:pad-20},{x:pad-10,y:size-pad+20},{x:size-pad+10,y:size-pad+20}];}
   else{positions=[{x:pad,y:pad},{x:size-pad,y:pad},{x:size-pad,y:size-pad},{x:pad,y:size-pad}];
     if(n>4)positions.push({x:cx,y:pad-20});}
-
-  // 建立 slot → position index 對照
-  const slotToIdx={};
-  slots.forEach((s,i)=>{ slotToIdx[s.slot]=i; });
-
-  // 解析隊名取得 slot 號碼
-  function nameToSlot(name) {
-    if (!name) return null;
-    const s = String(name);
-    // 「第N籤」
-    const m1 = s.match(/^第(\d+)籤$/);
-    if (m1) return parseInt(m1[1]);
-    // 「A組第N籤」→ 換算全局
-    const m2 = s.match(/^([A-D])組第(\d+)籤$/);
-    if (m2) {
-      const gc=drawState.groupCount||4, tot=approvedCount||drawData.length;
-      const base=Math.floor(tot/gc),extra=tot%gc;
-      const labels=['A','B','C','D'];
-      let start=1;
-      for(let g=0;g<gc;g++){
-        const sz=base+(g<extra?1:0);
-        if(labels[g]===m2[1]) return start+parseInt(m2[2])-1;
-        start+=sz;
-      }
-    }
-    // 已是隊名 → 找對應 slot
-    const d=drawData.find(d=>d.teamname===name);
-    return d?d.slot:null;
-  }
-
-  // 依照 Excel 場次，計算每場對應的中點位置
-  const matchLabels=matches.map(match=>{
-    const sa=nameToSlot(match.teamA), sb=nameToSlot(match.teamB);
-    const ai=slotToIdx[sa]??-1, bi=slotToIdx[sb]??-1;
-    const pi=(ai>=0&&ai<positions.length)?positions[ai]:{x:cx,y:cy};
-    const pj=(bi>=0&&bi<positions.length)?positions[bi]:{x:cx,y:cy};
-    return {mx:(pi.x+pj.x)/2,my:(pi.y+pj.y)/2,match};
-  });
+  const matchLabels=[];let mIdx=0;
+  for(let i=0;i<n;i++){for(let j=i+1;j<n;j++){
+    const pi=positions[i]||{x:cx,y:cy},pj=positions[j]||{x:cx,y:cy};
+    matchLabels.push({mx:(pi.x+pj.x)/2,my:(pi.y+pj.y)/2,match:matches[mIdx]||null});mIdx++;
+  }}
   let svg='<svg viewBox="0 0 '+size+' '+size+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:440px;display:block;margin:0 auto">';
   svg+='<rect width="'+size+'" height="'+size+'" fill="#f7f6f3" rx="12"/>';
   for(let i=0;i<n;i++){for(let j=i+1;j<n;j++){
