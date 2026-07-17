@@ -942,11 +942,31 @@ function buildSVG(group,matches){
   if(n===3){positions=[{x:cx,y:pad-20},{x:pad-10,y:size-pad+20},{x:size-pad+10,y:size-pad+20}];}
   else{positions=[{x:pad,y:pad},{x:size-pad,y:pad},{x:size-pad,y:size-pad},{x:pad,y:size-pad}];
     if(n>4)positions.push({x:cx,y:pad-20});}
-  const matchLabels=[];let mIdx=0;
-  for(let i=0;i<n;i++){for(let j=i+1;j<n;j++){
-    const pi=positions[i]||{x:cx,y:cy},pj=positions[j]||{x:cx,y:cy};
-    matchLabels.push({mx:(pi.x+pj.x)/2,my:(pi.y+pj.y)/2,match:matches[mIdx]||null});mIdx++;
-  }}
+
+  // 建立隊名/籤號 → 位置索引
+  function nameToIdx(name) {
+    if (!name) return -1;
+    const s = String(name);
+    // 直接找隊名
+    let idx = slots.findIndex(sl => sl.teamname === s);
+    if (idx >= 0) return idx;
+    // 「第N籤」→ 找 slot 號碼
+    const m1 = s.match(/^第(\d+)籤$/);
+    if (m1) {
+      idx = slots.findIndex(sl => sl.slot === parseInt(m1[1]));
+      return idx;
+    }
+    return -1;
+  }
+
+  // 依照 Excel 場次順序，計算每場對應的中點位置
+  const matchLabels = matches.map(match => {
+    const ai = nameToIdx(match.teamA);
+    const bi = nameToIdx(match.teamB);
+    const pi = (ai >= 0) ? positions[ai] : {x:cx, y:cy};
+    const pj = (bi >= 0) ? positions[bi] : {x:cx, y:cy};
+    return {mx:(pi.x+pj.x)/2, my:(pi.y+pj.y)/2, match};
+  });
   let svg='<svg viewBox="0 0 '+size+' '+size+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:440px;display:block;margin:0 auto">';
   svg+='<rect width="'+size+'" height="'+size+'" fill="#f7f6f3" rx="12"/>';
   for(let i=0;i<n;i++){for(let j=i+1;j<n;j++){
