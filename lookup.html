@@ -468,7 +468,7 @@ function renderResult(res) {
 
   // 球員名單
   const staffRoles = ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'];
-  document.getElementById('mem-tbody').innerHTML = res.members.map((m, i) => {
+  document.getElementById('mem-tbody').innerHTML = (res.members || []).map((m, i) => {
     const isStaff   = staffRoles.includes(m.role);
     const isCaptain = m.role === '隊長';
     const roleClass = isCaptain ? 'role-captain' : isStaff ? 'role-staff' : 'role-player';

@@ -865,8 +865,20 @@ function renderStats() {
   const statusLabel = { approved:'已核准', waitlist:'備取', pending:'待審核', rejected:'退件' };
   const statusCls   = { approved:'status-approved', waitlist:'status-waitlist', pending:'status-pending', rejected:'status-rejected' };
 
-  // 計算完成順位：兩個條件都達到的隊伍，依「較晚的那個時間」排序
-  const parseDate = str => str ? new Date(str.replace(' ', 'T')) : null;
+  // 計算完成順位：兩個條件（匯款＋報名表）都具備的隊伍，依「較晚的那個時間」排序
+  const parseDate = str => {
+    if (!str) return null;
+    let s = String(str).trim().replace(/\/{2,}/g, '/');   // 容錯：6//11 → 6/11
+    const pm = /下午/.test(s), am = /上午/.test(s);
+    s = s.replace(/上午|下午/g, ' ');
+    const m = s.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})\s*(?:(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (!m) return null;
+    let h = m[4] !== undefined ? parseInt(m[4], 10) : 0;
+    if (pm && h < 12) h += 12;
+    if (am && h === 12) h = 0;
+    const d = new Date(+m[1], +m[2] - 1, +m[3], h, +(m[5] || 0), +(m[6] || 0));
+    return isNaN(d) ? null : d;
+  };
   const completedTeams = teamsData
     .filter(t => t.paymentDate && t.formDate)
     .map(t => {
@@ -875,6 +887,7 @@ function renderStats() {
       const later = (d1 && d2) ? (d1 > d2 ? d1 : d2) : (d1 || d2);
       return { teamId: t.teamId, later };
     })
+    .filter(t => t.later && !isNaN(t.later))
     .sort((a, b) => a.later - b.later);
   const rankMap = {};
   completedTeams.forEach((t, i) => { rankMap[t.teamId] = i + 1; });
