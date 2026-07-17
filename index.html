@@ -293,8 +293,20 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 
 @media(max-width:640px){
   .hero h1{font-size:22px}
-  .nav-links .nav-link:not(.cta){display:none}
+  .nav-links .nav-link:not(.cta):not(.mobile-show){display:none}
+  .hamburger{display:flex}
+  .nav-mobile-open .nav-links{
+    position:fixed;top:56px;left:0;right:0;background:#00695C;
+    flex-direction:column;padding:8px 0;gap:0;z-index:999;
+    box-shadow:0 4px 12px rgba(0,0,0,.2)
+  }
+  .nav-mobile-open .nav-links .nav-link{
+    display:flex!important;padding:13px 20px;border-radius:0;
+    border-bottom:1px solid rgba(255,255,255,.1)
+  }
 }
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;margin-left:8px}
+.hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .2s}
 </style>
 </head>
 <body>
@@ -317,8 +329,21 @@ const REGISTER_URL = 'register.html';
       <a class="nav-link" href="register.html#pay" style="color:rgba(255,255,255,.9)">💰 繳費回報</a>
       <a class="nav-link cta" id="nav-reg-btn" href="register.html">✏️ 立即報名</a>
     </div>
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
   </div>
 </nav>
+<script>
+function toggleMenu(){
+  document.querySelector('nav').classList.toggle('nav-mobile-open');
+}
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.nav-link').forEach(function(a){
+    a.addEventListener('click',function(){ document.querySelector('nav').classList.remove('nav-mobile-open'); });
+  });
+});
+</script>
 
 <!-- Hero -->
 <div class="hero">
