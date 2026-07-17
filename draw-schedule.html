@@ -176,8 +176,13 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .footer{background:var(--yt-teal-dark);color:rgba(255,255,255,.6);text-align:center;padding:20px;font-size:12px}
 .footer a{color:rgba(255,255,255,.8);text-decoration:none}
 
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;margin-left:8px}
+.hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .2s}
 @media(max-width:640px){
-  .nav-links .nav-link:not(.cta){display:none}
+  .nav-links .nav-link:not(.cta):not(.home){display:none}
+  .nav-logo{min-width:0}
+  .nav-link.home,.nav-link.cta{padding:6px 10px;white-space:nowrap;flex-shrink:0}
+  .nav-links{flex-shrink:0}
   .nav-links.open{
     display:flex;position:fixed;top:52px;left:0;right:0;background:#00695C;
     flex-direction:column;padding:8px 0;gap:0;z-index:999;
@@ -191,8 +196,6 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   .hamburger{display:flex}
   .tab-btn{font-size:13px;padding:12px 8px}
 }
-.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;margin-left:8px}
-.hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .2s}
 </style>
 </head>
 <body>
@@ -206,7 +209,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
   <div class="nav-inner">
     <div class="nav-logo">⚾ <span id="nav-title">比賽報名系統</span></div>
     <div class="nav-links">
-      <a class="nav-link" href="index.html">🏠 首頁</a>
+      <a class="nav-link home" href="index.html">🏠 首頁</a>
       <a class="nav-link" href="index.html#news">最新消息</a>
       <a class="nav-link" href="index.html#rules">競賽規程</a>
       <a class="nav-link active" href="draw-schedule.html">🎰 抽籤 &amp; 賽程</a>
