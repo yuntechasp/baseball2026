@@ -87,6 +87,21 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
   border:1px solid var(--gray-100);box-shadow:var(--shadow-sm);overflow:hidden}
 .card-body{padding:20px}
 
+/* ── 隊徽 ── */
+.tlogo{width:22px;height:22px;border-radius:50%;object-fit:contain;vertical-align:middle;background:#fff;border:1px solid var(--gray-100);flex-shrink:0}
+.tlogo-fb{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;vertical-align:middle;flex-shrink:0}
+/* ── 比數卡 ── */
+.score-strip{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 14px;-webkit-overflow-scrolling:touch}
+.score-card{min-width:180px;flex-shrink:0;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;padding:10px 14px;box-shadow:var(--shadow-sm)}
+.score-card-status{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--gray-400);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
+.score-card-status .final{color:var(--yt-teal-dark)}
+.score-card-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:13px}
+.score-card-row .t{font-weight:600;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:118px}
+.score-card-row .s{font-weight:800;font-size:15px;color:var(--gray-900)}
+.score-card-row.winner .t,.score-card-row.winner .s{color:var(--yt-teal-dark)}
+
+.score-card{cursor:pointer;transition:box-shadow .15s}
+.score-card:hover{box-shadow:var(--shadow-md,0 4px 12px rgba(0,0,0,.08))}
 /* ── 最新消息 ── */
 .news-item{display:flex;flex-direction:column;
   padding:13px 0;border-bottom:1px solid var(--gray-100)}
@@ -383,6 +398,15 @@ document.addEventListener('DOMContentLoaded',function(){
   <div id="loading-main" style="display:none"></div>
 
   <div id="main-content" style="display:none">
+
+    <!-- 最新戰況 -->
+    <div class="section" id="live-scores" style="display:none">
+      <div class="section-title">
+        <span class="section-title-icon">⚾</span> 最新戰況
+        <a href="draw-schedule.html#schedule" style="margin-left:auto;font-size:12px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">完整賽程 →</a>
+      </div>
+      <div id="score-cards"></div>
+    </div>
 
     <!-- 最新消息 -->
     <div class="section" id="news">
@@ -981,6 +1005,275 @@ function toast(msg) {
   e.textContent = msg; e.className = 'toast show';
   setTimeout(() => e.className = 'toast', 2500);
 }
+
+// ═══ 最新戰況（賽程資料另行載入，不影響首頁主要內容）═══
+let matchData = [], drawData = [];
+function fmtDateS(dv){if(!dv)return '';const str=String(dv);if(str.includes('T')||str.includes('-')){const dt=new Date(str);if(!isNaN(dt))return(dt.getMonth()+1)+'/'+dt.getDate();}return str;}
+function fmtTimeS(t){if(!t)return '';const str=String(t);if(str.includes('GMT')||str.includes('1899')||str.includes('T')){const dt=new Date(str);if(!isNaN(dt))return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');}return str;}
+
+// ═══ 循環賽排名引擎（依競賽規程：積分→對戰→TQB→人工裁定）═══
+function groupTeamList(label) {
+  const set = {};
+  matchData.filter(m => m.phase && m.phase.indexOf(label + '組') >= 0).forEach(m => {
+    const a = resolveBase(m.teamA), b = resolveBase(m.teamB);
+    if (a) set[a] = 1; if (b) set[b] = 1;
+  });
+  return Object.keys(set);
+}
+// 只解析籤號，不解析名次（避免排名引擎遞迴）
+function resolveBase(name) {
+  if (!name) return name;
+  const slotMap = {};
+  drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
+  const m1 = String(name).match(/^第(\d+)籤$/);
+  if (m1) return slotMap[parseInt(m1[1])] || name;
+  return name;
+}
+function hasScoreOf(m){ return m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==undefined&&m.scoreB!==''; }
+
+function computeStandings(label) {
+  const teams = groupTeamList(label);
+  const games = matchData.filter(m => m.phase && m.phase.indexOf(label + '組') >= 0);
+  const played = games.filter(hasScoreOf);
+  const allDone = games.length > 0 && played.length === games.length;
+
+  // 人工裁定優先：賽事設定 rankA / rankB… = 「隊名1,隊名2,…」
+  const override = (settings['rank' + label] || '').split(/[,，]/).map(x=>x.trim()).filter(Boolean);
+  if (override.length >= teams.length && teams.length > 0) {
+    return { rows: override.map((t,i)=>({team:t, rank:i+1, ...recordOf(t,played), tieNote:'人工裁定'})), allDone, resolved:true, manual:true };
+  }
+
+  function recordOf(t, gs) {
+    let w=0,l=0;
+    gs.forEach(m=>{
+      const a=resolveBase(m.teamA), b=resolveBase(m.teamB);
+      if(a!==t&&b!==t)return;
+      const winner = m.winner || (Number(m.scoreA)>Number(m.scoreB)?a:Number(m.scoreB)>Number(m.scoreA)?b:'');
+      if(winner===t)w++; else if(winner)l++;
+    });
+    return {w,l,pts:w*3};
+  }
+
+  let rows = teams.map(t=>({team:t, ...recordOf(t,played)}));
+  rows.sort((a,b)=>b.pts-a.pts);
+
+  // 同積分群組逐一處理
+  let rank=1, out=[], unresolved=false;
+  for(let i=0;i<rows.length;){
+    let j=i; while(j<rows.length&&rows[j].pts===rows[i].pts)j++;
+    const cluster=rows.slice(i,j);
+    if(cluster.length===1){ cluster[0].rank=rank; out.push(cluster[0]); }
+    else{
+      const names=cluster.map(c=>c.team);
+      const mutual=played.filter(m=>names.indexOf(resolveBase(m.teamA))>=0&&names.indexOf(resolveBase(m.teamB))>=0);
+      // (1) 相互對戰積分
+      cluster.forEach(c=>{ c.h2h=recordOf(c.team,mutual).pts; });
+      // (2) TQB：相互對戰 得分率-失分率（需局數）
+      let tqbOK=true;
+      cluster.forEach(c=>{
+        let rs=0,ra=0,atkInn=0,defInn=0;
+        mutual.forEach(m=>{
+          const a=resolveBase(m.teamA), b=resolveBase(m.teamB);
+          const iA=Number(m.inningsA), iB=Number(m.inningsB);
+          if(a===c.team){ rs+=Number(m.scoreA); ra+=Number(m.scoreB); atkInn+=iA; defInn+=iB; if(!iA||!iB)tqbOK=false; }
+          if(b===c.team){ rs+=Number(m.scoreB); ra+=Number(m.scoreA); atkInn+=iB; defInn+=iA; if(!iA||!iB)tqbOK=false; }
+        });
+        c.tqb=(atkInn&&defInn)?(rs/atkInn-ra/defInn):null;
+      });
+      cluster.sort((a,b)=>{
+        if(b.h2h!==a.h2h)return b.h2h-a.h2h;
+        if(tqbOK&&a.tqb!==null&&b.tqb!==null&&b.tqb!==a.tqb)return b.tqb-a.tqb;
+        return 0;
+      });
+      // 標記無法判定的並列（不提供暫定排序，避免爭議）
+      for(let k=0;k<cluster.length;k++){
+        const c=cluster[k], prev=cluster[k-1];
+        const tied=prev&&prev.h2h===c.h2h&&(!tqbOK||prev.tqb===c.tqb);
+        if(tied){
+          c.pending=true; prev.pending=true;
+          c.tieNote=prev.tieNote=(tqbOK?'人工裁定中':'待填局數或人工裁定');
+          unresolved=true;
+        } else if(cluster.length>1){
+          c.tieNote=tqbOK&&c.tqb!==null?('TQB '+c.tqb.toFixed(3)):'對戰判定';
+        }
+      }
+      // 並列隊伍改以隊名筆畫排序呈現（僅為顯示順序，非名次）
+      let k2=0;
+      while(k2<cluster.length){
+        if(cluster[k2].pending){
+          let j2=k2; while(j2<cluster.length&&cluster[j2].pending)j2++;
+          const seg=cluster.slice(k2,j2).sort((a,b)=>String(a.team).localeCompare(String(b.team),'zh-Hant'));
+          for(let t2=0;t2<seg.length;t2++)cluster[k2+t2]=seg[t2];
+          k2=j2;
+        } else k2++;
+      }
+      cluster.forEach((c,k)=>{ c.rank=rank+k; out.push(c); });
+    }
+    rank+=cluster.length; i=j;
+  }
+  return { rows: out, allDone, resolved: allDone && !unresolved, manual:false };
+}
+
+// 場次勝隊 / 敗隊（供 Q1勝隊、S1敗隊等標籤解析）
+function teamOfMatch(num, wantWinner) {
+  const m = matchData.find(x=>String(x.matchNum).toUpperCase()===String(num).toUpperCase());
+  if(!m||!hasScoreOf(m))return null;
+  const a=resolveBase(m.teamA), b=resolveBase(m.teamB);
+  const winner=m.winner||(Number(m.scoreA)>Number(m.scoreB)?a:Number(m.scoreB)>Number(m.scoreA)?b:null);
+  if(!winner||winner==='平局')return null;
+  return wantWinner?winner:(winner===a?b:a);
+}
+
+function resolveTeamName(name) {
+  if (!name) return name;
+  const slotMap = {};
+  drawData.forEach(d => { slotMap[d.slot] = d.teamname; });
+
+  // 格式一：「第N籤」→ 直接查 slotMap
+  const m1 = String(name).match(/^第(\d+)籤$/);
+  if (m1) return slotMap[parseInt(m1[1])] || name;
+
+  // 格式二：「A組第N籤」→ 換算全局籤號
+  const m2 = String(name).match(/([A-D])組第(\d+)籤/);
+  if (m2) {
+    const gc = drawState.groupCount || 4;
+    const n  = approvedCount || drawData.length;
+    const base = Math.floor(n/gc), extra = n%gc;
+    const labels = ['A','B','C','D','E','F'];
+    let slotStart = 1;
+    for (let g = 0; g < gc; g++) {
+      const sz = base + (g < extra ? 1 : 0);
+      if (labels[g] === m2[1]) {
+        const slot = slotStart + parseInt(m2[2]) - 1;
+        return slotMap[slot] || name;
+      }
+      slotStart += sz;
+    }
+  }
+
+  // 格式三：「A組第N名」→ 循環賽排名（全部賽畢且名次確定才帶入）
+  const m3 = String(name).match(/^([A-D])組第(\d+)名$/);
+  if (m3) {
+    try {
+      const st = computeStandings(m3[1]);
+      if (st.allDone) {
+        const row = st.rows.find(r => r.rank === parseInt(m3[2]));
+        if (row && !row.pending) return row.team;
+      }
+    } catch(e) {}
+    return name;
+  }
+
+  // 格式四：「Q1勝隊 / S1敗隊」等 → 依場次結果帶入
+  const m4 = String(name).match(/^([A-Z]+\d+)\s*(勝|敗)隊?$/);
+  if (m4) {
+    const t = teamOfMatch(m4[1], m4[2] === '勝');
+    if (t) return t;
+    return name;
+  }
+
+  return name; // 已是隊名或無法解析，直接回傳
+}
+
+function renderGroupTable(group, groupMatches) {
+  if (!groupMatches.length) {
+    return '<div style="text-align:center;padding:24px;color:var(--gray-400);font-size:13px">賽程尚未產生</div>';
+  }
+  let html = '<div class="match-table-wrap"><table class="match-table"><thead><tr>' +
+    '<th style="width:60px">場次</th><th>隊伍 A</th><th style="width:40px"></th><th>隊伍 B</th>' +
+    '<th style="width:80px;text-align:center">日期</th>' +
+    '<th style="width:70px;text-align:center">時間</th>' +
+    '<th style="width:90px;text-align:center">比分</th>' +
+    '<th style="width:120px;text-align:center">勝隊</th>' +
+    '<th style="width:80px;text-align:center">紀錄表</th>' +
+    '</tr></thead><tbody>';
+  groupMatches.forEach(m => {
+    const teamA = resolveTeamName(m.teamA);
+    const teamB = resolveTeamName(m.teamB);
+    const hasScore = m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==undefined&&m.scoreB!=='';
+    const isWinA = hasScore && Number(m.scoreA) > Number(m.scoreB);
+    const isWinB = hasScore && Number(m.scoreB) > Number(m.scoreA);
+    const scoreCell = hasScore
+      ? '<span class="score-cell">'+m.scoreA+' : '+m.scoreB+'</span>'
+      : '<span class="pending-tag">待賽</span>';
+    const winnerName = m.winner || (hasScore ? (isWinA ? teamA : isWinB ? teamB : '平局') : '');
+    const winnerCell = hasScore
+      ? (winnerName === '平局'
+          ? '<span style="font-size:12px;color:var(--gray-400)">平局</span>'
+          : '<span style="font-size:12px;font-weight:600;color:var(--green)">✅ '+esc(winnerName)+'</span>')
+      : '<span style="font-size:12px;color:var(--gray-300)">—</span>';
+    const recCell = m.recordUrl
+      ? '<a href="'+esc(m.recordUrl)+'" target="_blank" rel="noopener" style="display:inline-block;padding:3px 10px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:12px;font-size:11px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">📄 紀錄表</a>'
+      : '<span style="font-size:11px;color:var(--gray-300)">—</span>';
+    html += '<tr>' +
+      '<td><strong>'+esc(m.matchNum)+'</strong></td>' +
+      '<td class="'+(isWinA?'win-team':'')+'">'+esc(teamA)+'</td>' +
+      '<td style="text-align:center;width:40px"><span style="font-size:11px;font-weight:700;color:var(--gray-400);background:var(--gray-100);border-radius:4px;padding:2px 6px">VS</span></td>' +
+      '<td class="'+(isWinB?'win-team':'')+'">'+esc(teamB)+'</td>' +
+      '<td style="text-align:center">'+fmtDate(m.date)+'</td>' +
+      '<td style="text-align:center">'+fmtTime(m.time)+'</td>' +
+      '<td style="text-align:center">'+scoreCell+'</td>' +
+      '<td style="text-align:center">'+winnerCell+'</td>' +
+      '<td style="text-align:center">'+recCell+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ════════════════════════════════
+// TAB 三：總時間表
+// ════════════════════════════════
+// ── 隊徽：logos/隊名.png；無檔案時顯示色圓＋校名首字 ──
+function teamLogoHtml(name) {
+  if (!name || /組第|勝隊|敗隊|籤$/.test(name)) return '';
+  const palette = ['#00695C','#1a5fa8','#c4601a','#7b1fa2','#c0392b','#2e7d32','#5d4037','#455a64'];
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 9973;
+  const color = palette[h % palette.length];
+  // 取校名代表字：去掉「國立/私立/市立」後的第一個字
+  const ch = name.replace(/^(國立|私立|市立|縣立)/, '').charAt(0) || '?';
+  return '<img class="tlogo" src="logos/' + encodeURIComponent(name) + '.png" alt="" ' +
+    'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'inline-flex\'">' +
+    '<span class="tlogo-fb" style="display:none;background:' + color + '">' + esc(ch) + '</span>';
+}
+
+
+
+
+function renderHomeScoreCards() {
+  const box = document.getElementById('score-cards');
+  const sec = document.getElementById('live-scores');
+  if (!matchData.length) { sec.style.display = 'none'; return; }
+  const played  = matchData.filter(hasScoreOf);
+  const pending = matchData.filter(m => !hasScoreOf(m));
+  const cards = played.slice(-6).reverse().concat(pending.slice(0, 4));
+  if (!cards.length) { sec.style.display = 'none'; return; }
+  let html = '<div class="score-strip">';
+  cards.forEach(m => {
+    const a = resolveTeamName(m.teamA), b = resolveTeamName(m.teamB);
+    const fin = hasScoreOf(m);
+    const winA = fin && Number(m.scoreA) > Number(m.scoreB);
+    const winB = fin && Number(m.scoreB) > Number(m.scoreA);
+    html += '<div class="score-card" onclick="location.href=\'draw-schedule.html#schedule\'">' +
+      '<div class="score-card-status"><span class="'+(fin?'final':'')+'">'+(fin?'終場':'未開賽')+'</span><span>'+esc(m.matchNum)+' · '+fmtDateS(m.date)+' '+fmtTimeS(m.time)+'</span></div>' +
+      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(a)+'</span></span><span class="s">'+(fin?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
+      '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(b)+'</span></span><span class="s">'+(fin?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
+      '</div>';
+  });
+  box.innerHTML = html + '</div>';
+  sec.style.display = '';
+}
+(async () => {
+  try {
+    const [mRes, dRes] = await Promise.all([
+      api({ action:'getMatches' }),
+      api({ action:'getDrawData' })
+    ]);
+    if (mRes.ok && mRes.data) matchData = mRes.data;
+    if (dRes.ok && dRes.draws) drawData = dRes.draws;
+    renderHomeScoreCards();
+  } catch(e) {}
+})();
+
 </script>
 </body>
 </html>
