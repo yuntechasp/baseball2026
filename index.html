@@ -90,6 +90,40 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 /* ── 隊徽 ── */
 .tlogo{width:22px;height:22px;border-radius:50%;object-fit:contain;vertical-align:middle;background:#fff;border:1px solid var(--gray-100);flex-shrink:0}
 .tlogo-fb{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;vertical-align:middle;flex-shrink:0}
+/* ── 賽事詳情彈窗 ── */
+.gm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:none;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto}
+.gm-overlay.open{display:flex}
+.gm-panel{background:var(--white);border-radius:16px;max-width:640px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;margin:auto 0}
+.gm-head{background:var(--yt-teal-dark);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gm-head .m{font-size:13px;font-weight:700}
+.gm-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;line-height:1}
+.gm-score{display:flex;align-items:center;justify-content:center;gap:22px;padding:18px 16px 8px}
+.gm-team{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:110px}
+.gm-team .n{font-size:13px;font-weight:700;color:var(--gray-900);text-align:center}
+.gm-team .tlogo,.gm-team .tlogo-fb{width:40px;height:40px;font-size:17px}
+.gm-big{font-size:34px;font-weight:800;color:var(--gray-900);display:flex;align-items:center;gap:12px}
+.gm-big .win{color:var(--yt-teal-dark)}
+.gm-status{text-align:center;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:.06em;padding-bottom:6px}
+.gm-sec{padding:8px 18px 16px}
+.gm-sec-title{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--gray-400);margin:8px 0 8px}
+.gm-pit{display:flex;gap:10px;flex-wrap:wrap}
+.gm-pit-card{flex:1;min-width:160px;border:1px solid var(--gray-100);border-radius:10px;padding:10px 12px;background:var(--gray-50)}
+.gm-pit-name{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:8px}
+.gm-tag{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;color:#fff;letter-spacing:.05em}
+.gm-tag.w{background:var(--yt-teal-dark)}.gm-tag.l{background:#c0392b}.gm-tag.sv{background:#c4601a}
+.gm-pit-stats{display:flex;gap:12px}
+.gm-pit-stat{text-align:center}
+.gm-pit-stat .v{font-size:16px;font-weight:800;color:var(--gray-900)}
+.gm-pit-stat .k{font-size:9px;color:var(--gray-400);white-space:nowrap}
+/* ── 逐局計分板 ── */
+.linescore-wrap{background:var(--gray-50);border-radius:8px;padding:10px 12px;margin:4px 0}
+.linescore{border-collapse:collapse;width:auto;margin:0 auto}
+.linescore th,.linescore td{padding:4px 9px;text-align:center;font-size:12px;border:none}
+.linescore th{color:var(--gray-400);font-weight:600;font-size:11px}
+.linescore td.tname{text-align:left;font-weight:700;color:var(--gray-900);padding-right:14px;white-space:nowrap}
+.linescore td.rhe{font-weight:800;color:var(--yt-teal-dark);border-left:2px solid var(--gray-200)}
+.linescore td.rhe~td.rhe{border-left:none}
+.ls-btn{display:inline-block;margin-top:3px;padding:2px 8px;font-size:10px;font-weight:600;color:var(--yt-teal-dark);background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:10px;cursor:pointer}
 /* ── 比數卡捲動箭頭 ── */
 .strip-wrap{position:relative}
 .strip-btn{position:absolute;top:50%;transform:translateY(-60%);z-index:5;width:32px;height:32px;border-radius:50%;
@@ -1016,6 +1050,8 @@ function toast(msg) {
 
 // ═══ 最新戰況（賽程資料另行載入，不影響首頁主要內容）═══
 let matchData = [], drawData = [];
+function fmtDate(x){return fmtDateS(x);}
+function fmtTime(x){return fmtTimeS(x);}
 function fmtDateS(dv){if(!dv)return '';const str=String(dv);if(str.includes('T')||str.includes('-')){const dt=new Date(str);if(!isNaN(dt))return(dt.getMonth()+1)+'/'+dt.getDate();}return str;}
 function fmtTimeS(t){if(!t)return '';const str=String(t);if(str.includes('GMT')||str.includes('1899')||str.includes('T')){const dt=new Date(str);if(!isNaN(dt))return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');}return str;}
 
@@ -1267,6 +1303,73 @@ function initStripArrows(wrapId) {
   setTimeout(upd, 50);
 }
 
+// ── 逐局計分板 ──
+function buildLineScore(m) {
+  const a = resolveTeamName(m.teamA), b = resolveTeamName(m.teamB);
+  const lineA = String(m.lineA||'').split(',').map(x=>x.trim());
+  const lineB = String(m.lineB||'').split(',').map(x=>x.trim());
+  const n = Math.max(lineA.length, lineB.length, 9);
+  const heA = String(m.heA||'').split(',').map(x=>x.trim());
+  const heB = String(m.heB||'').split(',').map(x=>x.trim());
+  const hasHE = (m.heA||m.heB);
+  let html = '<div class="linescore-wrap"><table class="linescore"><thead><tr><th></th>';
+  for (let i=1;i<=n;i++) html += '<th>'+i+'</th>';
+  html += '<th style="border-left:2px solid var(--gray-200)">R</th>'+(hasHE?'<th>H</th><th>E</th>':'')+'</tr></thead><tbody>';
+  [[a,lineA,m.scoreA,heA],[b,lineB,m.scoreB,heB]].forEach(row => {
+    html += '<tr><td class="tname"><span style="display:inline-flex;align-items:center;gap:7px">'+teamLogoHtml(row[0])+esc(row[0])+'</span></td>';
+    for (let i=0;i<n;i++) html += '<td>'+esc(row[1][i]!==undefined&&row[1][i]!==''?row[1][i]:'')+'</td>';
+    html += '<td class="rhe">'+row[2]+'</td>'+(hasHE?'<td class="rhe" style="border-left:none">'+esc(row[3][0]||'')+'</td><td class="rhe" style="border-left:none">'+esc(row[3][1]||'')+'</td>':'');
+    html += '</tr>';
+  });
+  return html + '</tbody></table></div>';
+}
+// ── 賽事詳情彈窗 ──
+function pitcherBlock(raw, type) {
+  if (!raw) return '';
+  const p = String(raw).split(/[,，]/).map(x=>x.trim());
+  const tags = {w:['WIN','w'], l:['LOSS','l'], sv:['SAVE','sv']};
+  const labels = ['投球局數','自責分','三振','四壞'];
+  let stats = '';
+  for (let i=0;i<4;i++){
+    if (p[i+1]!==undefined&&p[i+1]!=='') stats += '<div class="gm-pit-stat"><div class="v">'+esc(p[i+1])+'</div><div class="k">'+labels[i]+'</div></div>';
+  }
+  return '<div class="gm-pit-card">' +
+    '<div class="gm-pit-name"><span class="gm-tag '+tags[type][1]+'">'+tags[type][0]+'</span>'+esc(p[0]||'')+'</div>' +
+    '<div class="gm-pit-stats">'+stats+'</div></div>';
+}
+function openGameModal(num) {
+  const m = matchData.find(x=>String(x.matchNum)===String(num));
+  if (!m) return;
+  const a = resolveTeamName(m.teamA), b = resolveTeamName(m.teamB);
+  const fin = hasScoreOf(m);
+  const winA = fin && Number(m.scoreA)>Number(m.scoreB);
+  const winB = fin && Number(m.scoreB)>Number(m.scoreA);
+  let html = '<div class="gm-head"><span class="m">'+esc(m.matchNum)+' · '+esc((m.phase||'').replace('分組賽 ','預賽 '))+'</span>' +
+    '<button class="gm-close" onclick="closeGameModal()">✕</button></div>';
+  html += '<div class="gm-score">' +
+    '<div class="gm-team">'+teamLogoHtml(a)+'<span class="n">'+esc(a)+'</span></div>' +
+    '<div class="gm-big">'+(fin?'<span class="'+(winA?'win':'')+'">'+m.scoreA+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winB?'win':'')+'">'+m.scoreB+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
+    '<div class="gm-team">'+teamLogoHtml(b)+'<span class="n">'+esc(b)+'</span></div></div>';
+  html += '<div class="gm-status">'+(fin?'終場':'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
+  if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
+  const pit = pitcherBlock(m.pitcherW,'w') + pitcherBlock(m.pitcherL,'l') + pitcherBlock(m.pitcherSV,'sv');
+  if (pit) html += '<div class="gm-sec"><div class="gm-sec-title">PITCHING SUMMARY</div><div class="gm-pit">'+pit+'</div></div>';
+  if (m.recordUrl) html += '<div class="gm-sec" style="text-align:center;padding-top:0"><a href="'+esc(m.recordUrl)+'" target="_blank" rel="noopener" style="display:inline-block;padding:8px 20px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:20px;font-size:13px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">📄 查看紀錄表</a></div>';
+  let ov = document.getElementById('game-modal');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'game-modal'; ov.className = 'gm-overlay';
+    ov.addEventListener('click', e => { if (e.target === ov) closeGameModal(); });
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = '<div class="gm-panel">'+html+'</div>';
+  ov.classList.add('open');
+}
+function closeGameModal() {
+  const ov = document.getElementById('game-modal');
+  if (ov) ov.classList.remove('open');
+}
+
 function renderHomeScoreCards() {
   const box = document.getElementById('score-cards');
   const sec = document.getElementById('live-scores');
@@ -1281,7 +1384,7 @@ function renderHomeScoreCards() {
     const fin = hasScoreOf(m);
     const winA = fin && Number(m.scoreA) > Number(m.scoreB);
     const winB = fin && Number(m.scoreB) > Number(m.scoreA);
-    html += '<div class="score-card" onclick="location.href=\'draw-schedule.html#schedule\'">' +
+    html += '<div class="score-card" onclick="openGameModal(\''+esc(String(m.matchNum))+'\')">' +
       '<div class="score-card-status"><span class="'+(fin?'final':'')+'">'+(fin?'終場':'未開賽')+'</span><span>'+esc(m.matchNum)+' · '+fmtDateS(m.date)+' '+fmtTimeS(m.time)+'</span></div>' +
       '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(a)+'</span></span><span class="s">'+(fin?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
       '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(b)+'</span></span><span class="s">'+(fin?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
