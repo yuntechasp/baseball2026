@@ -1308,7 +1308,7 @@ function buildLineScore(m) {
   const a = resolveTeamName(m.teamA), b = resolveTeamName(m.teamB);
   const lineA = String(m.lineA||'').split(',').map(x=>x.trim());
   const lineB = String(m.lineB||'').split(',').map(x=>x.trim());
-  const n = Math.max(lineA.length, lineB.length, 9);
+  const n = Math.max(lineA.length, lineB.length);  // 依實際局數顯示（7局制、延長賽皆自動適應）
   const heA = String(m.heA||'').split(',').map(x=>x.trim());
   const heB = String(m.heB||'').split(',').map(x=>x.trim());
   const hasHE = (m.heA||m.heB);
