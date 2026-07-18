@@ -90,6 +90,14 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 /* ── 隊徽 ── */
 .tlogo{width:22px;height:22px;border-radius:50%;object-fit:contain;vertical-align:middle;background:#fff;border:1px solid var(--gray-100);flex-shrink:0}
 .tlogo-fb{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;vertical-align:middle;flex-shrink:0}
+/* ── 比數卡捲動箭頭 ── */
+.strip-wrap{position:relative}
+.strip-btn{position:absolute;top:50%;transform:translateY(-60%);z-index:5;width:32px;height:32px;border-radius:50%;
+  border:1px solid var(--gray-200);background:var(--white);color:var(--yt-teal-dark);font-size:18px;font-weight:700;
+  cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);display:none;align-items:center;justify-content:center;line-height:1}
+.strip-btn:hover{background:var(--yt-teal-light)}
+.strip-btn.left{left:-8px}
+.strip-btn.right{right:-8px}
 /* ── 比數卡 ── */
 .score-strip{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 14px;-webkit-overflow-scrolling:touch}
 .score-card{min-width:180px;flex-shrink:0;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;padding:10px 14px;box-shadow:var(--shadow-sm)}
@@ -1239,6 +1247,26 @@ function teamLogoHtml(name) {
 
 
 
+
+// 比數卡捲動箭頭：內容超寬時顯示
+function initStripArrows(wrapId) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const strip = wrap.querySelector('.score-strip');
+  const L = wrap.querySelector('.strip-btn.left'), R = wrap.querySelector('.strip-btn.right');
+  if (!strip || !L || !R) return;
+  function upd() {
+    const over = strip.scrollWidth > strip.clientWidth + 4;
+    L.style.display = (over && strip.scrollLeft > 4) ? 'flex' : 'none';
+    R.style.display = (over && strip.scrollLeft < strip.scrollWidth - strip.clientWidth - 4) ? 'flex' : 'none';
+  }
+  L.onclick = () => strip.scrollBy({left:-400, behavior:'smooth'});
+  R.onclick = () => strip.scrollBy({left: 400, behavior:'smooth'});
+  strip.addEventListener('scroll', upd);
+  window.addEventListener('resize', upd);
+  setTimeout(upd, 50);
+}
+
 function renderHomeScoreCards() {
   const box = document.getElementById('score-cards');
   const sec = document.getElementById('live-scores');
@@ -1259,8 +1287,12 @@ function renderHomeScoreCards() {
       '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(b)+'</span></span><span class="s">'+(fin?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
       '</div>';
   });
-  box.innerHTML = html + '</div>';
+  box.innerHTML = '<div class="strip-wrap" id="home-strip-wrap">' +
+    '<button class="strip-btn left" aria-label="向左捲動">‹</button>' +
+    html + '</div>' +
+    '<button class="strip-btn right" aria-label="向右捲動">›</button></div>';
   sec.style.display = '';
+  initStripArrows('home-strip-wrap');
 }
 (async () => {
   try {
