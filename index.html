@@ -137,6 +137,8 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .score-card{min-width:180px;flex-shrink:0;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;padding:10px 14px;box-shadow:var(--shadow-sm)}
 .score-card-status{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--gray-400);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
 .score-card-status .final{color:var(--yt-teal-dark)}
+.score-card-status .live{color:#c0392b;animation:livePulse 1.6s ease-in-out infinite}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.45}}
 .score-card-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:13px}
 .score-card-row .t{font-weight:600;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:118px}
 .score-card-row .s{font-weight:800;font-size:15px;color:var(--gray-900)}
@@ -1074,11 +1076,14 @@ function resolveBase(name) {
   return name;
 }
 function hasScoreOf(m){ return m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==undefined&&m.scoreB!==''; }
+// 終場＝比分＋勝隊(J欄)都填；只有比分＝比賽中
+function isFinalOf(m){ return hasScoreOf(m) && !!m.winner; }
+function isLiveOf(m){ return hasScoreOf(m) && !m.winner; }
 
 function computeStandings(label) {
   const teams = groupTeamList(label);
   const games = matchData.filter(m => m.phase && m.phase.indexOf(label + '組') >= 0);
-  const played = games.filter(hasScoreOf);
+  const played = games.filter(isFinalOf);
   const allDone = games.length > 0 && played.length === games.length;
 
   // 人工裁定優先：賽事設定 rankA / rankB… = 「隊名1,隊名2,…」
@@ -1092,7 +1097,7 @@ function computeStandings(label) {
     gs.forEach(m=>{
       const a=resolveBase(m.teamA), b=resolveBase(m.teamB);
       if(a!==t&&b!==t)return;
-      const winner = m.winner || (Number(m.scoreA)>Number(m.scoreB)?a:Number(m.scoreB)>Number(m.scoreA)?b:'');
+      const winner = m.winner || '';
       if(winner===t)w++; else if(winner)l++;
     });
     return {w,l,pts:w*3};
@@ -1161,9 +1166,9 @@ function computeStandings(label) {
 // 場次勝隊 / 敗隊（供 Q1勝隊、S1敗隊等標籤解析）
 function teamOfMatch(num, wantWinner) {
   const m = matchData.find(x=>String(x.matchNum).toUpperCase()===String(num).toUpperCase());
-  if(!m||!hasScoreOf(m))return null;
+  if(!m||!isFinalOf(m))return null;
   const a=resolveBase(m.teamA), b=resolveBase(m.teamB);
-  const winner=m.winner||(Number(m.scoreA)>Number(m.scoreB)?a:Number(m.scoreB)>Number(m.scoreA)?b:null);
+  const winner=m.winner;
   if(!winner||winner==='平局')return null;
   return wantWinner?winner:(winner===a?b:a);
 }
@@ -1337,20 +1342,22 @@ function pitcherBlock(raw, type) {
     '<div class="gm-pit-name"><span class="gm-tag '+tags[type][1]+'">'+tags[type][0]+'</span>'+esc(p[0]||'')+'</div>' +
     '<div class="gm-pit-stats">'+stats+'</div></div>';
 }
+let currentModalNum = null;
 function openGameModal(num) {
   const m = matchData.find(x=>String(x.matchNum)===String(num));
   if (!m) return;
+  currentModalNum = num;
   const a = resolveTeamName(m.teamA), b = resolveTeamName(m.teamB);
-  const fin = hasScoreOf(m);
+  const fin = isFinalOf(m), liv = isLiveOf(m);
   const winA = fin && Number(m.scoreA)>Number(m.scoreB);
   const winB = fin && Number(m.scoreB)>Number(m.scoreA);
   let html = '<div class="gm-head"><span class="m">'+esc(m.matchNum)+' · '+esc((m.phase||'').replace('分組賽 ','預賽 '))+'</span>' +
     '<button class="gm-close" onclick="closeGameModal()">✕</button></div>';
   html += '<div class="gm-score">' +
     '<div class="gm-team">'+teamLogoHtml(a)+'<span class="n">'+esc(a)+'</span></div>' +
-    '<div class="gm-big">'+(fin?'<span class="'+(winA?'win':'')+'">'+m.scoreA+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winB?'win':'')+'">'+m.scoreB+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
+    '<div class="gm-big">'+((fin||liv)?'<span class="'+(winA?'win':'')+'">'+m.scoreA+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winB?'win':'')+'">'+m.scoreB+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
     '<div class="gm-team">'+teamLogoHtml(b)+'<span class="n">'+esc(b)+'</span></div></div>';
-  html += '<div class="gm-status">'+(fin?'終場':'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
+  html += '<div class="gm-status">'+(fin?'終場':liv?'<span style="color:#c0392b">● 比賽中</span>':'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
   if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
   const pit = pitcherBlock(m.pitcherW,'w') + pitcherBlock(m.pitcherL,'l') + pitcherBlock(m.pitcherSV,'sv');
   if (pit) html += '<div class="gm-sec"><div class="gm-sec-title">PITCHING SUMMARY</div><div class="gm-pit">'+pit+'</div></div>';
@@ -1366,6 +1373,7 @@ function openGameModal(num) {
   ov.classList.add('open');
 }
 function closeGameModal() {
+  currentModalNum = null;
   const ov = document.getElementById('game-modal');
   if (ov) ov.classList.remove('open');
 }
@@ -1374,20 +1382,22 @@ function renderHomeScoreCards() {
   const box = document.getElementById('score-cards');
   const sec = document.getElementById('live-scores');
   if (!matchData.length) { sec.style.display = 'none'; return; }
-  const played  = matchData.filter(hasScoreOf);
+  const live    = matchData.filter(isLiveOf);
+  const finals  = matchData.filter(isFinalOf);
   const pending = matchData.filter(m => !hasScoreOf(m));
-  const cards = played.slice(-6).reverse().concat(pending.slice(0, 4));
+  const cards = live.concat(finals.slice(-6).reverse()).concat(pending.slice(0, 4));
   if (!cards.length) { sec.style.display = 'none'; return; }
   let html = '<div class="score-strip">';
   cards.forEach(m => {
     const a = resolveTeamName(m.teamA), b = resolveTeamName(m.teamB);
-    const fin = hasScoreOf(m);
+    const fin  = isFinalOf(m);
+    const liv  = isLiveOf(m);
     const winA = fin && Number(m.scoreA) > Number(m.scoreB);
     const winB = fin && Number(m.scoreB) > Number(m.scoreA);
     html += '<div class="score-card" onclick="openGameModal(\''+esc(String(m.matchNum))+'\')">' +
-      '<div class="score-card-status"><span class="'+(fin?'final':'')+'">'+(fin?'終場':'未開賽')+'</span><span>'+esc(m.matchNum)+' · '+fmtDateS(m.date)+' '+fmtTimeS(m.time)+'</span></div>' +
-      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(a)+'</span></span><span class="s">'+(fin?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
-      '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(b)+'</span></span><span class="s">'+(fin?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
+      '<div class="score-card-status"><span class="'+(fin?'final':liv?'live':'')+'">'+(fin?'終場':liv?'● 比賽中':'未開賽')+'</span><span>'+esc(m.matchNum)+' · '+fmtDateS(m.date)+' '+fmtTimeS(m.time)+'</span></div>' +
+      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(a)+'</span></span><span class="s">'+((fin||liv)?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
+      '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(b)+'</span></span><span class="s">'+((fin||liv)?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
       '</div>';
   });
   box.innerHTML = '<div class="strip-wrap" id="home-strip-wrap">' +
@@ -1397,7 +1407,7 @@ function renderHomeScoreCards() {
   sec.style.display = '';
   initStripArrows('home-strip-wrap');
 }
-(async () => {
+async function loadLiveScores() {
   try {
     const [mRes, dRes] = await Promise.all([
       api({ action:'getMatches' }),
@@ -1406,8 +1416,15 @@ function renderHomeScoreCards() {
     if (mRes.ok && mRes.data) matchData = mRes.data;
     if (dRes.ok && dRes.draws) drawData = dRes.draws;
     renderHomeScoreCards();
+    // 彈窗開著的話同步更新內容
+    const ov = document.getElementById('game-modal');
+    if (ov && ov.classList.contains('open') && currentModalNum) openGameModal(currentModalNum);
   } catch(e) {}
-})();
+}
+loadLiveScores();
+// 每 5 分鐘自動刷新比分（分頁在背景時暫停，切回來立即更新）
+setInterval(() => { if (!document.hidden) loadLiveScores(); }, 300000);  // 每 5 分鐘刷新
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadLiveScores(); });
 
 </script>
 </body>
