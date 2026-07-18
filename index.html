@@ -401,8 +401,13 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="section-title">
         <span class="section-title-icon">📋</span> 競賽規程
       </div>
+      <button class="teams-toggle" id="rules-toggle" onclick="toggleRulesList()">
+        📋 <span id="rules-toggle-text">展開競賽規程</span> <span class="toggle-arrow">▼</span>
+      </button>
+      <div class="teams-collapse" id="rules-collapse">
       <div class="rules-grid" id="rules-grid">
         <div class="loading">載入中…</div>
+      </div>
       </div>
     </div>
 
@@ -808,6 +813,14 @@ function toggleTeamsList() {
   const n = teamsData.length;
   document.getElementById('teams-toggle-text').textContent =
     (isOpen ? '收合報名隊伍名單' : '展開報名隊伍名單') + (n ? '（' + n + ' 隊）' : '');
+}
+
+function toggleRulesList() {
+  document.getElementById('rules-collapse').classList.toggle('open');
+  const btn = document.getElementById('rules-toggle');
+  btn.classList.toggle('open');
+  document.getElementById('rules-toggle-text').textContent =
+    btn.classList.contains('open') ? '收合競賽規程' : '展開競賽規程';
 }
 
 function renderStats() {

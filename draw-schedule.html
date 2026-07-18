@@ -176,6 +176,24 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .footer{background:var(--yt-teal-dark);color:rgba(255,255,255,.6);text-align:center;padding:20px;font-size:12px}
 .footer a{color:rgba(255,255,255,.8);text-decoration:none}
 
+/* ── 比數卡 ── */
+.score-strip{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 14px;-webkit-overflow-scrolling:touch}
+.score-card{min-width:180px;flex-shrink:0;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;padding:10px 14px;box-shadow:var(--shadow-sm)}
+.score-card-status{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--gray-400);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
+.score-card-status .final{color:var(--yt-teal-dark)}
+.score-card-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:13px}
+.score-card-row .t{font-weight:600;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:118px}
+.score-card-row .s{font-weight:800;font-size:15px;color:var(--gray-900)}
+.score-card-row.winner .t,.score-card-row.winner .s{color:var(--yt-teal-dark)}
+/* ── 逐局計分板 ── */
+.linescore-wrap{background:var(--gray-50);border-radius:8px;padding:10px 12px;margin:4px 0}
+.linescore{border-collapse:collapse;width:auto;margin:0 auto}
+.linescore th,.linescore td{padding:4px 9px;text-align:center;font-size:12px;border:none}
+.linescore th{color:var(--gray-400);font-weight:600;font-size:11px}
+.linescore td.tname{text-align:left;font-weight:700;color:var(--gray-900);padding-right:14px;white-space:nowrap}
+.linescore td.rhe{font-weight:800;color:var(--yt-teal-dark);border-left:2px solid var(--gray-200)}
+.linescore td.rhe~td.rhe{border-left:none}
+.ls-btn{display:inline-block;margin-top:3px;padding:2px 8px;font-size:10px;font-weight:600;color:var(--yt-teal-dark);background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:10px;cursor:pointer}
 .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;margin-left:8px}
 .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .2s}
 @media(max-width:640px){
@@ -869,16 +887,29 @@ function computeStandings(label) {
         if(tqbOK&&a.tqb!==null&&b.tqb!==null&&b.tqb!==a.tqb)return b.tqb-a.tqb;
         return 0;
       });
-      // 檢查是否完全分出高下
+      // 標記無法判定的並列（不提供暫定排序，避免爭議）
       for(let k=0;k<cluster.length;k++){
-        const c=cluster[k];
-        const prev=cluster[k-1];
+        const c=cluster[k], prev=cluster[k-1];
         const tied=prev&&prev.h2h===c.h2h&&(!tqbOK||prev.tqb===c.tqb);
-        c.rank=rank+k;
-        if(tied){ c.tieNote=tqbOK?'需依規程(3)~(5)人工判定':'需填局數(N/O欄)計算TQB'; prev.tieNote=c.tieNote; unresolved=true; }
-        else if(cluster.length>1){ c.tieNote=tqbOK&&c.tqb!==null?('TQB '+c.tqb.toFixed(3)):'對戰判定'; }
-        out.push(c);
+        if(tied){
+          c.pending=true; prev.pending=true;
+          c.tieNote=prev.tieNote=(tqbOK?'人工裁定中':'待填局數或人工裁定');
+          unresolved=true;
+        } else if(cluster.length>1){
+          c.tieNote=tqbOK&&c.tqb!==null?('TQB '+c.tqb.toFixed(3)):'對戰判定';
+        }
       }
+      // 並列隊伍改以隊名筆畫排序呈現（僅為顯示順序，非名次）
+      let k2=0;
+      while(k2<cluster.length){
+        if(cluster[k2].pending){
+          let j2=k2; while(j2<cluster.length&&cluster[j2].pending)j2++;
+          const seg=cluster.slice(k2,j2).sort((a,b)=>String(a.team).localeCompare(String(b.team),'zh-Hant'));
+          for(let t2=0;t2<seg.length;t2++)cluster[k2+t2]=seg[t2];
+          k2=j2;
+        } else k2++;
+      }
+      cluster.forEach((c,k)=>{ c.rank=rank+k; out.push(c); });
     }
     rank+=cluster.length; i=j;
   }
@@ -927,9 +958,9 @@ function resolveTeamName(name) {
   if (m3) {
     try {
       const st = computeStandings(m3[1]);
-      if (st.resolved) {
+      if (st.allDone) {
         const row = st.rows.find(r => r.rank === parseInt(m3[2]));
-        if (row) return row.team;
+        if (row && !row.pending) return row.team;
       }
     } catch(e) {}
     return name;
@@ -994,6 +1025,56 @@ function renderGroupTable(group, groupMatches) {
 // ════════════════════════════════
 // TAB 三：總時間表
 // ════════════════════════════════
+// ── 最新戰況比數卡 ──
+function renderScoreCards() {
+  const played  = matchData.filter(hasScoreOf);
+  const pending = matchData.filter(m => !hasScoreOf(m));
+  // 已完賽取最近 6 場（依賽程序反轉）＋ 即將進行取前 4 場
+  const cards = played.slice(-6).reverse().concat(pending.slice(0, 4));
+  if (!cards.length) return '';
+  let html = '<div class="score-strip">';
+  cards.forEach(m => {
+    const a = resolveTeamName(m.teamA), b = resolveTeamName(m.teamB);
+    const fin = hasScoreOf(m);
+    const winA = fin && Number(m.scoreA) > Number(m.scoreB);
+    const winB = fin && Number(m.scoreB) > Number(m.scoreA);
+    html += '<div class="score-card">' +
+      '<div class="score-card-status"><span class="'+(fin?'final':'')+'">'+(fin?'終場':'未開賽')+'</span><span>'+esc(m.matchNum)+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+'</span></div>' +
+      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t">'+esc(a)+'</span><span class="s">'+(fin?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
+      '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t">'+esc(b)+'</span><span class="s">'+(fin?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
+      '</div>';
+  });
+  return html + '</div>';
+}
+
+// ── 逐局計分板 ──
+function buildLineScore(m) {
+  const a = resolveTeamName(m.teamA), b = resolveTeamName(m.teamB);
+  const lineA = String(m.lineA||'').split(',').map(x=>x.trim());
+  const lineB = String(m.lineB||'').split(',').map(x=>x.trim());
+  const n = Math.max(lineA.length, lineB.length, 9);
+  const heA = String(m.heA||'').split(',').map(x=>x.trim());
+  const heB = String(m.heB||'').split(',').map(x=>x.trim());
+  const hasHE = (m.heA||m.heB);
+  let html = '<div class="linescore-wrap"><table class="linescore"><thead><tr><th></th>';
+  for (let i=1;i<=n;i++) html += '<th>'+i+'</th>';
+  html += '<th style="border-left:2px solid var(--gray-200)">R</th>'+(hasHE?'<th>H</th><th>E</th>':'')+'</tr></thead><tbody>';
+  [[a,lineA,m.scoreA,heA],[b,lineB,m.scoreB,heB]].forEach(row => {
+    html += '<tr><td class="tname">'+esc(row[0])+'</td>';
+    for (let i=0;i<n;i++) html += '<td>'+esc(row[1][i]!==undefined&&row[1][i]!==''?row[1][i]:'')+'</td>';
+    html += '<td class="rhe">'+row[2]+'</td>'+(hasHE?'<td class="rhe" style="border-left:none">'+esc(row[3][0]||'')+'</td><td class="rhe" style="border-left:none">'+esc(row[3][1]||'')+'</td>':'');
+    html += '</tr>';
+  });
+  return html + '</tbody></table></div>';
+}
+function toggleLineScore(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : '';
+  if (btn) btn.textContent = open ? '📊 每局' : '收合';
+}
+
 function renderTotalSchedule() {
   const tag  = document.getElementById('sched-status-tag');
   const area = document.getElementById('total-schedule-area');
@@ -1029,7 +1110,7 @@ function renderTotalSchedule() {
     ).join('') +
     '</div>';
 
-  let html = jumpBar;
+  let html = renderScoreCards() + jumpBar;
   dates.forEach(date => {
     const dayMatches = byDate[date].sort((a,b) => (fmtTime(a.time)||'').localeCompare(fmtTime(b.time)||''));
     const anchorId = 'date-' + date.replace('/','_');
@@ -1058,6 +1139,9 @@ function renderTotalSchedule() {
         ? '<span class="score-cell">'+m.scoreA+' : '+m.scoreB+'</span>'
         : '<span class="pending-tag">待賽</span>';
       const phaseLabel = (m.phase||'').replace('分組賽 ','預賽 ');
+      const hasLine = !!(m.lineA || m.lineB);
+      const lsId = 'ls-' + String(m.matchNum).replace(/\W/g,'');
+      const lsBtn = hasLine ? '<br><span class="ls-btn" onclick="toggleLineScore(\''+lsId+'\', this)">📊 每局</span>' : '';
       const recCell = m.recordUrl
         ? '<a href="'+esc(m.recordUrl)+'" target="_blank" rel="noopener" style="display:inline-block;padding:3px 10px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:12px;font-size:11px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">📄 紀錄表</a>'
         : '<span style="font-size:11px;color:var(--gray-300)">—</span>';
@@ -1068,8 +1152,9 @@ function renderTotalSchedule() {
         '<td style="text-align:center;width:40px"><span style="font-size:11px;font-weight:700;color:var(--gray-400);background:var(--gray-100);border-radius:4px;padding:2px 6px">VS</span></td>' +
         '<td class="'+(isWinB?'win-team':'')+'">'+esc(teamB)+'</td>' +
         '<td style="text-align:center">'+fmtTime(m.time)+'</td>' +
-        '<td style="text-align:center">'+scoreCell+'</td>' +
-        '<td style="text-align:center">'+recCell+'</td></tr>';
+        '<td style="text-align:center">'+scoreCell+lsBtn+'</td>' +
+        '<td style="text-align:center">'+recCell+'</td></tr>' +
+        (hasLine ? '<tr id="'+lsId+'" style="display:none"><td colspan="8" style="padding:6px 10px">'+buildLineScore(m)+'</td></tr>' : '');
     });
     html += '</tbody></table></div></div>';
   });
@@ -1126,18 +1211,19 @@ function renderGroup(group) {
         '<th style="width:60px;text-align:center">積分</th>' +
         '<th style="width:170px;text-align:center">判定</th></tr></thead><tbody>';
       st.rows.forEach(r => {
-        const medal = st.resolved ? (r.rank===1?'🥇 ':r.rank===2?'🥈 ':'') : '';
-        html += '<tr>' +
-          '<td style="text-align:center"><strong>'+r.rank+'</strong></td>' +
+        const medal = (st.allDone && !r.pending) ? (r.rank===1?'🥇 ':r.rank===2?'🥈 ':'') : '';
+        html += '<tr'+(r.pending?' style="background:#fdf6ec"':'')+'>' +
+          '<td style="text-align:center"><strong>'+(r.pending?'⚖️':r.rank)+'</strong></td>' +
           '<td>'+medal+esc(r.team)+'</td>' +
           '<td style="text-align:center">'+r.w+' - '+r.l+'</td>' +
           '<td style="text-align:center"><strong>'+r.pts+'</strong></td>' +
-          '<td style="text-align:center;font-size:11px;color:'+(r.tieNote&&r.tieNote.indexOf('需')===0?'var(--red,#c0392b)':'var(--gray-400)')+'">'+esc(r.tieNote||'')+'</td></tr>';
+          '<td style="text-align:center;font-size:11px;font-weight:'+(r.pending?'700':'400')+';color:'+(r.pending?'#c4601a':'var(--gray-400)')+'">'+esc(r.tieNote||'')+'</td></tr>';
       });
       html += '</tbody></table>';
       if (!st.allDone) html += '<div style="font-size:11px;color:var(--gray-400);padding:6px 2px">⏳ 本組尚有比賽未完成，名次為暫定</div>';
       else if (st.manual) html += '<div style="font-size:11px;color:var(--gray-400);padding:6px 2px">📌 名次由主辦單位依規程裁定</div>';
       else if (st.resolved) html += '<div style="font-size:11px;color:var(--green);padding:6px 2px">✅ 本組名次確定，前二名晉級八強</div>';
+      else if (st.allDone) html += '<div style="font-size:11px;color:#c4601a;padding:6px 2px">⚖️ 部分名次並列，由主辦單位依規程裁定後公布</div>';
       html += '</div>';
     }
   } catch(e) {}
