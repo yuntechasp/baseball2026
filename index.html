@@ -93,7 +93,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 /* ── 賽事詳情彈窗 ── */
 .gm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:none;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto}
 .gm-overlay.open{display:flex}
-.gm-panel{background:var(--white);border-radius:16px;max-width:640px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;margin:auto 0}
+.gm-panel{background:var(--white);border-radius:16px;max-width:700px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;margin:auto 0}
 .gm-head{background:var(--yt-teal-dark);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .gm-head .m{font-size:13px;font-weight:700}
 .gm-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;line-height:1}
@@ -124,6 +124,15 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .linescore td.rhe{font-weight:800;color:var(--yt-teal-dark);border-left:2px solid var(--gray-200)}
 .linescore td.rhe~td.rhe{border-left:none}
 .ls-btn{display:inline-block;margin-top:3px;padding:2px 8px;font-size:10px;font-weight:600;color:var(--yt-teal-dark);background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:10px;cursor:pointer}
+/* ── 先發名單 ── */
+.gm-lineup{display:flex;gap:14px}
+.gm-lineup-col{flex:1;min-width:0;border:1px solid var(--gray-100);border-radius:10px;background:var(--gray-50);padding:10px 12px}
+.gm-lineup-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--gray-100)}
+.gm-lineup-head .tlogo,.gm-lineup-head .tlogo-fb{width:22px;height:22px;font-size:11px}
+.gm-lu-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;color:var(--gray-900)}
+.gm-lu-num{width:18px;height:18px;border-radius:50%;background:var(--yt-teal-light);color:var(--yt-teal-dark);font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.gm-lu-pos{font-size:10px;color:var(--gray-400);margin-left:auto}
+@media(max-width:520px){.gm-lineup{flex-direction:column}}
 /* ── 比數卡捲動箭頭 ── */
 .strip-wrap{position:relative}
 .strip-btn{position:absolute;top:50%;transform:translateY(-60%);z-index:5;width:32px;height:32px;border-radius:50%;
@@ -1345,6 +1354,28 @@ function pitcherBlock(raw, type) {
     '<div class="gm-pit-name"><span class="gm-tag '+tags[type][1]+'">'+tags[type][0]+'</span>'+esc(p[0]||'')+'</div>' +
     '<div class="gm-pit-stats">'+stats+'</div></div>';
 }
+// ── 先發名單區塊：格式「姓名(守位),姓名(守位),…」自動編 1~9 棒；「投手:姓名」列於最後 ──
+function lineupCol(team, raw) {
+  const items = String(raw).split(/[,，、]/).map(x=>x.trim()).filter(Boolean);
+  let rows = '', num = 1, pitcher = '';
+  items.forEach(it => {
+    const pm = it.match(/^(投手|先發投手|P)[:：]\s*(.+)$/);
+    if (pm) { pitcher = pm[2]; return; }
+    const m = it.match(/^(.+?)[\(（](.+?)[\)）]$/);
+    const nm = m ? m[1] : it, pos = m ? m[2] : '';
+    rows += '<div class="gm-lu-row"><span class="gm-lu-num">'+(num++)+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(nm)+'</span>'+(pos?'<span class="gm-lu-pos">'+esc(pos)+'</span>':'')+'</div>';
+  });
+  if (pitcher) rows += '<div class="gm-lu-row" style="margin-top:4px;padding-top:6px;border-top:1px dashed var(--gray-100)"><span class="gm-lu-num" style="background:#fdf0e6;color:#c4601a">P</span><span>'+esc(pitcher)+'</span><span class="gm-lu-pos">先發投手</span></div>';
+  return '<div class="gm-lineup-col"><div class="gm-lineup-head">'+teamLogoHtml(team)+esc(shortTeamName(team))+'</div>'+rows+'</div>';
+}
+function buildLineupSection(m, a, b) {
+  if (!m.lineupA && !m.lineupB) return '';
+  let cols = '';
+  if (m.lineupA) cols += lineupCol(a, m.lineupA);
+  if (m.lineupB) cols += lineupCol(b, m.lineupB);
+  return '<div class="gm-sec"><div class="gm-sec-title">STARTING LINEUP</div><div class="gm-lineup">'+cols+'</div></div>';
+}
+
 let currentModalNum = null;
 function openGameModal(num) {
   const m = matchData.find(x=>String(x.matchNum)===String(num));
@@ -1361,6 +1392,7 @@ function openGameModal(num) {
     '<div class="gm-big">'+((fin||liv)?'<span class="'+(winA?'win':'')+'">'+m.scoreA+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winB?'win':'')+'">'+m.scoreB+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
     '<div class="gm-team">'+teamLogoHtml(b)+'<span class="n">'+esc(b)+'</span></div></div>';
   html += '<div class="gm-status">'+(fin?'終場':liv?'<span style="color:#c0392b">● 比賽中</span>':'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
+  html += buildLineupSection(m, a, b);
   if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
   const pit = pitcherBlock(m.pitcherW,'w') + pitcherBlock(m.pitcherL,'l') + pitcherBlock(m.pitcherSV,'sv');
   if (pit) html += '<div class="gm-sec"><div class="gm-sec-title">PITCHING SUMMARY</div><div class="gm-pit">'+pit+'</div></div>';
