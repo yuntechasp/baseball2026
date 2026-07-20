@@ -188,45 +188,46 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .gm-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;line-height:1}
 .gm-score{display:flex;align-items:center;justify-content:center;gap:22px;padding:18px 16px 8px}
 .gm-team{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:110px}
-.gm-team .n{font-size:13px;font-weight:700;color:var(--gray-900);text-align:center}
-.gm-team .tlogo,.gm-team .tlogo-fb{width:40px;height:40px;font-size:17px}
-.gm-big{font-size:34px;font-weight:800;color:var(--gray-900);display:flex;align-items:center;gap:12px}
+.gm-team .n{font-size:16px;font-weight:700;color:var(--gray-900);text-align:center}
+.gm-team .tlogo,.gm-team .tlogo-fb{width:52px;height:52px;font-size:22px}
+.gm-big{font-size:44px;font-weight:800;color:var(--gray-900);display:flex;align-items:center;gap:14px}
 .gm-big .win{color:var(--yt-teal-dark)}
-.gm-status{text-align:center;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:.06em;padding-bottom:6px}
+.gm-status{text-align:center;font-size:13px;font-weight:700;color:var(--gray-400);letter-spacing:.06em;padding-bottom:8px}
 .gm-sec{padding:8px 18px 16px}
 .gm-sec-title{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--gray-400);margin:8px 0 8px}
 .gm-pit{display:flex;gap:10px;flex-wrap:wrap}
 .gm-pit-card{flex:1;min-width:160px;border:1px solid var(--gray-100);border-radius:10px;padding:10px 12px;background:var(--gray-50)}
-.gm-pit-name{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:8px}
+.gm-pit-name{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--gray-900);margin-bottom:8px}
 .gm-tag{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;color:#fff;letter-spacing:.05em}
 .gm-tag.w{background:var(--yt-teal-dark)}.gm-tag.l{background:#c0392b}.gm-tag.sv{background:#c4601a}
 .gm-pit-stats{display:flex;gap:12px}
 .gm-pit-stat{text-align:center}
-.gm-pit-stat .v{font-size:16px;font-weight:800;color:var(--gray-900)}
-.gm-pit-stat .k{font-size:9px;color:var(--gray-400);white-space:nowrap}
+.gm-pit-stat .v{font-size:19px;font-weight:800;color:var(--gray-900)}
+.gm-pit-stat .k{font-size:11px;color:var(--gray-400);white-space:nowrap}
 /* ── 比數卡捲動箭頭 ── */
 .strip-wrap{position:relative}
 .strip-btn{position:absolute;top:50%;transform:translateY(-60%);z-index:5;width:32px;height:32px;border-radius:50%;
   border:1px solid var(--gray-200);background:var(--white);color:var(--yt-teal-dark);font-size:18px;font-weight:700;
   cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);display:none;align-items:center;justify-content:center;line-height:1}
 .strip-btn:hover{background:var(--yt-teal-light)}
+.score-card .tlogo,.score-card .tlogo-fb{width:28px;height:28px;font-size:13px}
 .strip-btn.left{left:-8px}
 .strip-btn.right{right:-8px}
 /* ── 比數卡 ── */
 .score-strip{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 14px;-webkit-overflow-scrolling:touch}
-.score-card{min-width:180px;flex-shrink:0;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;padding:10px 14px;box-shadow:var(--shadow-sm)}
-.score-card-status{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--gray-400);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
+.score-card{min-width:240px;flex-shrink:0;background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:14px 18px;box-shadow:var(--shadow-sm)}
+.score-card-status{font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--gray-400);margin-bottom:9px;display:flex;justify-content:space-between;gap:8px}
 .score-card-status .final{color:var(--yt-teal-dark)}
 .score-card-status .live{color:#c0392b;animation:livePulse 1.6s ease-in-out infinite}
 @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.45}}
-.score-card-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:13px}
-.score-card-row .t{font-weight:600;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:118px}
-.score-card-row .s{font-weight:800;font-size:15px;color:var(--gray-900)}
+.score-card-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:16px}
+.score-card-row .t{font-weight:700;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:158px}
+.score-card-row .s{font-weight:800;font-size:22px;color:var(--gray-900)}
 .score-card-row.winner .t,.score-card-row.winner .s{color:var(--yt-teal-dark)}
 /* ── 逐局計分板 ── */
 .linescore-wrap{background:var(--gray-50);border-radius:8px;padding:10px 12px;margin:4px 0}
 .linescore{border-collapse:collapse;width:auto;margin:0 auto}
-.linescore th,.linescore td{padding:4px 9px;text-align:center;font-size:12px;border:none}
+.linescore th,.linescore td{padding:5px 10px;text-align:center;font-size:14px;border:none}
 .linescore th{color:var(--gray-400);font-weight:600;font-size:11px}
 .linescore td.tname{text-align:left;font-weight:700;color:var(--gray-900);padding-right:14px;white-space:nowrap}
 .linescore td.rhe{font-weight:800;color:var(--yt-teal-dark);border-left:2px solid var(--gray-200)}
