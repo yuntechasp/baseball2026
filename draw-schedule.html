@@ -213,6 +213,11 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .gm-lu-num{width:18px;height:18px;border-radius:50%;background:var(--yt-teal-light);color:var(--yt-teal-dark);font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .gm-lu-pos{font-size:10px;color:var(--gray-400);margin-left:auto}
 @media(max-width:520px){.gm-lineup{flex-direction:column}}
+/* ── 投手運用 ── */
+.gm-role{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;color:#fff;letter-spacing:.03em;flex-shrink:0}
+.gm-role.sp{background:var(--yt-teal-dark)}.gm-role.mr{background:#1a5fa8}.gm-role.cl{background:#c4601a}.gm-role.xx{background:#888}
+.gm-pu-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--gray-900)}
+.gm-pu-stats{margin-left:auto;font-size:11px;color:var(--gray-400);white-space:nowrap}
 /* ── 比數卡捲動箭頭 ── */
 .strip-wrap{position:relative}
 .strip-btn{position:absolute;top:50%;transform:translateY(-60%);z-index:5;width:32px;height:32px;border-radius:50%;
@@ -1148,6 +1153,29 @@ function buildLineupSection(m, a, b) {
   return '<div class="gm-sec"><div class="gm-sec-title">STARTING LINEUP</div><div class="gm-lineup">'+cols+'</div></div>';
 }
 
+// ── 投手運用區塊：Y/Z 欄「姓名(角色):局數,自責分,三振,四壞」逗號分隔，成績選填 ──
+function pitcherUsageCol(team, raw) {
+  // 先以「,姓名(」的節奏切出每位投手（成績內也有逗號，需聰明切分）
+  const items = String(raw).split(/[,，、](?=[^,，、:：]+[\(（])/).map(x=>x.trim()).filter(Boolean);
+  const roleMap = { '先發':'sp', '中繼':'mr', '後援':'cl', '救援':'cl', '終結':'cl' };
+  let rows = '';
+  items.forEach(it => {
+    const m = it.match(/^(.+?)[\(（](.+?)[\)）]\s*(?:[:：]\s*(.+))?$/);
+    const nm = m ? m[1] : it, role = m ? m[2] : '', stats = m && m[3] ? m[3].split(/[,，]/).map(x=>x.trim()) : null;
+    const cls = roleMap[role] || 'xx';
+    const statTxt = stats ? [stats[0]&&stats[0]+'局', stats[1]!==undefined&&stats[1]!==''?'自責'+stats[1]:'', stats[2]?'K'+stats[2]:'', stats[3]?'BB'+stats[3]:''].filter(Boolean).join(' · ') : '';
+    rows += '<div class="gm-pu-row">'+(role?'<span class="gm-role '+cls+'">'+esc(role)+'</span>':'')+'<span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(nm)+'</span>'+(statTxt?'<span class="gm-pu-stats">'+esc(statTxt)+'</span>':'')+'</div>';
+  });
+  return '<div class="gm-lineup-col"><div class="gm-lineup-head">'+teamLogoHtml(team)+esc(shortTeamName(team))+'</div>'+rows+'</div>';
+}
+function buildPitchersSection(m, a, b) {
+  if (!m.pitchersA && !m.pitchersB) return '';
+  let cols = '';
+  if (m.pitchersA) cols += pitcherUsageCol(a, m.pitchersA);
+  if (m.pitchersB) cols += pitcherUsageCol(b, m.pitchersB);
+  return '<div class="gm-sec"><div class="gm-sec-title">PITCHERS 投手運用</div><div class="gm-lineup">'+cols+'</div></div>';
+}
+
 let currentModalNum = null;
 function openGameModal(num) {
   const m = matchData.find(x=>String(x.matchNum)===String(num));
@@ -1168,6 +1196,7 @@ function openGameModal(num) {
   if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
   const pit = pitcherBlock(m.pitcherW,'w') + pitcherBlock(m.pitcherL,'l') + pitcherBlock(m.pitcherSV,'sv');
   if (pit) html += '<div class="gm-sec"><div class="gm-sec-title">PITCHING SUMMARY</div><div class="gm-pit">'+pit+'</div></div>';
+  html += buildPitchersSection(m, a, b);
   if (m.recordUrl) html += '<div class="gm-sec" style="text-align:center;padding-top:0"><a href="'+esc(m.recordUrl)+'" target="_blank" rel="noopener" style="display:inline-block;padding:8px 20px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:20px;font-size:13px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">📄 查看紀錄表</a></div>';
   let ov = document.getElementById('game-modal');
   if (!ov) {
