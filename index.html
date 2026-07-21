@@ -1452,8 +1452,8 @@ function openGameModal(num) {
     '<div class="gm-big">'+((fin||liv)?'<span class="'+(winA?'win':'')+'">'+m.scoreA+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winB?'win':'')+'">'+m.scoreB+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
     '<div class="gm-team">'+teamLogoHtml(b)+'<span class="n">'+esc(b)+'</span></div></div>';
   html += '<div class="gm-status">'+(fin?'終場':liv?'<span style="color:#c0392b">● 比賽中</span>':'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
-  html += buildLineupSection(m, a, b);
   if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
+  html += buildLineupSection(m, a, b);
   const pit = pitcherBlock(m.pitcherW,'w') + pitcherBlock(m.pitcherL,'l') + pitcherBlock(m.pitcherSV,'sv');
   if (pit) html += '<div class="gm-sec"><div class="gm-sec-title">PITCHING SUMMARY</div><div class="gm-pit">'+pit+'</div></div>';
   html += buildPitchersSection(m, a, b);
