@@ -1869,17 +1869,17 @@ async function printOrderBook(ver) {
     .page.no-count{counter-increment:none}
     @media print{
       /* 下方留 14mm 給頁尾頁碼 */
-      @page{size:A5;margin:10mm 12mm 14mm 12mm;marks:none}
+      @page{size:A5;margin:9mm 8mm 13mm 8mm;marks:none}
       body{margin:0;font-size:9.5pt}
       .page{page-break-after:always;margin:0;box-shadow:none}
       .page:last-child{page-break-after:avoid}
       .page[style*="page-break-after:auto"]{page-break-after:auto}
       *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .landscape-page{page:landscapePage}
-      @page landscapePage{size:A5 landscape;margin:10mm 12mm 14mm 12mm}
+      @page landscapePage{size:A5 landscape;margin:9mm 8mm 13mm 8mm}
       /* 固定頁高度 = A5 版心（210mm - 上下margin 24mm）；橫式為 148mm - 24mm */
-      .page.fixed-page{height:186mm}
-      .page.fixed-page.landscape-page{height:124mm}
+      .page.fixed-page{height:188mm}
+      .page.fixed-page.landscape-page{height:126mm}
       /* 頁尾圓形頁碼改由 @page 產生，隱藏內嵌版本避免重複 */
       .print-hide-footer{display:none}
     }
@@ -1887,8 +1887,8 @@ async function printOrderBook(ver) {
     .page{min-height:auto;position:relative;overflow:hidden;background:#fff}
     /* 單頁固定尺寸（等同 A5 版心大小），讓頁碼能正確落在真正的頁尾；
        內容會自然溢滿的區塊（規程、隊職員名單）另外覆寫為 min-height:auto 讓其自由跨頁 */
-    .page.fixed-page{height:186mm;box-sizing:border-box}
-    .page.fixed-page.landscape-page{height:124mm}
+    .page.fixed-page{height:188mm;box-sizing:border-box}
+    .page.fixed-page.landscape-page{height:126mm}
     .bk-footer{position:absolute;bottom:6mm;left:0;right:0;text-align:center}
     .cover{background:linear-gradient(160deg,#004d40 0%,#00695C 40%,#00897B 70%,#004d40 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 40px;min-height:90vh}
     .cover-year{font-size:28px;font-weight:300;letter-spacing:.3em;opacity:.8;margin-bottom:8px}
@@ -1921,16 +1921,17 @@ async function printOrderBook(ver) {
     .team-staff-row{background:#E0F5F2;padding:8px 14px;font-size:12.5px;color:#00695C;display:flex;flex-wrap:wrap;border-bottom:2px solid #9FD9CE}
     .team-staff-item{display:flex;gap:4px;margin-right:20px}
     .team-staff-item .lbl{color:#00876f;font-weight:700}
-    .players-cols{display:grid;grid-template-columns:repeat(5,1fr);gap:0 8px;margin-top:4px}
+    .players-cols{display:grid;grid-template-columns:repeat(5,1fr);gap:0 4px;margin-top:4px}
     .verify-cols{grid-template-columns:repeat(3,1fr);gap:0 10px}
-    .players-col-cell{display:flex;align-items:center;padding:3px;border-bottom:1px solid #f0f0f0;font-size:13px}
-    .players-col-cell .num{width:28px;text-align:center;font-weight:700;color:#00695C;flex-shrink:0;border-right:1px solid #e0e0e0;margin-right:5px}
+    .players-col-cell{display:flex;align-items:center;padding:3px 1px;border-bottom:1px solid #f0f0f0;font-size:12.5px;white-space:nowrap;overflow:hidden}
+    .players-col-cell .num{width:22px;text-align:center;font-weight:700;color:#00695C;flex-shrink:0;border-right:1px solid #e0e0e0;margin-right:4px}
     .players-col-cell.cap .num{color:#F47920}
     .players-col-cell.cap .nm{color:#F47920;font-weight:700}
-    .players-col-cell .nm{flex:1}
+    .players-col-cell .nm{flex:1;white-space:nowrap;letter-spacing:-.02em}
     .players-col-cell .sid{font-size:11.5px;color:#555;display:block}
     .verify-cols .players-col-cell{font-size:13.5px;padding:4px 3px}
     .verify-cols .players-col-cell .num{font-size:13.5px;width:30px}
+    .cap-mark{font-size:8px;color:#F47920;margin-left:1px;vertical-align:super;line-height:0}
     .cap-tag{background:#F47920;color:#fff;border-radius:8px;padding:0 5px;font-size:9px;font-weight:700;margin-left:4px;vertical-align:middle}
     .verify-badge{background:#a32d2d;color:#fff;font-size:10px;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px}
     .cert-imgs{display:flex;gap:40px;align-items:center;justify-content:center;margin:10px 0 6px}
@@ -1938,10 +1939,10 @@ async function printOrderBook(ver) {
     .cert-img-box span{font-size:11px;font-weight:700;color:#1c1c1a}
     .bracket-page{padding:16px 0}
     .schedule-page{padding:16px 0}
-    .sched-date-header{background:#00695C;color:#fff;font-size:14px;font-weight:700;padding:8px 16px;border-radius:6px;margin:16px 0 8px}
-    .sched-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:4px}
-    .sched-table th{background:#004d40;color:#fff;padding:7px 12px;font-size:12px;text-align:center}
-    .sched-table td{padding:7px 12px;border-bottom:1px solid #ededea;text-align:center}
+    .sched-date-header{background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:5px;margin:10px 0 5px}
+    .sched-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px;table-layout:fixed}
+    .sched-table th{background:#004d40;color:#fff;padding:4px 4px;font-size:10px;text-align:center}
+    .sched-table td{padding:3.5px 4px;border-bottom:1px solid #ededea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .sched-table tr:nth-child(even) td{background:#f7f6f3}
     .vs-tag{color:#888;font-size:11px;font-weight:700;margin:0 8px}
     .page-footer{position:absolute;bottom:24px;left:0;right:0;text-align:center;font-size:11px;color:#aaa}
@@ -2156,7 +2157,7 @@ async function printOrderBook(ver) {
       const isCap=p.role==='隊長';
       const sid=isVerify?`<span class="sid">${bkEsc(p.studentId||'')}</span>`:'';
       const numTxt = (p.number === 0 || (p.number !== null && p.number !== undefined && String(p.number).trim() !== '')) ? String(p.number).trim() : '—';
-      return `<div class="players-col-cell${isCap?' cap':''}"><span class="num">${bkEsc(numTxt)}</span><span class="nm">${bkEsc(p.name)}${isCap?' ©':''}</span>${sid}</div>`;
+      return `<div class="players-col-cell${isCap?' cap':''}"><span class="num">${bkEsc(numTxt)}</span><span class="nm">${bkEsc(p.name)}${isCap?'<sup class="cap-mark">©</sup>':''}</span>${sid}</div>`;
     }).join('');
 
     allTeamsHtml += `<div style="margin-bottom:16px;page-break-inside:avoid">
@@ -2224,7 +2225,7 @@ async function printOrderBook(ver) {
   // 賽程時間表
   let schedHtml = '';
   if (!BK.matches.length) {
-    schedHtml = `<div class="page schedule-page fixed-page" data-sec="sched" style="page-break-before:always">
+    schedHtml = `<div class="page schedule-page fixed-page" data-sec="sched">
       <div class="section-title">賽程時間表</div>
       <div style="text-align:center;padding:60px;color:#888">賽程尚未公布，待抽籤完成後產生。</div>
       
@@ -2234,24 +2235,24 @@ async function printOrderBook(ver) {
     BK.matches.forEach(m=>{const d=m.date||'日期未定';if(!byDate[d])byDate[d]=[];byDate[d].push(m);});
     const resolve=name=>{if(!name)return name;const mt=String(name).match(/([A-D])組第(\d+)籤/);if(!mt)return name;const labels=['A','B','C','D'];let ss=1;for(let g=0;g<4;g++){if(labels[g]===mt[1]){return drawSlotMap[ss+parseInt(mt[2])-1]||name;}ss+=4;}return name;};
     const dateKeys = Object.keys(byDate).sort();
-    const schedPages = dateKeys.map((date, di) => {
+    const schedBlocks = dateKeys.map((date) => {
       const day=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-      let tbl=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:50px">場次</th><th style="width:70px">組別</th><th>隊伍 A</th><th style="width:26px"></th><th>隊伍 B</th><th style="width:55px">時間</th><th style="width:65px">比分</th><th style="width:90px">勝隊</th></tr></thead><tbody>`;
+      let tbl=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:44px">場次</th><th style="width:62px">組別</th><th>隊伍 A</th><th style="width:22px"></th><th>隊伍 B</th><th style="width:48px">時間</th><th style="width:56px">比分</th><th style="width:80px">勝隊</th></tr></thead><tbody>`;
       day.forEach(m=>{
         const tA=resolve(m.teamA),tB=resolve(m.teamB),ph=(m.phase||'').replace('分組賽 ','預賽 ');
         const hs=m.scoreA!==undefined&&m.scoreA!=='';
         const scoreCell=hs?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.scoreA)} : ${bkEsc(m.scoreB)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
         const winnerCell=m.winner?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.winner)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
-        tbl+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:11px;color:#666">${bkEsc(ph)}</td><td style="font-weight:600">${bkEsc(tA)}</td><td class="vs-tag">VS</td><td style="font-weight:600">${bkEsc(tB)}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
+        tbl+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:10px;color:#666">${bkEsc(ph)}</td><td style="font-weight:600">${bkEsc(tA)}</td><td class="vs-tag">VS</td><td style="font-weight:600">${bkEsc(tB)}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
       });
       tbl+='</tbody></table>';
-      return `<div class="page schedule-page fixed-page" data-sec="sched" style="page-break-before:always">
-        <div class="section-title">賽程時間表${dateKeys.length>1?`（${di+1}/${dateKeys.length}）`:''}</div>
-        ${tbl}
-        
-      </div>`;
+      return `<div class="sched-day">${tbl}</div>`;
     });
-    schedHtml = schedPages.join('');
+    // 整份賽程表為一個連續流動區塊，由分頁腳本依實際高度自動切頁
+    schedHtml = `<div class="page flow-page schedule-page" data-pclass="schedule-page" data-sec="sched" style="min-height:auto">
+      <div class="section-title">賽程時間表</div>
+      ${schedBlocks.join('')}
+    </div>`;
   }
 
   // ── 開啟列印視窗 ────────────────────────────
@@ -2261,8 +2262,8 @@ async function printOrderBook(ver) {
   // 每頁補上頁尾頁碼，並回填目錄頁碼。
   const paginateScript = `
     (function(){
-      var PAGE_H = 186 * 3.7795;   // 186mm -> px
-      var LAND_H = 124 * 3.7795;
+      var PAGE_H = 188 * 3.7795;   // 188mm -> px
+      var LAND_H = 126 * 3.7795;
 
       function pageHeight(el){
         return el.classList.contains('landscape-page') ? LAND_H : PAGE_H;
@@ -2274,12 +2275,12 @@ async function printOrderBook(ver) {
           document.querySelectorAll('.page.flow-page')
         );
         flows.forEach(function(flow){
-          var limit = pageHeight(flow) - 40;   // 預留頁尾空間
+          var limit = pageHeight(flow) - 34;   // 預留頁尾空間
           var header = flow.querySelector('.section-title');
-          var blocks = Array.prototype.slice.call(flow.children).filter(function(c){
-            return c !== header && !c.classList.contains('verify-badge');
-          });
           var badge = flow.querySelector('.verify-badge');
+          var blocks = Array.prototype.slice.call(flow.children).filter(function(c){
+            return c !== header && c !== badge;
+          });
 
           var pages = [];
           var cur = null, curH = 0;
@@ -2287,34 +2288,68 @@ async function printOrderBook(ver) {
           function newPage(isFirst){
             var p = document.createElement('div');
             p.className = 'page fixed-page ' + flow.dataset.pclass;
-            if (isFirst && badge) p.appendChild(badge.cloneNode(true));
-            if (header) {
-              var h = header.cloneNode(true);
-              if (!isFirst) h.textContent = header.textContent + '（續）';
-              p.appendChild(h);
+            p.dataset.sec = flow.dataset.sec;          // 保留章節標記供目錄回填
+            if (isFirst) {
+              if (badge) p.appendChild(badge.cloneNode(true));
+              if (header) p.appendChild(header.cloneNode(true));  // 只有首頁有標題，續頁不重複
             }
             pages.push(p);
+            document.body.appendChild(p);
             cur = p;
-            // 量測 header 佔用高度
-            curH = 0;
+            curH = p.getBoundingClientRect().height;
             return p;
           }
 
           newPage(true);
-          document.body.appendChild(cur);
-          var headH = cur.getBoundingClientRect().height;
-          curH = headH;
 
+          // 若單一區塊本身就超過一頁（例如某天場次特別多），拆成可分割的小單位
+          function explode(el){
+            var h = el.getBoundingClientRect ? null : null;
+            var table = el.querySelector ? el.querySelector('table') : null;
+            if (!table) return [el];
+            var rows = Array.prototype.slice.call(table.querySelectorAll('tbody > tr'));
+            if (rows.length < 2) return [el];
+            var head = el.cloneNode(true);
+            var htab = head.querySelector('table');
+            var hbody = htab.querySelector('tbody');
+            while (hbody.firstChild) hbody.removeChild(hbody.firstChild);
+            var out = [], chunkSize = 12, i;
+            for (i = 0; i < rows.length; i += chunkSize) {
+              var part = head.cloneNode(true);
+              // 只有第一段保留日期標題
+              if (i > 0) {
+                var dh = part.querySelector('.sched-date-header');
+                if (dh) dh.parentNode.removeChild(dh);
+              }
+              var pbody = part.querySelector('tbody');
+              for (var j = i; j < Math.min(i + chunkSize, rows.length); j++) {
+                pbody.appendChild(rows[j].cloneNode(true));
+              }
+              out.push(part);
+            }
+            return out;
+          }
+
+          var units = [];
           blocks.forEach(function(b){
+            var probe = b.cloneNode(true);
+            cur.appendChild(probe);
+            var ph = probe.getBoundingClientRect().height;
+            cur.removeChild(probe);
+            if (ph > limit - 30) {
+              units = units.concat(explode(b));
+            } else {
+              units.push(b);
+            }
+          });
+
+          units.forEach(function(b){
             var clone = b.cloneNode(true);
             cur.appendChild(clone);
             var h = clone.getBoundingClientRect().height;
             if (curH + h > limit && cur.children.length > 1) {
               cur.removeChild(clone);
-              var prev = cur;
               newPage(false);
-              document.body.appendChild(cur);
-              curH = cur.getBoundingClientRect().height;
               cur.appendChild(clone);
               curH += clone.getBoundingClientRect().height;
             } else {
