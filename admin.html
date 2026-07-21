@@ -1884,12 +1884,12 @@ async function printOrderBook(ver) {
       .print-hide-footer{display:none}
     }
     .page-num-auto::after{content:counter(pagenum);display:inline-block;background:#00695C;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;font-weight:700;text-align:center}
-    .page{min-height:auto;position:relative;overflow:hidden;background:#fff}
+    .page{min-height:auto;position:relative;overflow:visible;background:#fff}
     /* 單頁固定尺寸（等同 A5 版心大小），讓頁碼能正確落在真正的頁尾；
        內容會自然溢滿的區塊（規程、隊職員名單）另外覆寫為 min-height:auto 讓其自由跨頁 */
     .page.fixed-page{height:188mm;box-sizing:border-box}
     .page.fixed-page.landscape-page{height:126mm}
-    .bk-footer{position:absolute;bottom:6mm;left:0;right:0;text-align:center}
+    .bk-footer{position:absolute;bottom:-9mm;left:0;right:0;text-align:center}
     .cover{background:linear-gradient(160deg,#004d40 0%,#00695C 40%,#00897B 70%,#004d40 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 40px;min-height:90vh}
     .cover-year{font-size:28px;font-weight:300;letter-spacing:.3em;opacity:.8;margin-bottom:8px}
     .cover-title-zh{font-size:52px;font-weight:900;line-height:1.2;margin-bottom:8px;text-shadow:0 2px 12px rgba(0,0,0,.3)}
@@ -1942,7 +1942,7 @@ async function printOrderBook(ver) {
     .sched-date-header{background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:5px;margin:10px 0 5px}
     .sched-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px;table-layout:fixed}
     .sched-table th{background:#004d40;color:#fff;padding:4px 4px;font-size:10px;text-align:center}
-    .sched-table td{padding:3.5px 4px;border-bottom:1px solid #ededea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sched-table td{padding:3px 3px;border-bottom:1px solid #ededea;text-align:center;white-space:normal;word-break:break-word;line-height:1.25;vertical-align:middle}
     .sched-table tr:nth-child(even) td{background:#f7f6f3}
     .vs-tag{color:#888;font-size:11px;font-weight:700;margin:0 8px}
     .page-footer{position:absolute;bottom:24px;left:0;right:0;text-align:center;font-size:11px;color:#aaa}
@@ -2093,7 +2093,8 @@ async function printOrderBook(ver) {
 
   let ruleContent = '';
   ruleSections.forEach(sec => {
-    ruleContent += `<div style="margin-bottom:8px"><div class="rule-main">${bkEsc(sec.head)}</div>`;
+    // 每個小節以獨立區塊輸出，讓分頁腳本可在行與行之間斷頁（標題與首行不分離）
+    ruleContent += `<div class="rule-sec"><div class="rule-main">${bkEsc(sec.head)}</div>`;
     sec.lines.forEach(l => {
       if (l.t === 'BBCOR_CERT_IMG') {
         ruleContent += `<div class="cert-imgs" style="display:flex;gap:40px;align-items:center;justify-content:center;margin:8px 0">
@@ -2119,7 +2120,7 @@ async function printOrderBook(ver) {
         ruleContent += `<div style="font-size:13px;font-weight:${fw};color:${col};line-height:1.75;margin-bottom:2px">${bkEsc(l.t)}</div>`;
       }
     });
-    ruleContent += '<div style="height:4px"></div></div>';
+    ruleContent += '</div>';
   });
   const rulesHtml = `<div class="page flow-page rules-page" data-pclass="rules-page" data-sec="rules" style="min-height:auto">
     <div class="section-title">競賽規程</div>${ruleContent}
@@ -2161,7 +2162,7 @@ async function printOrderBook(ver) {
     }).join('');
 
     allTeamsHtml += `<div style="margin-bottom:16px;page-break-inside:avoid">
-      <div class="team-header"><div class="team-num">${slot||idx+1}</div><div class="team-name">校名　${bkEsc(team.teamname)}</div></div>
+      <div class="team-header"><div class="team-name">校名　${bkEsc(team.teamname)}</div></div>
       <div style="background:#9FD9CE;color:#00695C;font-size:12px;font-weight:700;padding:4px 18px;border-left:1.5px solid #9FD9CE;border-right:1.5px solid #9FD9CE">隊職員名單</div>
       ${staff.length?`<div class="team-staff-row">${staffHtml2}</div>`:''}
       <div class="${colClass}">${cells}</div>
@@ -2177,13 +2178,28 @@ async function printOrderBook(ver) {
 
   // 賽程圖
   function bkGroupSVG(teams, label) {
-    const W=250,H=238,pos=[{x:44,y:46},{x:206,y:46},{x:206,y:189},{x:44,y:189}];
+    const W=250,H=262,pos=[{x:44,y:60},{x:206,y:60},{x:206,y:196},{x:44,y:196}];
     const pairs=[[0,1],[1,2],[2,3],[3,0],[0,2],[1,3]],diags={'0,2':true,'1,3':true,'2,0':true,'3,1':true};
     let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%"><rect width="${W}" height="${H}" fill="#f9f9f9" rx="6"/>`;
     svg+=`<text x="${W/2}" y="${H/2+6}" text-anchor="middle" font-size="40" font-weight="900" fill="#00695C" opacity=".08">${label}</text>`;
     pairs.forEach(p=>{const k=p[0]+','+p[1],d=!!diags[k];svg+=`<line x1="${pos[p[0]].x}" y1="${pos[p[0]].y}" x2="${pos[p[1]].x}" y2="${pos[p[1]].y}" stroke="${d?'#9FD9CE':'#00695C'}" stroke-width="1.5"${d?' stroke-dasharray="5,4"':''}/>`; });
-    const lbl=[{x:50,y:50,dy:-16},{x:230,y:50,dy:-16},{x:230,y:210,dy:20},{x:50,y:210,dy:20}];
-    lbl.forEach((l,i)=>{const name=teams[i]||('第'+(i+1)+'籤'),short=name.length>7?name.slice(0,7)+'…':name;svg+=`<circle cx="${l.x}" cy="${l.y}" r="5" fill="#00695C"/><text x="${l.x}" y="${l.y+l.dy}" text-anchor="middle" font-size="11" font-weight="700" fill="#00695C">${bkEsc(short)}</text>`;});
+    const lbl=[{x:48,y:60,dy:-14},{x:202,y:60,dy:-14},{x:202,y:196,dy:20},{x:48,y:196,dy:20}];
+    lbl.forEach((l,i)=>{
+      const name=teams[i]||('第'+(i+1)+'籤');
+      // 名稱過長時折成兩行，不再截斷
+      let lines=[name];
+      if(name.length>6){
+        const cut=Math.ceil(name.length/2);
+        lines=[name.slice(0,cut),name.slice(cut)];
+      }
+      const isTop=l.dy<0;
+      // 上方標籤往上長，下方標籤往下長
+      const tspans=lines.map((ln,li)=>{
+        const dy=isTop?(l.dy-(lines.length-1-li)*12):(l.dy+li*12);
+        return `<tspan x="${l.x}" y="${l.y+dy}">${bkEsc(ln)}</tspan>`;
+      }).join('');
+      svg+=`<circle cx="${l.x}" cy="${l.y}" r="5" fill="#00695C"/><text text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">${tspans}</text>`;
+    });
     svg+='</svg>';
     return `<div style="border:1.5px solid #9FD9CE;border-radius:8px;overflow:hidden"><div style="background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:6px 12px">⚾ ${label} 組</div><div style="padding:8px">${svg}</div></div>`;
   }
@@ -2285,18 +2301,34 @@ async function printOrderBook(ver) {
           var pages = [];
           var cur = null, curH = 0;
 
+          // 量測用沙盒：與實際頁面同寬，但高度不限，才能取得真實內容高度
+          var probe = document.createElement('div');
+          probe.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden';
+          probe.className = flow.dataset.pclass;
+          document.body.appendChild(probe);
+          probe.style.width = flow.getBoundingClientRect().width + 'px';
+
+          function measure(node){
+            var c = node.cloneNode(true);
+            probe.appendChild(c);
+            var h = c.getBoundingClientRect().height;
+            var st = window.getComputedStyle(c);
+            h += parseFloat(st.marginTop || 0) + parseFloat(st.marginBottom || 0);
+            probe.removeChild(c);
+            return h;
+          }
+
           function newPage(isFirst){
             var p = document.createElement('div');
             p.className = 'page fixed-page ' + flow.dataset.pclass;
             p.dataset.sec = flow.dataset.sec;          // 保留章節標記供目錄回填
+            curH = 0;
             if (isFirst) {
-              if (badge) p.appendChild(badge.cloneNode(true));
-              if (header) p.appendChild(header.cloneNode(true));  // 只有首頁有標題，續頁不重複
+              if (badge) { p.appendChild(badge.cloneNode(true)); curH += measure(badge); }
+              if (header) { p.appendChild(header.cloneNode(true)); curH += measure(header); }
             }
             pages.push(p);
-            document.body.appendChild(p);
             cur = p;
-            curH = p.getBoundingClientRect().height;
             return p;
           }
 
@@ -2304,39 +2336,67 @@ async function printOrderBook(ver) {
 
           // 若單一區塊本身就超過一頁（例如某天場次特別多），拆成可分割的小單位
           function explode(el){
-            var h = el.getBoundingClientRect ? null : null;
+            // 競賽規程小節：逐行拆，標題跟著第一行走
+            if (el.classList && el.classList.contains('rule-sec')) {
+              var kids = Array.prototype.slice.call(el.children);
+              var head = kids.shift();          // .rule-main 標題
+              var out2 = [], grp = null, grpH = 0;
+              function startGrp(withHead){
+                grp = document.createElement('div');
+                grp.className = 'rule-sec';
+                if (withHead) grp.appendChild(head.cloneNode(true));
+                grpH = withHead ? measure(head) : 0;
+                out2.push(grp);
+              }
+              startGrp(true);
+              kids.forEach(function(line){
+                var lh = measure(line);
+                if (grpH + lh > limit - 10 && grp.children.length > (out2.length === 1 ? 1 : 0)) {
+                  startGrp(false);
+                }
+                grp.appendChild(line.cloneNode(true));
+                grpH += lh;
+              });
+              return out2;
+            }
+
             var table = el.querySelector ? el.querySelector('table') : null;
             if (!table) return [el];
             var rows = Array.prototype.slice.call(table.querySelectorAll('tbody > tr'));
             if (rows.length < 2) return [el];
-            var head = el.cloneNode(true);
-            var htab = head.querySelector('table');
-            var hbody = htab.querySelector('tbody');
-            while (hbody.firstChild) hbody.removeChild(hbody.firstChild);
-            var out = [], chunkSize = 12, i;
-            for (i = 0; i < rows.length; i += chunkSize) {
-              var part = head.cloneNode(true);
-              // 只有第一段保留日期標題
-              if (i > 0) {
+            var shell = el.cloneNode(true);
+            var sbody = shell.querySelector('tbody');
+            while (sbody.firstChild) sbody.removeChild(sbody.firstChild);
+
+            var out = [], part = null, pbody = null, partH = 0;
+            var shellH = measure(shell);
+
+            function startPart(withHeader){
+              part = shell.cloneNode(true);
+              if (!withHeader) {
                 var dh = part.querySelector('.sched-date-header');
                 if (dh) dh.parentNode.removeChild(dh);
               }
-              var pbody = part.querySelector('tbody');
-              for (var j = i; j < Math.min(i + chunkSize, rows.length); j++) {
-                pbody.appendChild(rows[j].cloneNode(true));
-              }
+              pbody = part.querySelector('tbody');
+              partH = withHeader ? shellH : measure(part);
               out.push(part);
             }
+
+            startPart(true);
+            rows.forEach(function(r){
+              var rh = measure(r) || 18;
+              if (partH + rh > limit - 10 && pbody.children.length > 0) {
+                startPart(false);
+              }
+              pbody.appendChild(r.cloneNode(true));
+              partH += rh;
+            });
             return out;
           }
 
           var units = [];
           blocks.forEach(function(b){
-            var probe = b.cloneNode(true);
-            cur.appendChild(probe);
-            var ph = probe.getBoundingClientRect().height;
-            cur.removeChild(probe);
-            if (ph > limit - 30) {
+            if (measure(b) > limit) {
               units = units.concat(explode(b));
             } else {
               units.push(b);
@@ -2344,18 +2404,15 @@ async function printOrderBook(ver) {
           });
 
           units.forEach(function(b){
-            var clone = b.cloneNode(true);
-            cur.appendChild(clone);
-            var h = clone.getBoundingClientRect().height;
-            if (curH + h > limit && cur.children.length > 1) {
-              cur.removeChild(clone);
+            var h = measure(b);
+            if (curH + h > limit && cur.children.length > 0) {
               newPage(false);
-              cur.appendChild(clone);
-              curH += clone.getBoundingClientRect().height;
-            } else {
-              curH += h;
             }
+            cur.appendChild(b.cloneNode(true));
+            curH += h;
           });
+
+          document.body.removeChild(probe);
 
           // 用切好的頁面取代原本的長頁
           pages.forEach(function(p){
@@ -2380,7 +2437,7 @@ async function printOrderBook(ver) {
           if (old) old.parentNode.removeChild(old);
           var f = document.createElement('div');
           f.className = 'bk-footer';
-          f.style.cssText = 'position:absolute;bottom:6mm;left:0;right:0;text-align:center';
+          f.style.cssText = 'position:absolute;bottom:-9mm;left:0;right:0;text-align:center';
           f.innerHTML = '<span style="display:inline-block;background:#00695C;color:#fff;'
             + 'border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;'
             + 'font-weight:700;text-align:center">' + n + '</span>';
