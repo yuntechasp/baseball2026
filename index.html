@@ -132,6 +132,9 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .gm-lu-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;color:var(--gray-900)}
 .gm-lu-num{width:18px;height:18px;border-radius:50%;background:var(--yt-teal-light);color:var(--yt-teal-dark);font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .gm-lu-pos{font-size:10px;color:var(--gray-400);margin-left:auto}
+.gm-lu-row.sub{padding-left:26px;position:relative;color:var(--gray-900)}
+.gm-lu-row.sub::before{content:'↳';position:absolute;left:8px;color:var(--gray-300);font-size:12px}
+.gm-lu-subtag{font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;background:#fdf0e6;color:#c4601a;flex-shrink:0}
 @media(max-width:520px){.gm-lineup{flex-direction:column}}
 /* ── 投手運用 ── */
 .gm-role{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;color:#fff;letter-spacing:.03em;flex-shrink:0}
@@ -1361,14 +1364,43 @@ function pitcherBlock(raw, type) {
 }
 // ── 先發名單區塊：格式「姓名(守位),姓名(守位),…」自動編 1~9 棒；「投手:姓名」列於最後 ──
 function lineupCol(team, raw) {
-  const items = String(raw).split(/[,，、]/).map(x=>x.trim()).filter(Boolean);
+  // 頂層以逗號分隔＝棒次；同一格內用分號分隔＝換人（頂替上一位，不佔新號碼，縮排顯示）
+  const slots = String(raw).split(/[,，](?![^(（]*[\)）])/).map(x=>x.trim()).filter(Boolean)
+    .reduce((acc, tok) => {
+      // 分號可能跟在前一個 token 尾端一起被逗號誤切開的情況很少見；這裡以分號優先切
+      acc.push(tok); return acc;
+    }, []);
+  // 若含分號，需要把「同一棒次內的換人」正確分組：先用分號切，再對每組視為一個棒次
+  const raw2 = String(raw);
+  const groups = [];
+  let buf = '';
+  let depth = 0;
+  for (let i = 0; i < raw2.length; i++) {
+    const ch = raw2[i];
+    if (ch === '(' || ch === '（') depth++;
+    if (ch === ')' || ch === '）') depth--;
+    if (ch === ',' && depth === 0) { groups.push(buf); buf = ''; }
+    else buf += ch;
+  }
+  if (buf.trim()) groups.push(buf);
+
   let rows = '', num = 1, pitcher = '';
-  items.forEach(it => {
-    const pm = it.match(/^(投手|先發投手|P)[:：]\s*(.+)$/);
-    if (pm) { pitcher = pm[2]; return; }
-    const m = it.match(/^(.+?)[\(（](.+?)[\)）]$/);
-    const nm = m ? m[1] : it, pos = m ? m[2] : '';
-    rows += '<div class="gm-lu-row"><span class="gm-lu-num">'+(num++)+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(nm)+'</span>'+(pos?'<span class="gm-lu-pos">'+esc(pos)+'</span>':'')+'</div>';
+  groups.forEach(g => {
+    const parts = g.split(';').map(x=>x.trim()).filter(Boolean);
+    parts.forEach((it, idx) => {
+      const pm = it.match(/^(投手|先發投手|P)[:：]\s*(.+)$/);
+      if (pm) { pitcher = pm[2]; return; }
+      const m = it.match(/^(.+?)[\(（](.+?)[\)）]$/);
+      const nm = m ? m[1] : it, posRaw = m ? m[2] : '';
+      const subTags = ['代打','代跑','代守','PH','PR','PD'];
+      let tag = '', pos = posRaw;
+      subTags.forEach(t => { if (posRaw.indexOf(t) >= 0) { tag = t; pos = posRaw.replace(t,'').replace(/^[,，]|[,，]$/g,'').trim(); } });
+      if (idx === 0) {
+        rows += '<div class="gm-lu-row"><span class="gm-lu-num">'+(num++)+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(nm)+'</span>'+(pos?'<span class="gm-lu-pos">'+esc(pos)+'</span>':'')+'</div>';
+      } else {
+        rows += '<div class="gm-lu-row sub">'+(tag?'<span class="gm-lu-subtag">'+esc(tag)+'</span>':'')+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(nm)+'</span>'+(pos?'<span class="gm-lu-pos">'+esc(pos)+'</span>':'')+'</div>';
+      }
+    });
   });
   if (pitcher) rows += '<div class="gm-lu-row" style="margin-top:4px;padding-top:6px;border-top:1px dashed var(--gray-100)"><span class="gm-lu-num" style="background:#fdf0e6;color:#c4601a">P</span><span>'+esc(pitcher)+'</span><span class="gm-lu-pos">先發投手</span></div>';
   return '<div class="gm-lineup-col"><div class="gm-lineup-head">'+teamLogoHtml(team)+esc(shortTeamName(team))+'</div>'+rows+'</div>';
