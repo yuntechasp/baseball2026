@@ -1857,15 +1857,18 @@ async function printOrderBook(ver) {
   // ── 秩序冊 CSS ──────────────────────────
   const bookletCSS = `
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#fff;color:#1c1c1a}
+    body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#fff;color:#1c1c1a;counter-reset:pagenum}
+    .page{counter-increment:pagenum}
+    .page.no-count{counter-increment:none}
     @media print{
-      @page{size:A4;margin:1.5cm;marks:none;@bottom-center{content:counter(page);font-family:'Noto Sans TC',sans-serif;font-size:11px;color:#888}}
-      body{margin:0;counter-reset:pagenum}
-      .page{page-break-after:always;margin:0;box-shadow:none;counter-increment:pagenum}
+      @page{size:A5;margin:1.2cm;marks:none}
+      body{margin:0;zoom:0.72}
+      .page{page-break-after:always;margin:0;box-shadow:none}
       .page:last-child{page-break-after:avoid}
       .page[style*="page-break-after:auto"]{page-break-after:auto}
-      .cover-page{counter-increment:none}
       *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .landscape-page{page:landscapePage}
+      @page landscapePage{size:A5 landscape;margin:1.2cm}
     }
     .page-num-auto::after{content:counter(pagenum);display:inline-block;background:#00695C;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;font-weight:700;text-align:center}
     .page{min-height:auto;position:relative;overflow:hidden;background:#fff}
@@ -1936,7 +1939,7 @@ async function printOrderBook(ver) {
   const isVerify = ver === 'verify';
 
   // 封面
-  const coverHtml = `<div class="page cover" style="counter-increment:none">
+  const coverHtml = `<div class="page cover no-count">
     <div class="cover-baseball">⚾</div>
     <div class="cover-year">2026</div>
     <div class="cover-title-zh">${bkEsc(title)}</div>
@@ -1957,15 +1960,6 @@ async function printOrderBook(ver) {
     <div class="toc-item"><span class="toc-num">二、</span><span class="toc-name">參賽隊職員名單</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
     <div class="toc-item"><span class="toc-num">三、</span><span class="toc-name">賽程圖</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
     <div class="toc-item"><span class="toc-num">四、</span><span class="toc-name">賽程時間表</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
-    <div class="org-info">
-      <div class="org-row"><span class="org-label">指導單位</span><span class="org-val">教育部</span></div>
-      <div class="org-row"><span class="org-label">主辦單位</span><span class="org-val">雲林科技大學</span></div>
-      <div class="org-row"><span class="org-label">承辦單位</span><span class="org-val">雲林科技大學體育室</span></div>
-      <div class="org-row"><span class="org-label">協辦單位</span><span class="org-val">雲林科技大學棒球隊</span></div>
-      <div class="org-row"><span class="org-label">比賽地點</span><span class="org-val">${bkEsc(s.venue||'雲林科技大學棒球場')}</span></div>
-      <div class="org-row"><span class="org-label">比賽日期</span><span class="org-val">${s.gamedate||''}${s.gameend?' ～ '+s.gameend:''}</span></div>
-      <div class="org-row"><span class="org-label">聯絡方式</span><span class="org-val">蔡小姐　05-5342601#2704　wanjan@yuntech.edu.tw</span></div>
-    </div>
     <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
   </div>`;
 
@@ -2155,12 +2149,12 @@ async function printOrderBook(ver) {
 
   // 賽程圖
   function bkGroupSVG(teams, label) {
-    const W=250,H=215,pos=[{x:44,y:36},{x:206,y:36},{x:206,y:179},{x:44,y:179}];
+    const W=250,H=238,pos=[{x:44,y:46},{x:206,y:46},{x:206,y:189},{x:44,y:189}];
     const pairs=[[0,1],[1,2],[2,3],[3,0],[0,2],[1,3]],diags={'0,2':true,'1,3':true,'2,0':true,'3,1':true};
     let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%"><rect width="${W}" height="${H}" fill="#f9f9f9" rx="6"/>`;
     svg+=`<text x="${W/2}" y="${H/2+6}" text-anchor="middle" font-size="40" font-weight="900" fill="#00695C" opacity=".08">${label}</text>`;
     pairs.forEach(p=>{const k=p[0]+','+p[1],d=!!diags[k];svg+=`<line x1="${pos[p[0]].x}" y1="${pos[p[0]].y}" x2="${pos[p[1]].x}" y2="${pos[p[1]].y}" stroke="${d?'#9FD9CE':'#00695C'}" stroke-width="1.5"${d?' stroke-dasharray="5,4"':''}/>`; });
-    const lbl=[{x:50,y:40,dy:-16},{x:230,y:40,dy:-16},{x:230,y:200,dy:20},{x:50,y:200,dy:20}];
+    const lbl=[{x:50,y:50,dy:-16},{x:230,y:50,dy:-16},{x:230,y:210,dy:20},{x:50,y:210,dy:20}];
     lbl.forEach((l,i)=>{const name=teams[i]||('第'+(i+1)+'籤'),short=name.length>7?name.slice(0,7)+'…':name;svg+=`<circle cx="${l.x}" cy="${l.y}" r="5" fill="#00695C"/><text x="${l.x}" y="${l.y+l.dy}" text-anchor="middle" font-size="11" font-weight="700" fill="#00695C">${bkEsc(short)}</text>`;});
     svg+='</svg>';
     return `<div style="border:1.5px solid #9FD9CE;border-radius:8px;overflow:hidden"><div style="background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:6px 12px">⚾ ${label} 組</div><div style="padding:8px">${svg}</div></div>`;
@@ -2192,8 +2186,10 @@ async function printOrderBook(ver) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
       ${bkGroupSVG(gt.A,'A')}${bkGroupSVG(gt.B,'B')}${bkGroupSVG(gt.C,'C')}${bkGroupSVG(gt.D,'D')}
     </div>
-    <div style="font-size:13px;font-weight:700;color:#00695C;margin-bottom:8px">🏆 複賽對戰圖</div>
-    <div style="overflow-x:auto">${bkElimSVG()}</div>
+  </div>
+  <div class="page bracket-page landscape-page" style="page-break-before:always">
+    <div class="section-title">複賽對戰圖</div>
+    <div style="padding-top:12px">${bkElimSVG()}</div>
   </div>`;
 
   // 賽程時間表
@@ -2206,8 +2202,14 @@ async function printOrderBook(ver) {
     const resolve=name=>{if(!name)return name;const mt=String(name).match(/([A-D])組第(\d+)籤/);if(!mt)return name;const labels=['A','B','C','D'];let ss=1;for(let g=0;g<4;g++){if(labels[g]===mt[1]){return drawSlotMap[ss+parseInt(mt[2])-1]||name;}ss+=4;}return name;};
     Object.keys(byDate).sort().forEach(date=>{
       const day=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-      schedHtml+=`<div class="sched-date-header">📅 ${date}</div><table class="sched-table"><thead><tr><th style="width:55px">場次</th><th style="width:75px">組別</th><th>隊伍 A</th><th style="width:30px"></th><th>隊伍 B</th><th style="width:65px">時間</th></tr></thead><tbody>`;
-      day.forEach(m=>{const tA=resolve(m.teamA),tB=resolve(m.teamB),ph=(m.phase||'').replace('分組賽 ','預賽 ');const hs=m.scoreA!==undefined&&m.scoreA!=='';const sc=hs?`<td colspan="3" style="text-align:center;font-weight:700;color:#00695C">${m.scoreA} : ${m.scoreB}</td>`:`<td style="font-weight:600">${bkEsc(tA)}</td><td class="vs-tag">VS</td><td style="font-weight:600">${bkEsc(tB)}</td>`;schedHtml+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:11px;color:#666">${bkEsc(ph)}</td>${sc}<td>${m.time||''}</td></tr>`;});
+      schedHtml+=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:50px">場次</th><th style="width:70px">組別</th><th>隊伍 A</th><th style="width:26px"></th><th>隊伍 B</th><th style="width:55px">時間</th><th style="width:65px">比分</th><th style="width:90px">勝隊</th></tr></thead><tbody>`;
+      day.forEach(m=>{
+        const tA=resolve(m.teamA),tB=resolve(m.teamB),ph=(m.phase||'').replace('分組賽 ','預賽 ');
+        const hs=m.scoreA!==undefined&&m.scoreA!=='';
+        const scoreCell=hs?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.scoreA)} : ${bkEsc(m.scoreB)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
+        const winnerCell=m.winner?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.winner)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
+        schedHtml+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:11px;color:#666">${bkEsc(ph)}</td><td style="font-weight:600">${bkEsc(tA)}</td><td class="vs-tag">VS</td><td style="font-weight:600">${bkEsc(tB)}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
+      });
       schedHtml+='</tbody></table>';
     });
   }
