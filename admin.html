@@ -1868,14 +1868,20 @@ async function printOrderBook(ver) {
     .page{counter-increment:pagenum}
     .page.no-count{counter-increment:none}
     @media print{
-      @page{size:A5;margin:1.2cm;marks:none}
-      body{margin:0;zoom:0.72}
+      /* 下方留 14mm 給頁尾頁碼 */
+      @page{size:A5;margin:10mm 12mm 14mm 12mm;marks:none}
+      body{margin:0;font-size:9.5pt}
       .page{page-break-after:always;margin:0;box-shadow:none}
       .page:last-child{page-break-after:avoid}
       .page[style*="page-break-after:auto"]{page-break-after:auto}
       *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .landscape-page{page:landscapePage}
-      @page landscapePage{size:A5 landscape;margin:1.2cm}
+      @page landscapePage{size:A5 landscape;margin:10mm 12mm 14mm 12mm}
+      /* 固定頁高度 = A5 版心（210mm - 上下margin 24mm）；橫式為 148mm - 24mm */
+      .page.fixed-page{height:186mm}
+      .page.fixed-page.landscape-page{height:124mm}
+      /* 頁尾圓形頁碼改由 @page 產生，隱藏內嵌版本避免重複 */
+      .print-hide-footer{display:none}
     }
     .page-num-auto::after{content:counter(pagenum);display:inline-block;background:#00695C;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;font-weight:700;text-align:center}
     .page{min-height:auto;position:relative;overflow:hidden;background:#fff}
@@ -1883,6 +1889,7 @@ async function printOrderBook(ver) {
        內容會自然溢滿的區塊（規程、隊職員名單）另外覆寫為 min-height:auto 讓其自由跨頁 */
     .page.fixed-page{height:186mm;box-sizing:border-box}
     .page.fixed-page.landscape-page{height:124mm}
+    .bk-footer{position:absolute;bottom:6mm;left:0;right:0;text-align:center}
     .cover{background:linear-gradient(160deg,#004d40 0%,#00695C 40%,#00897B 70%,#004d40 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 40px;min-height:90vh}
     .cover-year{font-size:28px;font-weight:300;letter-spacing:.3em;opacity:.8;margin-bottom:8px}
     .cover-title-zh{font-size:52px;font-weight:900;line-height:1.2;margin-bottom:8px;text-shadow:0 2px 12px rgba(0,0,0,.3)}
@@ -1967,11 +1974,11 @@ async function printOrderBook(ver) {
   // 目錄
   const tocHtml = `<div class="page toc-page fixed-page">
     <div class="toc-title">目　錄</div>
-    <div class="toc-item"><span class="toc-num">一、</span><span class="toc-name">競賽規程</span><span class="toc-dots"></span><span class="toc-pg">3</span></div>
-    <div class="toc-item"><span class="toc-num">二、</span><span class="toc-name">參賽隊職員名單</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
-    <div class="toc-item"><span class="toc-num">三、</span><span class="toc-name">賽程圖</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
-    <div class="toc-item"><span class="toc-num">四、</span><span class="toc-name">賽程時間表</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
-    <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
+    <div class="toc-item"><span class="toc-num">一、</span><span class="toc-name">競賽規程</span><span class="toc-dots"></span><span class="toc-pg" data-sec="rules">—</span></div>
+    <div class="toc-item"><span class="toc-num">二、</span><span class="toc-name">參賽隊職員名單</span><span class="toc-dots"></span><span class="toc-pg" data-sec="teams">—</span></div>
+    <div class="toc-item"><span class="toc-num">三、</span><span class="toc-name">賽程圖</span><span class="toc-dots"></span><span class="toc-pg" data-sec="bracket">—</span></div>
+    <div class="toc-item"><span class="toc-num">四、</span><span class="toc-name">複決賽對戰圖</span><span class="toc-dots"></span><span class="toc-pg" data-sec="bracket2">—</span></div>
+    <div class="toc-item"><span class="toc-num">五、</span><span class="toc-name">賽程時間表</span><span class="toc-dots"></span><span class="toc-pg" data-sec="sched">—</span></div>
   </div>`;
 
   // 競賽規程（完整）
@@ -2113,9 +2120,8 @@ async function printOrderBook(ver) {
     });
     ruleContent += '<div style="height:4px"></div></div>';
   });
-  const rulesHtml = `<div class="page rules-page" style="min-height:auto">
+  const rulesHtml = `<div class="page flow-page rules-page" data-pclass="rules-page" data-sec="rules" style="min-height:auto">
     <div class="section-title">競賽規程</div>${ruleContent}
-    <div style="height:40px"></div>
   </div>`;
 
   // 隊伍名單
@@ -2162,7 +2168,7 @@ async function printOrderBook(ver) {
   });
 
   // 全部隊伍放在一個不強制分頁的容器，讓 CSS 自動處理斷頁
-  const teamPages = [`<div class="page team-page" style="page-break-after:auto;min-height:auto;padding-bottom:40px">
+  const teamPages = [`<div class="page flow-page team-page" data-pclass="team-page" data-sec="teams" style="min-height:auto">
     ${isVerify?'<div class="verify-badge">🔒 核對版 — 含學號，請妥善保管</div>':''}
     <div class="section-title">隊職員名單</div>
     ${allTeamsHtml}
@@ -2201,27 +2207,27 @@ async function printOrderBook(ver) {
   BK.draws.forEach(d=>{drawSlotMap[d.slot]=d.teamname;});
   const gt={A:[1,2,3,4].map(n=>drawSlotMap[n]||`A組第${n}籤`),B:[5,6,7,8].map(n=>drawSlotMap[n]||`B組第${n-4}籤`),C:[9,10,11,12].map(n=>drawSlotMap[n]||`C組第${n-8}籤`),D:[13,14,15,16].map(n=>drawSlotMap[n]||`D組第${n-12}籤`)};
   // 賽程圖（強制另起新頁）
-  const bracketHtml = `<div class="page bracket-page fixed-page" style="page-break-before:always">
+  const bracketHtml = `<div class="page bracket-page fixed-page" data-sec="bracket" style="page-break-before:always">
     <div class="section-title">賽程圖</div>
     <div style="font-size:12px;color:#00695C;font-weight:600;margin-bottom:10px">⚾ 預賽：各組循環賽，取前二名晉級複決賽　｜　🏆 複決賽：單淘汰制</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
       ${bkGroupSVG(gt.A,'A')}${bkGroupSVG(gt.B,'B')}${bkGroupSVG(gt.C,'C')}${bkGroupSVG(gt.D,'D')}
     </div>
-    <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
+    
   </div>
-  <div class="page bracket-page landscape-page fixed-page" style="page-break-before:always">
+  <div class="page bracket-page landscape-page fixed-page" data-sec="bracket2" style="page-break-before:always">
     <div class="section-title">複決賽對戰圖</div>
     <div style="padding-top:12px">${bkElimSVG()}</div>
-    <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
+    
   </div>`;
 
   // 賽程時間表
   let schedHtml = '';
   if (!BK.matches.length) {
-    schedHtml = `<div class="page schedule-page fixed-page" style="page-break-before:always">
+    schedHtml = `<div class="page schedule-page fixed-page" data-sec="sched" style="page-break-before:always">
       <div class="section-title">賽程時間表</div>
       <div style="text-align:center;padding:60px;color:#888">賽程尚未公布，待抽籤完成後產生。</div>
-      <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
+      
     </div>`;
   } else {
     const byDate={};
@@ -2239,10 +2245,10 @@ async function printOrderBook(ver) {
         tbl+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:11px;color:#666">${bkEsc(ph)}</td><td style="font-weight:600">${bkEsc(tA)}</td><td class="vs-tag">VS</td><td style="font-weight:600">${bkEsc(tB)}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
       });
       tbl+='</tbody></table>';
-      return `<div class="page schedule-page fixed-page" style="page-break-before:always">
+      return `<div class="page schedule-page fixed-page" data-sec="sched" style="page-break-before:always">
         <div class="section-title">賽程時間表${dateKeys.length>1?`（${di+1}/${dateKeys.length}）`:''}</div>
         ${tbl}
-        <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
+        
       </div>`;
     });
     schedHtml = schedPages.join('');
@@ -2250,11 +2256,130 @@ async function printOrderBook(ver) {
 
   // ── 開啟列印視窗 ────────────────────────────
   const allPages = [coverHtml, tocHtml, rulesHtml, ...teamPages, bracketHtml, schedHtml].join('');
+
+  // 分頁與頁碼腳本：把會自然溢出的長區塊（規程、隊職員名單）切成實體固定頁，
+  // 每頁補上頁尾頁碼，並回填目錄頁碼。
+  const paginateScript = `
+    (function(){
+      var PAGE_H = 186 * 3.7795;   // 186mm -> px
+      var LAND_H = 124 * 3.7795;
+
+      function pageHeight(el){
+        return el.classList.contains('landscape-page') ? LAND_H : PAGE_H;
+      }
+
+      // 1) 把 min-height:auto 的長頁切成多張固定頁
+      function splitFlowPages(){
+        var flows = Array.prototype.slice.call(
+          document.querySelectorAll('.page.flow-page')
+        );
+        flows.forEach(function(flow){
+          var limit = pageHeight(flow) - 40;   // 預留頁尾空間
+          var header = flow.querySelector('.section-title');
+          var blocks = Array.prototype.slice.call(flow.children).filter(function(c){
+            return c !== header && !c.classList.contains('verify-badge');
+          });
+          var badge = flow.querySelector('.verify-badge');
+
+          var pages = [];
+          var cur = null, curH = 0;
+
+          function newPage(isFirst){
+            var p = document.createElement('div');
+            p.className = 'page fixed-page ' + flow.dataset.pclass;
+            if (isFirst && badge) p.appendChild(badge.cloneNode(true));
+            if (header) {
+              var h = header.cloneNode(true);
+              if (!isFirst) h.textContent = header.textContent + '（續）';
+              p.appendChild(h);
+            }
+            pages.push(p);
+            cur = p;
+            // 量測 header 佔用高度
+            curH = 0;
+            return p;
+          }
+
+          newPage(true);
+          document.body.appendChild(cur);
+          var headH = cur.getBoundingClientRect().height;
+          curH = headH;
+
+          blocks.forEach(function(b){
+            var clone = b.cloneNode(true);
+            cur.appendChild(clone);
+            var h = clone.getBoundingClientRect().height;
+            if (curH + h > limit && cur.children.length > 1) {
+              cur.removeChild(clone);
+              var prev = cur;
+              newPage(false);
+              document.body.appendChild(cur);
+              curH = cur.getBoundingClientRect().height;
+              cur.appendChild(clone);
+              curH += clone.getBoundingClientRect().height;
+            } else {
+              curH += h;
+            }
+          });
+
+          // 用切好的頁面取代原本的長頁
+          pages.forEach(function(p){
+            if (p.parentNode) p.parentNode.removeChild(p);
+            flow.parentNode.insertBefore(p, flow);
+          });
+          flow.parentNode.removeChild(flow);
+        });
+      }
+
+      // 2) 依實際順序編號，並補上頁尾頁碼
+      function stampFooters(){
+        var pages = document.querySelectorAll('.page');
+        var n = 0;
+        for (var i = 0; i < pages.length; i++) {
+          var p = pages[i];
+          if (p.classList.contains('no-count')) continue;
+          n++;
+          p.dataset.pageno = n;
+          // 移除舊的內嵌頁碼，統一重建
+          var old = p.querySelector('.bk-footer');
+          if (old) old.parentNode.removeChild(old);
+          var f = document.createElement('div');
+          f.className = 'bk-footer';
+          f.style.cssText = 'position:absolute;bottom:6mm;left:0;right:0;text-align:center';
+          f.innerHTML = '<span style="display:inline-block;background:#00695C;color:#fff;'
+            + 'border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;'
+            + 'font-weight:700;text-align:center">' + n + '</span>';
+          p.appendChild(f);
+        }
+      }
+
+      // 3) 回填目錄頁碼
+      function fillTOC(){
+        var map = {};
+        var pages = document.querySelectorAll('.page[data-sec]');
+        for (var i = 0; i < pages.length; i++) {
+          var k = pages[i].dataset.sec;
+          if (map[k] === undefined) map[k] = pages[i].dataset.pageno;
+        }
+        var slots = document.querySelectorAll('.toc-pg[data-sec]');
+        for (var j = 0; j < slots.length; j++) {
+          var key = slots[j].dataset.sec;
+          slots[j].textContent = map[key] || '—';
+        }
+      }
+
+      splitFlowPages();
+      stampFooters();
+      fillTOC();
+    })();
+  `;
+
   const w = window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
     <title>${bkEsc(title)} 秩序冊${isVerify?' (核對版)':''}</title>
     <style>${bookletCSS}</style></head><body>${allPages}
-    <script>window.onload=()=>setTimeout(()=>{alert('列印提示：請在列印設定中，將「頁首和頁尾」取消勾選，再按確認列印。');window.print();},500)<\/script>
+    <script>${paginateScript}<\/script>
+    <script>window.onload=()=>setTimeout(()=>{alert('列印提示：請在列印設定中，將「頁首和頁尾」取消勾選、邊界設為「預設」，再按確認列印。');window.print();},600)<\/script>
     </body></html>`);
   w.document.close();
 }
