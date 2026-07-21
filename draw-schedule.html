@@ -1091,17 +1091,21 @@ function shortTeamName(n){ return String(n||'').replace(/^(國立|私立|市立|
 // ── 隊徽：logos/隊名.png；無檔案時顯示色圓＋校名首字 ──
 function teamLogoHtml(name) {
   if (!name || /組第|勝隊|敗隊|籤$/.test(name)) return '';
-  // 優先採用「賽事設定」表手動指定的顏色（key: color:隊名，value: #RRGGBB）
-  const manual = settings && settings['color:' + name];
+  // 優先採用「賽事設定」表手動指定的顏色
+  // key: color:隊名        value: #RRGGBB（底色，必填才生效）
+  // key: color2:隊名       value: #RRGGBB（文字色，選填，同校第二代表色用來與同色系隊伍區隔）
+  const manual  = settings && settings['color:' + name];
+  const manual2 = settings && settings['color2:' + name];
   const palette = ['#00695C','#1a5fa8','#c4601a','#7b1fa2','#c0392b','#2e7d32','#5d4037','#455a64',
                     '#00838f','#6a1b9a','#ad1457','#558b2f','#e65100','#283593','#4e342e','#37474f'];
   let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 9973;
-  const color = manual || palette[h % palette.length];
+  const color  = manual || palette[h % palette.length];
+  const txtColor = manual2 || '#fff';
   // 取校名代表字：去掉「國立/私立/市立」後的第一個字
   const ch = name.replace(/^(國立|私立|市立|縣立)/, '').charAt(0) || '?';
   return '<img class="tlogo" src="logos/' + encodeURIComponent(name) + '.png" alt="" ' +
     'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'inline-flex\'">' +
-    '<span class="tlogo-fb" style="display:none;background:' + color + '">' + esc(ch) + '</span>';
+    '<span class="tlogo-fb" style="display:none;background:' + color + ';color:' + txtColor + '">' + esc(ch) + '</span>';
 }
 
 
