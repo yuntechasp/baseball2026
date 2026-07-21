@@ -494,6 +494,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
                   含封面、競賽規程、隊職員名單（無學號）、賽程圖、賽程時間表。
                 </div>
                 <button class="btn btn-primary" onclick="printOrderBook('public')" style="width:100%;justify-content:center">🖨 列印 / 另存 PDF</button>
+                <button class="btn" onclick="printOrderBook('public','word')" style="width:100%;justify-content:center;margin-top:8px;background:#2b579a;color:#fff;border-color:#2b579a">📝 匯出 Word（可自行調整）</button>
               </div>
             </div>
             <div class="card" style="margin:0">
@@ -504,6 +505,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzl_saJNrccY6hxzmBqrpKq
                   含學號、背號，供比賽現場核對球員資格使用，請妥善保管。
                 </div>
                 <button class="btn" onclick="printOrderBook('verify')" style="width:100%;justify-content:center;background:#a32d2d;color:#fff">🔒 列印核對版</button>
+                <button class="btn" onclick="printOrderBook('verify','word')" style="width:100%;justify-content:center;margin-top:8px;background:#2b579a;color:#fff;border-color:#2b579a">📝 匯出 Word（核對版）</button>
               </div>
             </div>
           </div>
@@ -1830,8 +1832,9 @@ function exportBracketExcel() {
   toast('賽程 Excel 已下載','ok');
 }
 
-async function printOrderBook(ver) {
+async function printOrderBook(ver, mode) {
   ver = ver || 'public';
+  mode = mode || 'print';   // 'print' | 'word'
   const teams = DB.teams.filter(t => t.status === 'approved');
   if (!teams.length) { toast('尚無核准隊伍'); return; }
 
@@ -1940,7 +1943,11 @@ async function printOrderBook(ver) {
     .sched-date-header{background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:5px;margin:12px 0 6px}
     .sched-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;table-layout:fixed}
     .sched-table th{background:#004d40;color:#fff;padding:5px 4px;font-size:10.5px;text-align:center}
-    .sched-table td{padding:6px 4px;border-bottom:1px solid #ededea;text-align:center;white-space:normal;word-break:break-word;line-height:1.4;vertical-align:middle}
+    .sched-table td{padding:6px 3px;border-bottom:1px solid #ededea;text-align:center;white-space:normal;word-break:break-all;line-height:1.35;vertical-align:middle}
+    /* 隊名欄：長校名平均折成兩行，不留單字孤行 */
+    .sched-table .tm-col{width:auto}
+    .sched-table td.tm{font-size:10.5px;letter-spacing:-.01em}
+    .sched-table td.tm .tm-l{display:block;line-height:1.3}
     .sched-table tr:nth-child(even) td{background:#f7f6f3}
     .vs-tag{color:#888;font-size:11px;font-weight:700;margin:0 8px}
     .page-footer{position:absolute;bottom:24px;left:0;right:0;text-align:center;font-size:11px;color:#aaa}
@@ -1949,6 +1956,14 @@ async function printOrderBook(ver) {
 
   // ── 產生各頁 HTML ────────────────────────
   function bkEsc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  // 長校名平均折行：8 字 -> 4+4，7 字 -> 4+3，避免最後一行只剩一個字
+  function splitName(name){
+    if(!name) return '';
+    const t=String(name).trim();
+    if(t.length<=6) return bkEsc(t);   // 6 字以內單行即可容納
+    const cut=Math.ceil(t.length/2);
+    return '<span class="tm-l">'+bkEsc(t.slice(0,cut))+'</span><span class="tm-l">'+bkEsc(t.slice(cut))+'</span>';
+  }
   function zhNum(n){return ['一','二','三','四','五','六','七','八','九','十'][n-1]||n;}
 
   const s = BK.settings;
@@ -2251,13 +2266,13 @@ async function printOrderBook(ver) {
     const dateKeys = Object.keys(byDate).sort();
     const schedBlocks = dateKeys.map((date) => {
       const day=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-      let tbl=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:44px">場次</th><th style="width:62px">組別</th><th>隊伍 A</th><th style="width:22px"></th><th>隊伍 B</th><th style="width:48px">時間</th><th style="width:56px">比分</th><th style="width:80px">勝隊</th></tr></thead><tbody>`;
+      let tbl=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:34px">場次</th><th style="width:46px">組別</th><th class="tm-col">隊伍 A</th><th style="width:18px"></th><th class="tm-col">隊伍 B</th><th style="width:40px">時間</th><th style="width:38px">比分</th><th style="width:52px">勝隊</th></tr></thead><tbody>`;
       day.forEach(m=>{
         const tA=resolve(m.teamA),tB=resolve(m.teamB),ph=(m.phase||'').replace('分組賽 ','預賽 ');
         const hs=m.scoreA!==undefined&&m.scoreA!=='';
         const scoreCell=hs?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.scoreA)} : ${bkEsc(m.scoreB)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
         const winnerCell=m.winner?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.winner)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
-        tbl+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:10px;color:#666">${bkEsc(ph)}</td><td style="font-weight:600">${bkEsc(tA)}</td><td class="vs-tag">VS</td><td style="font-weight:600">${bkEsc(tB)}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
+        tbl+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:10px;color:#666">${bkEsc(ph)}</td><td class="tm" style="font-weight:600">${splitName(tA)}</td><td class="vs-tag">VS</td><td class="tm" style="font-weight:600">${splitName(tB)}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
       });
       tbl+='</tbody></table>';
       return `<div class="sched-day">${tbl}</div>`;
@@ -2289,7 +2304,7 @@ async function printOrderBook(ver) {
           document.querySelectorAll('.page.flow-page')
         );
         flows.forEach(function(flow){
-          var limit = pageHeight(flow) - 34;   // 預留頁尾空間
+          var limit = pageHeight(flow) - 58;   // 預留頁尾頁碼空間（含留白）
           var header = flow.querySelector('.section-title');
           var badge = flow.querySelector('.verify-badge');
           var blocks = Array.prototype.slice.call(flow.children).filter(function(c){
@@ -2468,6 +2483,122 @@ async function printOrderBook(ver) {
       fillTOC();
     })();
   `;
+
+  // ── Word 匯出模式 ──────────────────────────
+  if (mode === 'word') {
+    // Word 版：移除固定頁高與絕對定位頁碼（Word 不支援），改用分頁符號，
+    // 讓你可以在 Word 裡自由調整版面。
+    const wordCSS = `
+      body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;color:#1c1c1a;font-size:11pt}
+      .page{page-break-after:always}
+      .page:last-child{page-break-after:auto}
+      .section-title{font-size:16pt;font-weight:700;color:#fff;background:#00695C;padding:8px 14px;margin-bottom:12px}
+      .rule-main{font-size:12pt;font-weight:700;color:#00695C;margin:10px 0 4px}
+      .rule-sec{margin-bottom:8px}
+      .team-header{background:#E0F5F2;border:1px solid #9FD9CE;padding:8px 14px}
+      .team-name{font-size:12pt;font-weight:700;color:#00695C}
+      .team-staff-row{background:#E0F5F2;padding:6px 12px;font-size:10pt;color:#00695C}
+      .team-staff-item{margin-right:16px}
+      .team-staff-item .lbl{font-weight:700}
+      table{border-collapse:collapse;width:100%}
+      .roster{margin-bottom:14px}
+      .roster td{border:1px solid #ddd;padding:4px 6px;font-size:10pt}
+      .roster .n{color:#00695C;font-weight:700;width:26px;text-align:center}
+      .sched-date-header{background:#00695C;color:#fff;font-size:12pt;font-weight:700;padding:6px 12px;margin:12px 0 6px}
+      .sched-table th{background:#004d40;color:#fff;padding:6px;font-size:10pt;border:1px solid #004d40}
+      .sched-table td{padding:6px;border:1px solid #ddd;font-size:10pt;text-align:center}
+      .cover-w{text-align:center;padding:80px 20px}
+      .cover-w h1{font-size:26pt;color:#00695C;margin-bottom:10px}
+      .cover-w p{font-size:12pt;color:#555;margin:4px 0}
+    `;
+
+    // 隊職員名單改用真表格（Word 對 CSS Grid 支援不佳）
+    let wTeams = '';
+    sortedTeams.forEach(team => {
+      const mems = BK.members[team.teamId] || [];
+      const staff = mems.filter(m => staffRoles.includes(m.role) && m.name && m.name.trim());
+      const allP  = mems.filter(m => !staffRoles.includes(m.role));
+      const byNum = (a,b)=>{
+        const na=parseInt(a.number,10), nb=parseInt(b.number,10);
+        const va=isNaN(na)?Infinity:na, vb=isNaN(nb)?Infinity:nb;
+        if(va!==vb) return va-vb;
+        return (a.name||'').localeCompare(b.name||'','zh-TW');
+      };
+      const cap = allP.find(m=>m.role==='隊長');
+      const others = allP.filter(m=>m.role!=='隊長').sort(byNum);
+      const ordered = cap ? [cap,...others] : others;
+      const COLS = isVerify ? 3 : 4;
+      let rows = '';
+      for (let i = 0; i < ordered.length; i += COLS) {
+        rows += '<tr>';
+        for (let j = 0; j < COLS; j++) {
+          const p = ordered[i+j];
+          if (!p) { rows += '<td class="n"></td><td></td>' + (isVerify?'<td></td>':''); continue; }
+          const nt = (p.number===0 || (p.number!==null && p.number!==undefined && String(p.number).trim()!=='')) ? String(p.number).trim() : '—';
+          rows += `<td class="n">${bkEsc(nt)}</td><td>${bkEsc(p.name)}${p.role==='隊長'?' (隊長)':''}</td>`
+               + (isVerify?`<td>${bkEsc(p.studentId||'')}</td>`:'');
+        }
+        rows += '</tr>';
+      }
+      const staffTxt = staff.map(x=>`<span class="team-staff-item"><span class="lbl">${bkEsc(x.role)}</span> ${bkEsc(x.name)}</span>`).join('');
+      wTeams += `<div class="team-header"><span class="team-name">校名　${bkEsc(team.teamname)}</span></div>
+        ${staff.length?`<div class="team-staff-row">${staffTxt}</div>`:''}
+        <table class="roster"><tbody>${rows}</tbody></table>`;
+    });
+
+    // 賽程時間表（Word 版用一般表格）
+    let wSched = '';
+    if (BK.matches.length) {
+      const byDateW = {};
+      BK.matches.forEach(m=>{const d=m.date||'日期未定';(byDateW[d]=byDateW[d]||[]).push(m);});
+      Object.keys(byDateW).sort().forEach(date=>{
+        const day = byDateW[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+        let rows='';
+        day.forEach(m=>{
+          const ph=(m.phase||'').replace('分組賽 ','預賽 ');
+          const sc=(m.scoreA!==undefined&&m.scoreA!=='')?`${bkEsc(m.scoreA)} : ${bkEsc(m.scoreB)}`:'—';
+          rows+=`<tr><td>${bkEsc(m.matchNum)}</td><td>${bkEsc(ph)}</td><td>${bkEsc(m.teamA)}</td><td>VS</td><td>${bkEsc(m.teamB)}</td><td>${bkEsc(fmtTime(m.time))}</td><td>${sc}</td><td>${bkEsc(m.winner||'—')}</td></tr>`;
+        });
+        wSched += `<div class="sched-date-header">${bkEsc(fmtDate(date))}</div>
+          <table class="sched-table"><thead><tr><th>場次</th><th>組別</th><th>隊伍 A</th><th></th><th>隊伍 B</th><th>時間</th><th>比分</th><th>勝隊</th></tr></thead><tbody>${rows}</tbody></table>`;
+      });
+    } else {
+      wSched = '<p>賽程尚未公布，待抽籤完成後產生。</p>';
+    }
+
+    const wordBody = `
+      <div class="page cover-w">
+        <h1>${bkEsc(title)}</h1>
+        <p>${s.gamedate||''}${s.gameend?' ～ '+s.gameend:''}</p>
+        <p>${bkEsc(s.venue||'雲林科技大學棒球場')}</p>
+        <p>主辦：雲林科技大學體育室</p>
+        <p>秩序冊${isVerify?'（核對版，內含學號請妥善保管）':''}</p>
+      </div>
+      <div class="page"><div class="section-title">競賽規程</div>${ruleContent}</div>
+      <div class="page"><div class="section-title">隊職員名單</div>${wTeams}</div>
+      <div class="page"><div class="section-title">賽程時間表</div>${wSched}</div>
+    `;
+
+    const docHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+      + 'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+      + '<head><meta charset="utf-8"><title>' + bkEsc(title) + '</title>'
+      + '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View>'
+      + '<w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->'
+      + '<style>@page{size:A5;margin:1.5cm}' + wordCSS + '</style></head><body>'
+      + wordBody + '</body></html>';
+
+    const blob = new Blob(['\ufeff' + docHtml], { type:'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title}_秩序冊${isVerify?'_核對版':''}_${today()}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    toast('✅ Word 檔已下載，可自行調整版面', 'ok');
+    return;
+  }
 
   const w = window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
