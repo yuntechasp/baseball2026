@@ -1109,7 +1109,7 @@ async function printTeamForm(teamId) {
   const players = members.filter(m => isPlayer(m));
 
   const staffRows = staff.map((m,i) =>
-    `<tr><td>${i+1}</td><td>${m.role}</td><td>${m.name}</td><td>${m.number||''}</td></tr>`
+    `<tr><td>${i+1}</td><td>${m.role}</td><td>${m.name}</td><td>${numOrBlank(m.number)}</td></tr>`
   ).join('') || '<tr><td colspan="4" style="text-align:center;color:#aaa">未填寫</td></tr>';
 
   let pNum = 0;
@@ -1120,7 +1120,7 @@ async function printTeamForm(teamId) {
       <td>${isCap ? '—' : pNum}</td>
       <td>${isCap ? '★ 隊長' : '運動員'}</td>
       <td>${m.name}</td>
-      <td>${m.number||''}</td>
+      <td>${numOrBlank(m.number)}</td>
       <td>${m.studentId||''}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;color:#aaa">未填寫</td></tr>';
@@ -2149,7 +2149,8 @@ async function printOrderBook(ver) {
     const cells = ordered.map(p=>{
       const isCap=p.role==='隊長';
       const sid=isVerify?`<span class="sid">${bkEsc(p.studentId||'')}</span>`:'';
-      return `<div class="players-col-cell${isCap?' cap':''}"><span class="num">${bkEsc(p.number||'—')}</span><span class="nm">${bkEsc(p.name)}${isCap?' ©':''}</span>${sid}</div>`;
+      const numTxt = (p.number === 0 || (p.number !== null && p.number !== undefined && String(p.number).trim() !== '')) ? String(p.number).trim() : '—';
+      return `<div class="players-col-cell${isCap?' cap':''}"><span class="num">${bkEsc(numTxt)}</span><span class="nm">${bkEsc(p.name)}${isCap?' ©':''}</span>${sid}</div>`;
     }).join('');
 
     allTeamsHtml += `<div style="margin-bottom:16px;page-break-inside:avoid">
@@ -2297,6 +2298,12 @@ function fmtTime(t) {
     if (!isNaN(d)) return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   }
   return s;
+}
+function numOrBlank(n) {
+  // 背號 0 是有效背號，不能被 falsy 判斷吃掉
+  if (n === null || n === undefined) return '';
+  const s = String(n).trim();
+  return s === '' ? '' : s;
 }
 function esc(s) {
   if (s===undefined||s===null) return '';
