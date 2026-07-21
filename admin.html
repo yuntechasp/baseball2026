@@ -1868,29 +1868,27 @@ async function printOrderBook(ver) {
     .page{counter-increment:pagenum}
     .page.no-count{counter-increment:none}
     @media print{
-      /* 下方留 14mm 給頁尾頁碼 */
-      @page{size:A5;margin:9mm 8mm 13mm 8mm;marks:none}
-      body{margin:0;font-size:9.5pt}
-      .page{page-break-after:always;margin:0;box-shadow:none}
+      @page{size:A5;margin:9mm 8mm 9mm 8mm;marks:none}
+      body{margin:0}
+      .page{page-break-after:always;margin:0;box-shadow:none;width:129mm}
+      .page.landscape-page{width:194mm}
       .page:last-child{page-break-after:avoid}
-      .page[style*="page-break-after:auto"]{page-break-after:auto}
       *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .landscape-page{page:landscapePage}
-      @page landscapePage{size:A5 landscape;margin:9mm 8mm 13mm 8mm}
-      /* 固定頁高度 = A5 版心（210mm - 上下margin 24mm）；橫式為 148mm - 24mm */
-      .page.fixed-page{height:188mm}
-      .page.fixed-page.landscape-page{height:126mm}
-      /* 頁尾圓形頁碼改由 @page 產生，隱藏內嵌版本避免重複 */
-      .print-hide-footer{display:none}
+      @page landscapePage{size:A5 landscape;margin:9mm 8mm 9mm 8mm}
+      /* 版心高度 = 210mm - 上下邊界 18mm = 192mm；橫式 148 - 18 = 130mm */
+      .page.fixed-page{height:192mm}
+      .page.fixed-page.landscape-page{height:130mm}
     }
     .page-num-auto::after{content:counter(pagenum);display:inline-block;background:#00695C;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;font-weight:700;text-align:center}
-    .page{min-height:auto;position:relative;overflow:visible;background:#fff}
-    /* 單頁固定尺寸（等同 A5 版心大小），讓頁碼能正確落在真正的頁尾；
-       內容會自然溢滿的區塊（規程、隊職員名單）另外覆寫為 min-height:auto 讓其自由跨頁 */
-    .page.fixed-page{height:188mm;box-sizing:border-box}
-    .page.fixed-page.landscape-page{height:126mm}
-    .bk-footer{position:absolute;bottom:-9mm;left:0;right:0;text-align:center}
-    .cover{background:linear-gradient(160deg,#004d40 0%,#00695C 40%,#00897B 70%,#004d40 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 40px;min-height:90vh}
+    /* 螢幕上就以 A5 版心尺寸排版，讓量測結果與實際列印一致 */
+    .page{min-height:auto;position:relative;overflow:visible;background:#fff;
+      width:129mm;margin:0 auto 8mm;box-sizing:border-box}
+    .page.landscape-page{width:194mm}
+    .page.fixed-page{height:192mm}
+    .page.fixed-page.landscape-page{height:130mm}
+    .bk-footer{position:absolute;bottom:4mm;left:0;right:0;text-align:center}
+    .cover{background:linear-gradient(160deg,#004d40 0%,#00695C 40%,#00897B 70%,#004d40 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:40px 30px;height:100%}
     .cover-year{font-size:28px;font-weight:300;letter-spacing:.3em;opacity:.8;margin-bottom:8px}
     .cover-title-zh{font-size:52px;font-weight:900;line-height:1.2;margin-bottom:8px;text-shadow:0 2px 12px rgba(0,0,0,.3)}
     .cover-title-en{font-size:18px;font-weight:400;letter-spacing:.15em;opacity:.7;margin-bottom:48px}
@@ -1921,10 +1919,10 @@ async function printOrderBook(ver) {
     .team-staff-row{background:#E0F5F2;padding:8px 14px;font-size:12.5px;color:#00695C;display:flex;flex-wrap:wrap;border-bottom:2px solid #9FD9CE}
     .team-staff-item{display:flex;gap:4px;margin-right:20px}
     .team-staff-item .lbl{color:#00876f;font-weight:700}
-    .players-cols{display:grid;grid-template-columns:repeat(5,1fr);gap:0 4px;margin-top:4px}
+    .players-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:0 6px;margin-top:4px}
     .verify-cols{grid-template-columns:repeat(3,1fr);gap:0 10px}
-    .players-col-cell{display:flex;align-items:center;padding:3px 1px;border-bottom:1px solid #f0f0f0;font-size:12.5px;white-space:nowrap;overflow:hidden}
-    .players-col-cell .num{width:22px;text-align:center;font-weight:700;color:#00695C;flex-shrink:0;border-right:1px solid #e0e0e0;margin-right:4px}
+    .players-col-cell{display:flex;align-items:center;padding:3.5px 2px;border-bottom:1px solid #f0f0f0;font-size:13px;white-space:nowrap;overflow:hidden}
+    .players-col-cell .num{width:24px;text-align:center;font-weight:700;color:#00695C;flex-shrink:0;border-right:1px solid #e0e0e0;margin-right:5px}
     .players-col-cell.cap .num{color:#F47920}
     .players-col-cell.cap .nm{color:#F47920;font-weight:700}
     .players-col-cell .nm{flex:1;white-space:nowrap;letter-spacing:-.02em}
@@ -1939,10 +1937,10 @@ async function printOrderBook(ver) {
     .cert-img-box span{font-size:11px;font-weight:700;color:#1c1c1a}
     .bracket-page{padding:16px 0}
     .schedule-page{padding:16px 0}
-    .sched-date-header{background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:5px;margin:10px 0 5px}
-    .sched-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px;table-layout:fixed}
-    .sched-table th{background:#004d40;color:#fff;padding:4px 4px;font-size:10px;text-align:center}
-    .sched-table td{padding:3px 3px;border-bottom:1px solid #ededea;text-align:center;white-space:normal;word-break:break-word;line-height:1.25;vertical-align:middle}
+    .sched-date-header{background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:5px;margin:12px 0 6px}
+    .sched-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;table-layout:fixed}
+    .sched-table th{background:#004d40;color:#fff;padding:5px 4px;font-size:10.5px;text-align:center}
+    .sched-table td{padding:6px 4px;border-bottom:1px solid #ededea;text-align:center;white-space:normal;word-break:break-word;line-height:1.4;vertical-align:middle}
     .sched-table tr:nth-child(even) td{background:#f7f6f3}
     .vs-tag{color:#888;font-size:11px;font-weight:700;margin:0 8px}
     .page-footer{position:absolute;bottom:24px;left:0;right:0;text-align:center;font-size:11px;color:#aaa}
@@ -2278,8 +2276,8 @@ async function printOrderBook(ver) {
   // 每頁補上頁尾頁碼，並回填目錄頁碼。
   const paginateScript = `
     (function(){
-      var PAGE_H = 188 * 3.7795;   // 188mm -> px
-      var LAND_H = 126 * 3.7795;
+      var PAGE_H = 192 * 3.7795;   // 192mm 版心 -> px
+      var LAND_H = 130 * 3.7795;
 
       function pageHeight(el){
         return el.classList.contains('landscape-page') ? LAND_H : PAGE_H;
@@ -2335,7 +2333,8 @@ async function printOrderBook(ver) {
           newPage(true);
 
           // 若單一區塊本身就超過一頁（例如某天場次特別多），拆成可分割的小單位
-          function explode(el){
+          function explode(el, cap){
+            cap = cap || limit;
             // 競賽規程小節：逐行拆，標題跟著第一行走
             if (el.classList && el.classList.contains('rule-sec')) {
               var kids = Array.prototype.slice.call(el.children);
@@ -2351,7 +2350,7 @@ async function printOrderBook(ver) {
               startGrp(true);
               kids.forEach(function(line){
                 var lh = measure(line);
-                if (grpH + lh > limit - 10 && grp.children.length > (out2.length === 1 ? 1 : 0)) {
+                if (grpH + lh > cap - 10 && grp.children.length > (out2.length === 1 ? 1 : 0)) {
                   startGrp(false);
                 }
                 grp.appendChild(line.cloneNode(true));
@@ -2385,7 +2384,7 @@ async function printOrderBook(ver) {
             startPart(true);
             rows.forEach(function(r){
               var rh = measure(r) || 18;
-              if (partH + rh > limit - 10 && pbody.children.length > 0) {
+              if (partH + rh > cap - 10 && pbody.children.length > 0) {
                 startPart(false);
               }
               pbody.appendChild(r.cloneNode(true));
@@ -2395,9 +2394,10 @@ async function printOrderBook(ver) {
           }
 
           var units = [];
+          var headRoom = (header ? measure(header) : 0) + (badge ? measure(badge) : 0);
           blocks.forEach(function(b){
-            if (measure(b) > limit) {
-              units = units.concat(explode(b));
+            if (measure(b) > limit - headRoom) {
+              units = units.concat(explode(b, limit - headRoom));
             } else {
               units.push(b);
             }
@@ -2405,7 +2405,9 @@ async function printOrderBook(ver) {
 
           units.forEach(function(b){
             var h = measure(b);
-            if (curH + h > limit && cur.children.length > 0) {
+            // 空頁保護：目前頁若尚無內容，即使超高也先放進去，避免產生空白頁
+            var hasContent = cur.children.length > (cur.querySelector('.section-title') ? 1 : 0);
+            if (curH + h > limit && hasContent) {
               newPage(false);
             }
             cur.appendChild(b.cloneNode(true));
@@ -2429,6 +2431,8 @@ async function printOrderBook(ver) {
         var n = 0;
         for (var i = 0; i < pages.length; i++) {
           var p = pages[i];
+          // 確保每一頁都撐滿版心高度，頁碼才會落在紙張底部
+          if (!p.classList.contains('fixed-page')) p.classList.add('fixed-page');
           if (p.classList.contains('no-count')) continue;
           n++;
           p.dataset.pageno = n;
@@ -2437,7 +2441,6 @@ async function printOrderBook(ver) {
           if (old) old.parentNode.removeChild(old);
           var f = document.createElement('div');
           f.className = 'bk-footer';
-          f.style.cssText = 'position:absolute;bottom:-9mm;left:0;right:0;text-align:center';
           f.innerHTML = '<span style="display:inline-block;background:#00695C;color:#fff;'
             + 'border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;'
             + 'font-weight:700;text-align:center">' + n + '</span>';
