@@ -1210,14 +1210,21 @@ async function renderPlayers() {
   let html = '';
   for (const t of teams) {
     const rawMembers = await loadMembers(t.teamId);
-    // 排序：隊職員在前，運動員在後
+    // 排序：隊職員在前，隊長次之，其餘運動員依背號由小到大
     const roleOrder = ['領隊','總教練','教練','管理','訓練員','運動防護員','隊長','運動員'];
     const members = [...rawMembers].sort((a, b) => {
       const ai = roleOrder.indexOf(a.role);
       const bi = roleOrder.indexOf(b.role);
       const av = ai === -1 ? 99 : ai;
       const bv = bi === -1 ? 99 : bi;
-      return av - bv;
+      if (av !== bv) return av - bv;
+      // 同為運動員時，依背號排序（非數字背號排最後）
+      const na = parseInt(a.number, 10);
+      const nb = parseInt(b.number, 10);
+      const va = isNaN(na) ? Infinity : na;
+      const vb = isNaN(nb) ? Infinity : nb;
+      if (va !== vb) return va - vb;
+      return (a.name || '').localeCompare(b.name || '', 'zh-TW');
     });
     const rows = members.map((m) => {
       const isCap = m.role === '隊長';
@@ -1872,6 +1879,10 @@ async function printOrderBook(ver) {
     }
     .page-num-auto::after{content:counter(pagenum);display:inline-block;background:#00695C;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;font-weight:700;text-align:center}
     .page{min-height:auto;position:relative;overflow:hidden;background:#fff}
+    /* 單頁固定尺寸（等同 A5 版心大小），讓頁碼能正確落在真正的頁尾；
+       內容會自然溢滿的區塊（規程、隊職員名單）另外覆寫為 min-height:auto 讓其自由跨頁 */
+    .page.fixed-page{height:186mm;box-sizing:border-box}
+    .page.fixed-page.landscape-page{height:124mm}
     .cover{background:linear-gradient(160deg,#004d40 0%,#00695C 40%,#00897B 70%,#004d40 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 40px;min-height:90vh}
     .cover-year{font-size:28px;font-weight:300;letter-spacing:.3em;opacity:.8;margin-bottom:8px}
     .cover-title-zh{font-size:52px;font-weight:900;line-height:1.2;margin-bottom:8px;text-shadow:0 2px 12px rgba(0,0,0,.3)}
@@ -1939,7 +1950,7 @@ async function printOrderBook(ver) {
   const isVerify = ver === 'verify';
 
   // 封面
-  const coverHtml = `<div class="page cover no-count">
+  const coverHtml = `<div class="page cover no-count fixed-page">
     <div class="cover-baseball">⚾</div>
     <div class="cover-year">2026</div>
     <div class="cover-title-zh">${bkEsc(title)}</div>
@@ -1954,7 +1965,7 @@ async function printOrderBook(ver) {
   </div>`;
 
   // 目錄
-  const tocHtml = `<div class="page toc-page">
+  const tocHtml = `<div class="page toc-page fixed-page">
     <div class="toc-title">目　錄</div>
     <div class="toc-item"><span class="toc-num">一、</span><span class="toc-name">競賽規程</span><span class="toc-dots"></span><span class="toc-pg">3</span></div>
     <div class="toc-item"><span class="toc-num">二、</span><span class="toc-name">參賽隊職員名單</span><span class="toc-dots"></span><span class="toc-pg">—</span></div>
@@ -2118,9 +2129,18 @@ async function printOrderBook(ver) {
     const mems = BK.members[team.teamId] || [];
     const staff = mems.filter(m => staffRoles.includes(m.role) && m.name && m.name.trim());
     const allP  = mems.filter(m => !staffRoles.includes(m.role));
+    // 依背號由小到大排序（非數字背號如「—」排最後，背號相同再依姓名）
+    const byNumber = (a, b) => {
+      const na = parseInt(a.number, 10);
+      const nb = parseInt(b.number, 10);
+      const va = isNaN(na) ? Infinity : na;
+      const vb = isNaN(nb) ? Infinity : nb;
+      if (va !== vb) return va - vb;
+      return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+    };
     const cap   = allP.find(m => m.role==='隊長');
-    const athl  = allP.filter(m => m.role!=='隊長');
-    const ordered = cap ? [cap,...athl] : athl;
+    const athl  = allP.filter(m => m.role!=='隊長').sort(byNumber);
+    const ordered = cap ? [cap,...athl] : athl;   // 隊長固定第一位
     const slot = slotMap[team.teamId];
     const cols = isVerify ? 3 : 5;
     const colClass = isVerify ? 'players-cols verify-cols' : 'players-cols';
@@ -2180,40 +2200,52 @@ async function printOrderBook(ver) {
   BK.draws.forEach(d=>{drawSlotMap[d.slot]=d.teamname;});
   const gt={A:[1,2,3,4].map(n=>drawSlotMap[n]||`A組第${n}籤`),B:[5,6,7,8].map(n=>drawSlotMap[n]||`B組第${n-4}籤`),C:[9,10,11,12].map(n=>drawSlotMap[n]||`C組第${n-8}籤`),D:[13,14,15,16].map(n=>drawSlotMap[n]||`D組第${n-12}籤`)};
   // 賽程圖（強制另起新頁）
-  const bracketHtml = `<div class="page bracket-page" style="page-break-before:always">
+  const bracketHtml = `<div class="page bracket-page fixed-page" style="page-break-before:always">
     <div class="section-title">賽程圖</div>
-    <div style="font-size:12px;color:#00695C;font-weight:600;margin-bottom:10px">⚾ 預賽：各組循環賽，取前二名晉級複賽　｜　🏆 複賽：單淘汰制</div>
+    <div style="font-size:12px;color:#00695C;font-weight:600;margin-bottom:10px">⚾ 預賽：各組循環賽，取前二名晉級複決賽　｜　🏆 複決賽：單淘汰制</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
       ${bkGroupSVG(gt.A,'A')}${bkGroupSVG(gt.B,'B')}${bkGroupSVG(gt.C,'C')}${bkGroupSVG(gt.D,'D')}
     </div>
+    <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
   </div>
-  <div class="page bracket-page landscape-page" style="page-break-before:always">
-    <div class="section-title">複賽對戰圖</div>
+  <div class="page bracket-page landscape-page fixed-page" style="page-break-before:always">
+    <div class="section-title">複決賽對戰圖</div>
     <div style="padding-top:12px">${bkElimSVG()}</div>
+    <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
   </div>`;
 
   // 賽程時間表
-  let schedHtml = '<div class="page schedule-page"><div class="section-title">賽程時間表</div>';
+  let schedHtml = '';
   if (!BK.matches.length) {
-    schedHtml += '<div style="text-align:center;padding:60px;color:#888">賽程尚未公布，待抽籤完成後產生。</div>';
+    schedHtml = `<div class="page schedule-page fixed-page" style="page-break-before:always">
+      <div class="section-title">賽程時間表</div>
+      <div style="text-align:center;padding:60px;color:#888">賽程尚未公布，待抽籤完成後產生。</div>
+      <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
+    </div>`;
   } else {
     const byDate={};
     BK.matches.forEach(m=>{const d=m.date||'日期未定';if(!byDate[d])byDate[d]=[];byDate[d].push(m);});
     const resolve=name=>{if(!name)return name;const mt=String(name).match(/([A-D])組第(\d+)籤/);if(!mt)return name;const labels=['A','B','C','D'];let ss=1;for(let g=0;g<4;g++){if(labels[g]===mt[1]){return drawSlotMap[ss+parseInt(mt[2])-1]||name;}ss+=4;}return name;};
-    Object.keys(byDate).sort().forEach(date=>{
+    const dateKeys = Object.keys(byDate).sort();
+    const schedPages = dateKeys.map((date, di) => {
       const day=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-      schedHtml+=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:50px">場次</th><th style="width:70px">組別</th><th>隊伍 A</th><th style="width:26px"></th><th>隊伍 B</th><th style="width:55px">時間</th><th style="width:65px">比分</th><th style="width:90px">勝隊</th></tr></thead><tbody>`;
+      let tbl=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:50px">場次</th><th style="width:70px">組別</th><th>隊伍 A</th><th style="width:26px"></th><th>隊伍 B</th><th style="width:55px">時間</th><th style="width:65px">比分</th><th style="width:90px">勝隊</th></tr></thead><tbody>`;
       day.forEach(m=>{
         const tA=resolve(m.teamA),tB=resolve(m.teamB),ph=(m.phase||'').replace('分組賽 ','預賽 ');
         const hs=m.scoreA!==undefined&&m.scoreA!=='';
         const scoreCell=hs?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.scoreA)} : ${bkEsc(m.scoreB)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
         const winnerCell=m.winner?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.winner)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
-        schedHtml+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:11px;color:#666">${bkEsc(ph)}</td><td style="font-weight:600">${bkEsc(tA)}</td><td class="vs-tag">VS</td><td style="font-weight:600">${bkEsc(tB)}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
+        tbl+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:11px;color:#666">${bkEsc(ph)}</td><td style="font-weight:600">${bkEsc(tA)}</td><td class="vs-tag">VS</td><td style="font-weight:600">${bkEsc(tB)}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
       });
-      schedHtml+='</tbody></table>';
+      tbl+='</tbody></table>';
+      return `<div class="page schedule-page fixed-page" style="page-break-before:always">
+        <div class="section-title">賽程時間表${dateKeys.length>1?`（${di+1}/${dateKeys.length}）`:''}</div>
+        ${tbl}
+        <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div>
+      </div>`;
     });
+    schedHtml = schedPages.join('');
   }
-  schedHtml += '<div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11px;color:#aaa"><span class="page-num-auto"></span></div></div>';
 
   // ── 開啟列印視窗 ────────────────────────────
   const allPages = [coverHtml, tocHtml, rulesHtml, ...teamPages, bracketHtml, schedHtml].join('');
