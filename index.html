@@ -1315,8 +1315,10 @@ function teamLogoHtml(name) {
   let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 9973;
   const color  = manual || palette[h % palette.length];
   const txtColor = manual2 || '#fff';
-  // 取校名代表字：去掉「國立/私立/市立」後的第一個字
-  const ch = name.replace(/^(國立|私立|市立|縣立)/, '').charAt(0) || '?';
+  // 取校名代表字：優先用「賽事設定」表指定的字（key: char:隊名，value: 單一字），
+  // 否則預設去掉「國立/私立/市立」後的第一個字
+  const manualChar = settings && settings['char:' + name];
+  const ch = manualChar || name.replace(/^(國立|私立|市立|縣立)/, '').charAt(0) || '?';
   return '<img class="tlogo" src="logos/' + encodeURIComponent(name) + '.png" alt="" ' +
     'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'inline-flex\'">' +
     '<span class="tlogo-fb" style="display:none;background:' + color + ';color:' + txtColor + '">' + esc(ch) + '</span>';
