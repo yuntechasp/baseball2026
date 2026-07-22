@@ -863,12 +863,20 @@ const PAGE_TITLES = {
 // ═══════════════════════════════════════════
 // API
 // ═══════════════════════════════════════════
+// 管理員密碼（登入後保存於記憶體與 sessionStorage），
+// 每次呼叫後端都自動附帶，讓後端能驗證身分。
+let ADMIN_PW = sessionStorage.getItem('admin_pw') || '';
+
 async function api(params) {
-  const r = await fetch(API_URL + '?' + new URLSearchParams(params));
+  const p = { ...params };
+  if (ADMIN_PW && p.password === undefined) p.password = ADMIN_PW;
+  const r = await fetch(API_URL + '?' + new URLSearchParams(p));
   return r.json();
 }
 async function apiPost(body) {
-  const url = API_URL + '?payload=' + encodeURIComponent(JSON.stringify(body));
+  const b = { ...body };
+  if (ADMIN_PW && b.password === undefined) b.password = ADMIN_PW;
+  const url = API_URL + '?payload=' + encodeURIComponent(JSON.stringify(b));
   const r = await fetch(url);
   return r.json();
 }
@@ -923,12 +931,19 @@ async function doLogin() {
   try {
     const res = await apiPost({ action:'adminLogin', password:pw });
     if (res.ok) {
+      ADMIN_PW = pw;
+      sessionStorage.setItem('admin_pw', pw);
       sessionStorage.setItem('admin_auth', '1');
       showAdmin();
     } else { showLoginErr(); }
   } catch(e) {
-    // offline demo
-    if (pw === 'admin1234') { sessionStorage.setItem('admin_auth','1'); showAdmin(); }
+    // 離線示範模式（無法連線後端時）
+    if (pw === 'admin1234') {
+      ADMIN_PW = pw;
+      sessionStorage.setItem('admin_pw', pw);
+      sessionStorage.setItem('admin_auth','1');
+      showAdmin();
+    }
     else showLoginErr();
   }
 }
@@ -938,6 +953,8 @@ function showLoginErr() {
   document.getElementById('pw-input').focus();
 }
 function doLogout() {
+  ADMIN_PW = '';
+  sessionStorage.removeItem('admin_pw');
   sessionStorage.removeItem('admin_auth');
   location.reload();
 }
@@ -1111,7 +1128,7 @@ async function printTeamForm(teamId) {
   const players = members.filter(m => isPlayer(m));
 
   const staffRows = staff.map((m,i) =>
-    `<tr><td>${i+1}</td><td>${m.role}</td><td>${m.name}</td><td>${numOrBlank(m.number)}</td></tr>`
+    `<tr><td>${i+1}</td><td>${esc(m.role)}</td><td>${esc(m.name)}</td><td>${esc(numOrBlank(m.number))}</td></tr>`
   ).join('') || '<tr><td colspan="4" style="text-align:center;color:#aaa">未填寫</td></tr>';
 
   let pNum = 0;
@@ -1121,15 +1138,15 @@ async function printTeamForm(teamId) {
     return `<tr${isCap?' style="background:#fffbf0"':''}>
       <td>${isCap ? '—' : pNum}</td>
       <td>${isCap ? '★ 隊長' : '運動員'}</td>
-      <td>${m.name}</td>
-      <td>${numOrBlank(m.number)}</td>
-      <td>${m.studentId||''}</td>
+      <td>${esc(m.name)}</td>
+      <td>${esc(numOrBlank(m.number))}</td>
+      <td>${esc(m.studentId||'')}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;color:#aaa">未填寫</td></tr>';
 
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
-  <title>${t.teamname} 報名表</title>
+  <title>${esc(t.teamname)} 報名表</title>
   <style>
     body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;padding:24px;color:#333;max-width:900px;margin:0 auto}
     h1{font-size:20px;text-align:center;color:#0d3b6e;margin-bottom:4px}
@@ -1143,19 +1160,19 @@ async function printTeamForm(teamId) {
     .section-title{font-size:14px;font-weight:700;color:#0d3b6e;border-left:4px solid #1a5fa8;padding-left:8px;margin:16px 0 8px}
     @media print{@page{margin:1.5cm}button{display:none}}
   </style></head><body>
-  <h1>${s.title||'比賽報名系統'}</h1>
+  <h1>${esc(s.title||'比賽報名系統')}</h1>
   <h2>報名表</h2>
   <div class="info-grid">
-    <div class="info-item"><div class="info-label">學校/隊伍名稱</div><strong>${t.teamname}</strong></div>
+    <div class="info-item"><div class="info-label">學校/隊伍名稱</div><strong>${esc(t.teamname)}</strong></div>
     <div class="info-item"><div class="info-label">運動種類</div>棒球</div>
-    <div class="info-item"><div class="info-label">報名組別</div>${t.group||'大專男生組'}</div>
-    <div class="info-item"><div class="info-label">領隊</div>${t.manager||''}</div>
-    <div class="info-item"><div class="info-label">領隊電話</div>${t.managerTel||''}</div>
-    <div class="info-item"><div class="info-label">教練</div>${t.coach||''}</div>
-    <div class="info-item"><div class="info-label">教練電話</div>${t.coachTel||''}</div>
-    <div class="info-item"><div class="info-label">聯絡信箱</div>${t.email||''}</div>
-    <div class="info-item"><div class="info-label">比賽日期</div>${(s.gamedate||'')+(s.gameend?' ~ '+s.gameend:'')}</div>
-    <div class="info-item"><div class="info-label">比賽場地</div>${s.venue||''}</div>
+    <div class="info-item"><div class="info-label">報名組別</div>${esc(t.group||'大專男生組')}</div>
+    <div class="info-item"><div class="info-label">領隊</div>${esc(t.manager||'')}</div>
+    <div class="info-item"><div class="info-label">領隊電話</div>${esc(t.managerTel||'')}</div>
+    <div class="info-item"><div class="info-label">教練</div>${esc(t.coach||'')}</div>
+    <div class="info-item"><div class="info-label">教練電話</div>${esc(t.coachTel||'')}</div>
+    <div class="info-item"><div class="info-label">聯絡信箱</div>${esc(t.email||'')}</div>
+    <div class="info-item"><div class="info-label">比賽日期</div>${esc((s.gamedate||'')+(s.gameend?' ~ '+s.gameend:''))}</div>
+    <div class="info-item"><div class="info-label">比賽場地</div>${esc(s.venue||'')}</div>
   </div>
   <div class="section-title">職員名單</div>
   <table>
@@ -3258,8 +3275,8 @@ async function deletePayment(payId) {
   renderPayments(); updatePaymentBadge();
 }
 
-// Auto-login if session exists
-if (sessionStorage.getItem('admin_auth')==='1') showAdmin();
+// Auto-login if session exists（且有保存密碼才自動進入）
+if (sessionStorage.getItem('admin_auth')==='1' && ADMIN_PW) showAdmin();
 </script>
 </body>
 </html>
