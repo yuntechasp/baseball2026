@@ -618,7 +618,7 @@ async function api(params) {
 }
 
 // ── 快取 Key ──────────────────────────────────
-const CACHE_KEY = 'baseball2026_cache_v4'; // 版本號更新時自動清除舊快取
+const CACHE_KEY = 'baseball2026_cache_v5'; // 版本號更新時自動清除舊快取
 
 function loadFromCache() {
   try {
@@ -679,7 +679,7 @@ function applyData(res) {
 
   // 背景靜默更新（失敗不影響頁面）
   try {
-    const res = await api({ action:'getAllData' });
+    const res = await api({ action:'getPublicData' });
     if (res && res.ok) {
       saveToCache(res);
       applyData(res);
