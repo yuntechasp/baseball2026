@@ -655,7 +655,7 @@ function applyData(res) {
   document.getElementById('loading-main').style.display = 'none';
   document.getElementById('main-content').style.display = 'block';
 
-  // 先顯示骨架畫面（載入中），確保使用者一定看到最新資料
+  // 先顯示骨架畫面（載入中）
   document.getElementById('news-list').innerHTML =
     [1,2,3].map(() => `<div class="news-item">
       <div class="news-item-header">
@@ -671,17 +671,37 @@ function applyData(res) {
      <div class="skel skel-line med" style="margin-bottom:8px"></div>
      <div class="skel skel-line full"></div><div class="skel skel-line full"></div></div>`;
 
-  // 先向後端取得最新資料；若失敗（斷網／逾時）才退回快取
-  try {
-    const res = await api({ action:'getPublicData' });
-    if (res && res.ok) {
-      saveToCache(res);
-      applyData(res);
-    } else {
-      throw new Error('bad response');
-    }
-  } catch(e) {
-    console.warn('API 取得失敗，改用快取', e);
+  // ── 分區塊載入：兩個請求同時發出，哪個先回就先畫哪一區 ──
+  let fullLoaded = false;   // 完整資料是否已套用（避免較慢的設定回應覆蓋它）
+
+  // (A) 賽事設定：資料量小、回得快 → 讓標題／日期／場地最快出現
+  const settingsReq = api({ action:'getSettings' })
+    .then(r => {
+      if (!fullLoaded && r && r.ok && r.data) {
+        settings = r.data;
+        applySettings();      // 橫幅標題、報名截止、比賽日期先顯示
+      }
+    })
+    .catch(() => {});
+
+  // (B) 完整公開資料：最新消息、報名統計、競賽規程（較慢，到了再補上）
+  const publicReq = api({ action:'getPublicData' })
+    .then(r => {
+      if (r && r.ok) {
+        fullLoaded = true;
+        saveToCache(r);
+        applyData(r);         // 覆蓋並補齊其餘區塊
+        return true;
+      }
+      return false;
+    })
+    .catch(() => false);
+
+  // 兩者都跑完後，若完整資料失敗才退回快取，避免頁面空著
+  await settingsReq;
+  const ok = await publicReq;
+  if (!ok) {
+    console.warn('API 取得失敗，改用快取');
     const cached = loadFromCache();
     if (cached) applyData(cached);
   }
