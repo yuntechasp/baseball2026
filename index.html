@@ -655,37 +655,35 @@ function applyData(res) {
   document.getElementById('loading-main').style.display = 'none';
   document.getElementById('main-content').style.display = 'block';
 
-  // 有快取先顯示舊資料
-  const cached = loadFromCache();
-  if (cached) {
-    applyData(cached);
-  } else {
-    // 顯示骨架畫面
-    document.getElementById('news-list').innerHTML =
-      [1,2,3].map(() => `<div class="news-item">
-        <div class="news-item-header">
-          <div class="skel" style="width:36px;height:22px;border-radius:20px;flex-shrink:0"></div>
-          <div style="flex:1">
-            <div class="skel skel-line med"></div>
-            <div class="skel skel-line short" style="height:11px;margin-top:4px"></div>
-          </div>
+  // 先顯示骨架畫面（載入中），確保使用者一定看到最新資料
+  document.getElementById('news-list').innerHTML =
+    [1,2,3].map(() => `<div class="news-item">
+      <div class="news-item-header">
+        <div class="skel" style="width:36px;height:22px;border-radius:20px;flex-shrink:0"></div>
+        <div style="flex:1">
+          <div class="skel skel-line med"></div>
+          <div class="skel skel-line short" style="height:11px;margin-top:4px"></div>
         </div>
-      </div>`).join('');
-    document.getElementById('rules-grid').innerHTML =
-      `<div class="rule-card"><div class="skel" style="width:40px;height:40px;border-radius:8px;margin-bottom:10px"></div>
-       <div class="skel skel-line med" style="margin-bottom:8px"></div>
-       <div class="skel skel-line full"></div><div class="skel skel-line full"></div></div>`;
-  }
+      </div>
+    </div>`).join('');
+  document.getElementById('rules-grid').innerHTML =
+    `<div class="rule-card"><div class="skel" style="width:40px;height:40px;border-radius:8px;margin-bottom:10px"></div>
+     <div class="skel skel-line med" style="margin-bottom:8px"></div>
+     <div class="skel skel-line full"></div><div class="skel skel-line full"></div></div>`;
 
-  // 背景靜默更新（失敗不影響頁面）
+  // 先向後端取得最新資料；若失敗（斷網／逾時）才退回快取
   try {
     const res = await api({ action:'getPublicData' });
     if (res && res.ok) {
       saveToCache(res);
       applyData(res);
+    } else {
+      throw new Error('bad response');
     }
   } catch(e) {
-    console.warn('API timeout, using cache');
+    console.warn('API 取得失敗，改用快取', e);
+    const cached = loadFromCache();
+    if (cached) applyData(cached);
   }
 })();
 
