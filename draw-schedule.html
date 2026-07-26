@@ -1484,16 +1484,21 @@ function buildSVG(group,matches){
 
   // 建立隊名/籤號 → 位置索引
   function nameToIdx(name) {
-    if (!name) return -1;
-    const s = String(name);
+    if (name === undefined || name === null || name === '') return -1;
+    const s = String(name).trim();
     // 直接找隊名
     let idx = slots.findIndex(sl => sl.teamname === s);
     if (idx >= 0) return idx;
+    // 純數字 → 當作全局籤號
+    if (/^\d+$/.test(s)) {
+      idx = slots.findIndex(sl => String(sl.slot) === s);
+      if (idx >= 0) return idx;
+    }
     // 「第N籤」→ 找對應的全局籤號
-    const m1 = s.match(/^第(\d+)籤$/);
+    const m1 = s.match(/第\s*(\d+)\s*籤/);
     if (m1) {
       idx = slots.findIndex(sl => String(sl.slot) === m1[1]);
-      return idx;
+      if (idx >= 0) return idx;
     }
     return -1;
   }
@@ -1514,13 +1519,20 @@ function buildSVG(group,matches){
   };
 
   const usedCenters = [];
+  // n===4：完全確定式佈局。先算出每場對應的角落 key，再依 key 指派固定位置。
+  // 兩條對角線 (0-2, 1-3) 一律置中、上下錯開，永不碰撞、永不偏移，確保每組都是一致的大 X。
+  const diagQueue = ['0-2', '1-3']; // 中央上、中央下
   const matchLabels = matches.map(match => {
     const ai = nameToIdx(match.teamA);
     const bi = nameToIdx(match.teamB);
     let mx, my;
-    if (n === 4 && ai >= 0 && bi >= 0 && fixedCenters4[slotPairKey(ai, bi)]) {
-      // 使用固定佈局位置（不會跑位）
-      const c = fixedCenters4[slotPairKey(ai, bi)];
+    if (n === 4 && ai >= 0 && bi >= 0) {
+      let key = slotPairKey(ai, bi);
+      // 對角線一律導向置中槽位（依出現順序：先上、後下），避免重疊到 cx,cy
+      if (key === '0-2' || key === '1-3') {
+        key = diagQueue.length ? diagQueue.shift() : key;
+      }
+      const c = fixedCenters4[key] || {x: cx, y: cy};
       mx = c.x; my = c.y;
     } else {
       // 其他隊數（3、5隊等）沿用中點 + 簡易防重疊
