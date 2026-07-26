@@ -1492,20 +1492,40 @@ function buildSVG(group,matches){
     return -1;
   }
 
-  // 依照 Excel 場次順序，計算每場對應的中點位置
+  // 依「對戰的兩隊角落」決定場次框位置，採固定佈局避免重疊。
+  // 四隊循環賽有六場：四邊各一、兩條對角線兩場（中央上下錯開）。
+  function slotPairKey(ai, bi) {
+    return [ai, bi].sort((x, y) => x - y).join('-');
+  }
+  // 針對 n===4 的固定位置表：索引 0=左上,1=右上,2=右下,3=左下
+  const fixedCenters4 = {
+    '0-1': {x: cx,            y: pad},              // 上邊
+    '1-2': {x: size - pad,    y: cy},              // 右邊
+    '2-3': {x: cx,            y: size - pad},      // 下邊
+    '0-3': {x: pad,           y: cy},              // 左邊
+    '0-2': {x: cx,            y: cy - 32},         // 對角線（中央偏上）
+    '1-3': {x: cx,            y: cy + 32},         // 對角線（中央偏下）
+  };
+
   const usedCenters = [];
   const matchLabels = matches.map(match => {
     const ai = nameToIdx(match.teamA);
     const bi = nameToIdx(match.teamB);
-    const pi = (ai >= 0) ? positions[ai] : {x:cx, y:cy};
-    const pj = (bi >= 0) ? positions[bi] : {x:cx, y:cy};
-    let mx = Math.round((pi.x+pj.x)/2);
-    let my = Math.round((pi.y+pj.y)/2);
-    // 若與已有框重疊，第一個往上，第二個往下各50px
-    const overlapIdx = usedCenters.findIndex(c => Math.abs(c.x-mx)<30 && Math.abs(c.y-my)<30);
-    if (overlapIdx >= 0) {
-      usedCenters[overlapIdx].y -= 55;
-      my += 55;
+    let mx, my;
+    if (n === 4 && ai >= 0 && bi >= 0 && fixedCenters4[slotPairKey(ai, bi)]) {
+      // 使用固定佈局位置（不會跑位）
+      const c = fixedCenters4[slotPairKey(ai, bi)];
+      mx = c.x; my = c.y;
+    } else {
+      // 其他隊數（3、5隊等）沿用中點 + 簡易防重疊
+      const pi = (ai >= 0) ? positions[ai] : {x:cx, y:cy};
+      const pj = (bi >= 0) ? positions[bi] : {x:cx, y:cy};
+      mx = Math.round((pi.x+pj.x)/2);
+      my = Math.round((pi.y+pj.y)/2);
+      let guard = 0;
+      while (usedCenters.some(c => Math.abs(c.x-mx)<30 && Math.abs(c.y-my)<30) && guard < 6) {
+        my += 50; guard++;
+      }
     }
     usedCenters.push({x:mx, y:my});
     return {mx, my, match};
