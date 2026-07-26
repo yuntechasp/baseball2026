@@ -433,7 +433,7 @@ async function api(params) {
 (async () => {
   try {
     const [allRes, drawRes, matchRes] = await Promise.all([
-      api({ action:'getAllData' }),
+      api({ action:'getPublicData' }),
       api({ action:'getDrawData' }),
       api({ action:'getMatches' }),
     ]);
@@ -493,6 +493,12 @@ function applySettings() {
   const title = s.title || '比賽報名系統';
   document.getElementById('nav-title').textContent    = title;
   document.getElementById('footer-title').textContent = title;
+  // 頁面中央大標題改為活動名稱（與首頁一致），副標保留頁面用途
+  const pageTitleEl = document.getElementById('page-title');
+  if (pageTitleEl) pageTitleEl.textContent = title;
+  const pageSubEl = document.getElementById('page-sub');
+  if (pageSubEl) pageSubEl.textContent = '線上抽籤 & 賽程資訊';
+  document.title = title;
 
   // 報名截止後隱藏「立即報名」按鈕
   let isOpen = s.open !== 'false';
