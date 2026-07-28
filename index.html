@@ -156,8 +156,8 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .strip-btn.left{left:-8px}
 .strip-btn.right{right:-8px}
 /* ── 比數卡 ── */
-.score-strip{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 14px;-webkit-overflow-scrolling:touch}
-.score-card{flex:0 0 calc(25% - 8px);min-width:236px;background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow-sm);box-sizing:border-box}
+.score-strip{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 14px;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.score-card{flex:0 0 calc((100% - 30px)/4);min-width:210px;scroll-snap-align:start;background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow-sm);box-sizing:border-box}
 .score-card-status{font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--gray-400);margin-bottom:9px;display:flex;justify-content:space-between;gap:8px}
 .score-card-status .final{color:var(--yt-teal-dark)}
 .score-card-status .live{color:#c0392b;animation:livePulse 1.6s ease-in-out infinite}
@@ -1518,7 +1518,15 @@ function renderHomeScoreCards() {
   const live    = matchData.filter(isLiveOf);
   const finals  = matchData.filter(isFinalOf);
   const pending = matchData.filter(m => !hasScoreOf(m));
-  const cards = live.concat(finals.slice(-6).reverse()).concat(pending.slice(0, 4));
+  const started = live.length > 0 || finals.length > 0;
+  let cards;
+  if (started) {
+    // 已開賽：進行中 + 最近終場 + 待賽，最多 8 場（涵蓋約兩天），一排水平捲動
+    cards = live.concat(finals.slice(-8).reverse()).concat(pending).slice(0, 8);
+  } else {
+    // 尚未開賽：顯示最前面 4 場待賽
+    cards = pending.slice(0, 4);
+  }
   if (!cards.length) { sec.style.display = 'none'; return; }
   let html = '<div class="score-strip">';
   cards.forEach(m => {
@@ -1535,8 +1543,9 @@ function renderHomeScoreCards() {
   });
   box.innerHTML = '<div class="strip-wrap" id="home-strip-wrap">' +
     '<button class="strip-btn left" aria-label="向左捲動">‹</button>' +
-    html + '</div>' +
-    '<button class="strip-btn right" aria-label="向右捲動">›</button></div>';
+    html +
+    '<button class="strip-btn right" aria-label="向右捲動">›</button>' +
+    '</div>';
   sec.style.display = '';
   initStripArrows('home-strip-wrap');
 }
