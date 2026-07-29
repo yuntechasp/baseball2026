@@ -1320,7 +1320,21 @@ function renderGroupTable(group, groupMatches) {
 // ════════════════════════════════
 // 卡片顯示用簡稱（去除國立/私立前綴；彈窗與其他處仍用全名）
 function shortTeamName(n){ return String(n||'').replace(/^(國立|私立|市立|縣立)/,''); }
-// ── 隊徽：logos/隊名.png；無檔案時顯示色圓＋校名首字 ──
+// ── 校徽檔名別名：全名 → 四字短名（圖檔可用任一種命名，兩種都會嘗試） ──
+var LOGO_ALIAS = {
+  '國立中正大學':'中正大學',
+  '國立中興大學':'中興大學',
+  '國立成功大學':'成功大學',
+  '國立雲林科技大學':'雲林科大',
+  '國立暨南國際大學':'暨南大學',
+  '國立臺中科技大學':'臺中科大',
+  '國立臺灣師範大學':'臺灣師大',
+  '國立臺灣體育運動大學':'臺灣體大',
+  '國立聯合大學':'聯合大學',
+  '國立體育大學':'國立體大',
+  '朝陽科技大學':'朝陽科大',
+};
+// ── 隊徽：先找 logos/全名.png，找不到再找 logos/四字短名.png，都無則色圓＋校名首字 ──
 function teamLogoHtml(name) {
   if (!name || /組第|勝隊|敗隊|籤$/.test(name)) return '';
   // 優先採用「賽事設定」表手動指定的顏色
@@ -1337,8 +1351,13 @@ function teamLogoHtml(name) {
   // 否則預設去掉「國立/私立/市立」後的第一個字
   const manualChar = settings && settings['char:' + name];
   const ch = manualChar || name.replace(/^(國立|私立|市立|縣立)/, '').charAt(0) || '?';
-  return '<img class="tlogo" src="logos/' + encodeURIComponent(name) + '.png" alt="" ' +
-    'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'inline-flex\'">' +
+  const primary = 'logos/' + encodeURIComponent(name) + '.png';
+  const alias   = LOGO_ALIAS[name] ? 'logos/' + encodeURIComponent(LOGO_ALIAS[name]) + '.png' : '';
+  // onerror：第一次失敗→改試四字短名圖；第二次失敗→隱藏圖、顯示色圓字
+  const onerr = alias
+    ? "if(!this.dataset.alt){this.dataset.alt=1;this.src='" + alias + "';}else{this.style.display='none';this.nextElementSibling.style.display='inline-flex';}"
+    : "this.style.display='none';this.nextElementSibling.style.display='inline-flex';";
+  return '<img class="tlogo" src="' + primary + '" alt="" onerror="' + onerr + '">' +
     '<span class="tlogo-fb" style="display:none;background:' + color + ';color:' + txtColor + '">' + esc(ch) + '</span>';
 }
 
