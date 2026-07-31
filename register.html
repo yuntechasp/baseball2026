@@ -605,6 +605,10 @@ function buildMemberRows() {
 }
 
 function v(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+function esc(s) {
+  if (s===undefined||s===null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 async function submitReg() {
   const errors = [];
@@ -672,7 +676,7 @@ async function submitReg() {
       // 預填隊名到繳費頁
       document.getElementById('p-teamname').value = v('f-teamname');
       document.getElementById('reg-success-msg').innerHTML =
-        `「${v('f-teamname')}」報名資料已送出！<br>請記得至「繳費回報」頁面填寫匯款資訊。`;
+        `「${esc(v('f-teamname'))}」報名資料已送出！<br>請記得至「繳費回報」頁面填寫匯款資訊。`;
     } else {
       al.className = 'alert alert-err show';
       al.textContent = res.error || '送出失敗，請稍後再試';
@@ -690,24 +694,24 @@ function printRegForm() {
   const s = settings;
   // 優先使用暫存的報名資料（送出後表單已隱藏）
   const d = window._submittedData || {};
-  const teamname = d.teamname || document.getElementById('f-teamname').value.trim();
-  const coach    = d.coach    || document.getElementById('f-coach').value.trim();
-  const coachTel = d.coachTel || document.getElementById('f-coach-tel').value.trim();
-  const email    = d.email    || document.getElementById('f-email').value.trim();
+  const teamname = esc(d.teamname || document.getElementById('f-teamname').value.trim());
+  const coach    = esc(d.coach    || document.getElementById('f-coach').value.trim());
+  const coachTel = esc(d.coachTel || document.getElementById('f-coach-tel').value.trim());
+  const email    = esc(d.email    || document.getElementById('f-email').value.trim());
   const manager  = d.manager  || document.getElementById('f-manager') ? document.getElementById('f-manager').value.trim() : '';
 
-  // 職員
+  // 職員（列印用的表格內容一律先 esc() 過，避免報名資料被拿去做列印頁的注入）
   let staffRows = '';
   if (d.staff && d.staff.length) {
     d.staff.forEach((st, i) => {
-      staffRows += '<tr><td>'+(i+1)+'</td><td>'+st.title+'</td><td>'+st.name+'</td><td>'+st.tel+'</td></tr>';
+      staffRows += '<tr><td>'+(i+1)+'</td><td>'+esc(st.title)+'</td><td>'+esc(st.name)+'</td><td>'+esc(st.tel)+'</td></tr>';
     });
   } else {
     for (let i = 0; i < 8; i++) {
       const title = document.getElementById('s'+i+'-title') ? document.getElementById('s'+i+'-title').value : '';
       const name  = document.getElementById('s'+i+'-name') ? document.getElementById('s'+i+'-name').value.trim() : '';
       const tel   = document.getElementById('s'+i+'-tel')  ? document.getElementById('s'+i+'-tel').value.trim()  : '';
-      if (name) staffRows += '<tr><td>'+(i+1)+'</td><td>'+title+'</td><td>'+name+'</td><td>'+tel+'</td></tr>';
+      if (name) staffRows += '<tr><td>'+(i+1)+'</td><td>'+esc(title)+'</td><td>'+esc(name)+'</td><td>'+esc(tel)+'</td></tr>';
     }
   }
 
@@ -716,17 +720,17 @@ function printRegForm() {
   const capName = cap.name || (document.getElementById('m0-name') ? document.getElementById('m0-name').value.trim() : '');
   const capNum  = cap.num  || (document.getElementById('m0-num')  ? document.getElementById('m0-num').value.trim()  : '');
   const capSid  = cap.sid  || (document.getElementById('m0-sid')  ? document.getElementById('m0-sid').value.trim()  : '');
-  let memberRows = '<tr style="background:#fffbf0"><td>—</td><td>★ 隊長</td><td>'+capName+'</td><td>'+capNum+'</td><td>'+capSid+'</td></tr>';
+  let memberRows = '<tr style="background:#fffbf0"><td>—</td><td>★ 隊長</td><td>'+esc(capName)+'</td><td>'+esc(capNum)+'</td><td>'+esc(capSid)+'</td></tr>';
   if (d.members && d.members.length) {
     d.members.forEach((m, i) => {
-      memberRows += '<tr><td>'+(i+1)+'</td><td>運動員</td><td>'+m.n+'</td><td>'+m.num+'</td><td>'+m.sid+'</td></tr>';
+      memberRows += '<tr><td>'+(i+1)+'</td><td>運動員</td><td>'+esc(m.n)+'</td><td>'+esc(m.num)+'</td><td>'+esc(m.sid)+'</td></tr>';
     });
   } else {
     for (let i = 1; i <= 24; i++) {
       const n   = document.getElementById('m'+i+'-name') ? document.getElementById('m'+i+'-name').value.trim() : '';
       const num = document.getElementById('m'+i+'-num')  ? document.getElementById('m'+i+'-num').value.trim()  : '';
       const sid = document.getElementById('m'+i+'-sid')  ? document.getElementById('m'+i+'-sid').value.trim()  : '';
-      if (n) memberRows += '<tr><td>'+i+'</td><td>運動員</td><td>'+n+'</td><td>'+num+'</td><td>'+sid+'</td></tr>';
+      if (n) memberRows += '<tr><td>'+i+'</td><td>運動員</td><td>'+esc(n)+'</td><td>'+esc(num)+'</td><td>'+esc(sid)+'</td></tr>';
     }
   }
 
@@ -748,7 +752,7 @@ function printRegForm() {
     .sign-box{border-top:1px solid #333;padding-top:8px;text-align:center;font-size:13px;color:#555}
     @media print{@page{margin:1.5cm}button{display:none}}
   </style></head><body>
-  <h1>${s.title || '比賽報名系統'}</h1>
+  <h1>${esc(s.title) || '比賽報名系統'}</h1>
   <h2>報名表</h2>
   <div class="info-grid">
     <div class="info-item"><div class="info-label">學校/隊伍名稱</div><strong>${teamname}</strong></div>
@@ -757,8 +761,8 @@ function printRegForm() {
     <div class="info-item"><div class="info-label">教練</div>${coach}</div>
     <div class="info-item"><div class="info-label">教練電話</div>${coachTel}</div>
     <div class="info-item"><div class="info-label">聯絡信箱</div>${email}</div>
-    <div class="info-item"><div class="info-label">比賽日期</div>${(s.gamedate||'')+(s.gameend?' ~ '+s.gameend:'')}</div>
-    <div class="info-item"><div class="info-label">比賽場地</div>${s.venue||''}</div>
+    <div class="info-item"><div class="info-label">比賽日期</div>${esc((s.gamedate||'')+(s.gameend?' ~ '+s.gameend:''))}</div>
+    <div class="info-item"><div class="info-label">比賽場地</div>${esc(s.venue||'')}</div>
   </div>
   <div class="section-title">職員名單</div>
   <table>
@@ -773,7 +777,7 @@ function printRegForm() {
   <div style="margin-top:40px;display:flex;gap:30px;align-items:flex-end">
     <div style="flex:1">
       <p style="font-size:12px;color:#666;margin-bottom:6px">※ 本報名表所填資料均屬實，如有不實，願負一切法律責任。</p>
-      <p style="font-size:12px;color:#666">※ 報名截止日：${s.deadline || ''}</p>
+      <p style="font-size:12px;color:#666">※ 報名截止日：${esc(s.deadline || '')}</p>
     </div>
     <div style="text-align:center;flex-shrink:0">
       <div style="width:180px;height:100px;border:1px solid #333;border-radius:4px;margin-bottom:8px;display:flex;align-items:center;justify-content:center">
@@ -825,7 +829,7 @@ async function submitPay() {
     document.getElementById('pay-form').style.display = 'none';
     document.getElementById('pay-success').style.display = 'block';
     document.getElementById('pay-success-msg').innerHTML =
-      `「${teamname}」的匯款資訊已收到。<br>主辦單位確認後若有問題將與您聯繫。`;
+      `「${esc(teamname)}」的匯款資訊已收到。<br>主辦單位確認後若有問題將與您聯繫。`;
     toast('繳費資訊已送出', 'ok');
   } catch(e) {
     al.className = 'alert alert-err show';
