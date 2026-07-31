@@ -676,7 +676,7 @@ async function verifyAndDraw() {
   try {
     const res = await api({ action:'verifyTeam', payload:encodeURIComponent(JSON.stringify({teamname,captainSid:sid})) });
     if (res.ok) {
-      verifiedTeam = { teamId:res.teamId, teamname:res.teamname };
+      verifiedTeam = { teamId:res.teamId, teamname:res.teamname, captainSid:sid };
       renderDraw();
     } else if (res.alreadyDrawn) {
       verifiedTeam = { teamId:'', teamname };
@@ -707,7 +707,7 @@ async function startDraw() {
   let apiResult = null;
 
   // 同步呼叫後端（在動畫期間取得結果）
-  api({ action: 'saveDraw', payload: encodeURIComponent(JSON.stringify({ action: 'saveDraw', teamId: verifiedTeam.teamId, teamname: verifiedTeam.teamname })) })
+  api({ action: 'saveDraw', payload: encodeURIComponent(JSON.stringify({ action: 'saveDraw', teamId: verifiedTeam.teamId, teamname: verifiedTeam.teamname, captainSid: verifiedTeam.captainSid })) })
     .then(res => { apiResult = res; })
     .catch(() => { apiResult = { ok: false, error: '網路錯誤' }; });
 
@@ -1739,7 +1739,7 @@ function drawElimSVG(groupTeams, advance) {
 }
 
 // ── Utils ──
-function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function fmtDate(d){if(!d)return '';const s=String(d);if(s.includes('T')||s.includes('-')){const dt=new Date(s);if(!isNaN(dt))return(dt.getMonth()+1)+'/'+dt.getDate();}return s;}
 function fmtTime(t){if(!t)return '';const s=String(t);if(s.includes('GMT')||s.includes('1899')||s.includes('T')){const d=new Date(s);if(!isNaN(d))return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}return s;}
 // ── 每 5 分鐘自動刷新比分 ──

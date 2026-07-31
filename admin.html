@@ -1516,10 +1516,11 @@ async function submitNews() {
         p.append('chunk', chunk);
         p.append('index', i);
         p.append('total', total);
+        p.append('password', ADMIN_PW);
         const r = await fetch(API_URL + '?' + p.toString()).then(r => r.json());
         if (!r.ok) throw new Error('第 ' + (i+1) + ' 段失敗：' + (r.error||''));
       }
-      const fp = new URLSearchParams({ action:'finalizeUpload', uploadId });
+      const fp = new URLSearchParams({ action:'finalizeUpload', uploadId, password: ADMIN_PW });
       const fr = await fetch(API_URL + '?' + fp.toString()).then(r => r.json());
       if (fr.ok && fr.imageKey) {
         imageUrl = fr.imageKey;
@@ -1601,6 +1602,9 @@ async function saveSettings() {
   if (newPw && newPw !== confPw) {
     al.className='alert alert-err show'; al.textContent='兩次密碼輸入不一致'; return;
   }
+  if (newPw && newPw.length < 8) {
+    al.className='alert alert-err show'; al.textContent='新密碼長度至少需要 8 碼'; return;
+  }
   al.className = 'alert';
   const s = {};
   ['title','subtitle','venue','deadline','deadlinetime','gamedate','gameend','drawdate','drawtime','drawendtime','maxTeams','open','regFee','regFeeNote','bankName','bankAccount'].forEach(k => {
@@ -1608,8 +1612,29 @@ async function saveSettings() {
     if (el) s[k] = el.value;
   });
   DB.settings = { ...DB.settings, ...s };
-  try { await apiPost({ action:'updateSettings', settings:s }); } catch(e){}
-  al.className='alert alert-ok show'; al.textContent='✅ 設定已儲存';
+  try {
+    await apiPost({ action:'updateSettings', settings:s });
+    // 密碼變更走獨立的 action，成功後才更新本機保存的密碼，
+    // 避免「畫面顯示已儲存」但實際密碼沒有真的被換掉。
+    if (newPw) {
+      const pwRes = await apiPost({ action:'changeAdminPassword', newPassword:newPw });
+      if (!pwRes.ok) {
+        al.className='alert alert-err show';
+        al.textContent = '⚠️ 其他設定已儲存，但密碼修改失敗：' + (pwRes.error||'未知錯誤');
+        toast('密碼修改失敗', 'warn');
+        return;
+      }
+      ADMIN_PW = newPw;
+      sessionStorage.setItem('admin_pw', newPw);
+      document.getElementById('cfg-newpw').value = '';
+      document.getElementById('cfg-confirmpw').value = '';
+    }
+  } catch(e) {
+    al.className='alert alert-err show'; al.textContent='⚠️ 儲存失敗，請檢查網路連線後再試一次';
+    toast('儲存失敗', 'warn');
+    return;
+  }
+  al.className='alert alert-ok show'; al.textContent = newPw ? '✅ 設定與密碼皆已更新' : '✅ 設定已儲存';
   setTimeout(()=>al.className='alert',3000);
   toast('設定已儲存', 'ok');
 }
@@ -1888,14 +1913,14 @@ async function printOrderBook(ver, mode) {
     .page{counter-increment:pagenum}
     .page.no-count{counter-increment:none}
     @media print{
-      @page{size:A5;margin:9mm 8mm 9mm 8mm;marks:none}
+      @page{size:A5;margin:9mm 9mm 9mm 9mm;marks:none}
       body{margin:0}
-      .page{page-break-after:always;margin:0;box-shadow:none;width:129mm}
+      .page{page-break-after:always;margin:0;box-shadow:none;width:130mm}
       .page.landscape-page{width:194mm}
       .page:last-child{page-break-after:avoid}
       *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .landscape-page{page:landscapePage}
-      @page landscapePage{size:A5 landscape;margin:9mm 8mm 9mm 8mm}
+      @page landscapePage{size:A5 landscape;margin:9mm 9mm 9mm 9mm}
       /* 版心高度 = 210mm - 上下邊界 18mm = 192mm；橫式 148 - 18 = 130mm */
       .page.fixed-page{height:192mm}
       .page.fixed-page.landscape-page{height:130mm}
@@ -1903,7 +1928,7 @@ async function printOrderBook(ver, mode) {
     .page-num-auto::after{content:counter(pagenum);display:inline-block;background:#00695C;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;font-size:11px;font-weight:700;text-align:center}
     /* 螢幕上就以 A5 版心尺寸排版，讓量測結果與實際列印一致 */
     .page{min-height:auto;position:relative;overflow:visible;background:#fff;
-      width:129mm;margin:0 auto 8mm;box-sizing:border-box}
+      width:130mm;margin:0 auto 8mm;box-sizing:border-box}
     .page.landscape-page{width:194mm}
     .page.fixed-page{height:192mm}
     .page.fixed-page.landscape-page{height:130mm}
@@ -1918,10 +1943,10 @@ async function printOrderBook(ver, mode) {
     .cover-icon{font-size:20px}
     .cover-badge{margin-top:48px;padding:12px 32px;border:2px solid rgba(255,255,255,.4);border-radius:40px;font-size:14px;letter-spacing:.1em;opacity:.8}
     .cover-baseball{font-size:120px;margin-bottom:24px;opacity:.9}
-    .toc-page{padding:16px 0}
-    .toc-title{font-size:26px;font-weight:700;color:#00695C;border-bottom:3px solid #00695C;padding-bottom:12px;margin-bottom:36px}
+    .toc-page{padding:40px 12mm 16px}
+    .toc-title{font-size:26px;font-weight:700;color:#0F9D93;border-bottom:3px solid #0F9D93;padding-bottom:12px;margin-bottom:36px}
     .toc-item{display:flex;align-items:baseline;margin-bottom:20px;font-size:16px}
-    .toc-num{color:#00695C;font-weight:700;min-width:32px}
+    .toc-num{color:#0F9D93;font-weight:700;min-width:32px}
     .toc-name{flex:1;color:#1c1c1a;font-weight:500}
     .toc-dots{flex:1;border-bottom:2px dotted #ccc;margin:0 12px 4px}
     .toc-pg{color:#888;font-size:14px;min-width:28px;text-align:right}
@@ -1929,10 +1954,10 @@ async function printOrderBook(ver, mode) {
     .org-row{display:flex;margin-bottom:10px;font-size:14px}
     .org-label{color:#888;min-width:80px}
     .org-val{color:#1c1c1a;font-weight:500}
-    .rules-page{padding:16px 0}
-    .section-title{font-size:22px;font-weight:700;color:#fff;background:#00695C;padding:10px 20px;border-radius:6px;margin-bottom:20px}
-    .rule-main{font-size:14.5px;font-weight:700;color:#00695C;margin-bottom:5px;margin-top:10px}
-    .team-page{padding:16px 0}
+    .rules-page{padding:40px 6mm 16px}
+    .section-title{font-size:22px;font-weight:700;color:#fff;background:#0F9D93;padding:10px 20px;border-radius:6px;margin-bottom:20px}
+    .rule-main{font-size:14.5px;font-weight:700;color:#0F9D93;margin-bottom:5px;margin-top:10px}
+    .team-page{padding:40px 6mm 16px}
     .team-header{background:#E0F5F2;border:1.5px solid #9FD9CE;border-bottom:none;padding:10px 18px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:12px}
     .team-num{background:#00695C;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
     .team-name{font-size:16px;font-weight:700;color:#00695C;flex:1}
@@ -1959,15 +1984,15 @@ async function printOrderBook(ver, mode) {
     .cert-imgs{display:flex;gap:40px;align-items:center;justify-content:center;margin:10px 0 6px}
     .cert-img-box{text-align:center}
     .cert-img-box span{font-size:11px;font-weight:700;color:#1c1c1a}
-    .bracket-page{padding:16px 0}
-    .schedule-page{padding:16px 0}
-    .sched-date-header{background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:5px;margin:12px 0 6px}
+    .bracket-page{padding:40px 6mm 16px}
+    .schedule-page{padding:40px 6mm 16px}
+    .sched-date-header{background:#0F9D93;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:5px;margin:12px 0 6px}
     .sched-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;table-layout:fixed}
-    .sched-table th{background:#004d40;color:#fff;padding:5px 4px;font-size:10.5px;text-align:center}
-    .sched-table td{padding:6px 3px;border-bottom:1px solid #ededea;text-align:center;white-space:normal;word-break:break-all;line-height:1.35;vertical-align:middle}
+    .sched-table th{background:#0F9D93;color:#fff;padding:5px 4px;font-size:10.5px;text-align:center}
+    .sched-table td{padding:6px 3px;border-bottom:1px solid #ededea;text-align:center;white-space:normal;word-break:keep-all;line-height:1.35;vertical-align:middle}
     /* 隊名欄：長校名平均折成兩行，不留單字孤行 */
     .sched-table .tm-col{width:auto}
-    .sched-table td.tm{font-size:10.5px;letter-spacing:-.01em}
+    .sched-table td.tm{font-size:10.5px;letter-spacing:-.03em;white-space:nowrap;word-break:keep-all;padding-left:2px;padding-right:2px}
     .sched-table td.tm .tm-l{display:block;line-height:1.3}
     .sched-table tr:nth-child(even) td{background:#f7f6f3}
     .vs-tag{color:#888;font-size:11px;font-weight:700;margin:0 8px}
@@ -1977,11 +2002,11 @@ async function printOrderBook(ver, mode) {
 
   // ── 產生各頁 HTML ────────────────────────
   function bkEsc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-  // 長校名平均折行：8 字 -> 4+4，7 字 -> 4+3，避免最後一行只剩一個字
+  // 盡量單行：8 字以內一律單行（涵蓋多數校名，如「國立暨南國際大學」）；超過才平均折行
   function splitName(name){
     if(!name) return '';
     const t=String(name).trim();
-    if(t.length<=6) return bkEsc(t);   // 6 字以內單行即可容納
+    if(t.length<=8) return bkEsc(t);   // 8 字以內單行（靠欄寬加寬＋字距收緊容納）
     const cut=Math.ceil(t.length/2);
     return '<span class="tm-l">'+bkEsc(t.slice(0,cut))+'</span><span class="tm-l">'+bkEsc(t.slice(cut))+'</span>';
   }
@@ -1990,6 +2015,22 @@ async function printOrderBook(ver, mode) {
   const s = BK.settings;
   const title = s.title || '2026全國大專校院夏季棒球錦標賽';
   const isVerify = ver === 'verify';
+
+  // 賽程時間表專用：校名短名對照（PDF 版與 Word 版共用；僅影響時間表顯示，不動底層資料）
+  const schedShortMap = {
+    '國立中正大學':'中正大學',
+    '國立中興大學':'中興大學',
+    '國立成功大學':'成功大學',
+    '國立雲林科技大學':'雲林科大',
+    '國立暨南國際大學':'暨南大學',
+    '國立臺中科技大學':'臺中科大',
+    '國立臺灣師範大學':'臺灣師大',
+    '國立臺灣體育運動大學':'臺灣體大',
+    '國立聯合大學':'聯合大學',
+    '國立體育大學':'國立體大',
+    '朝陽科技大學':'朝陽科大',
+  };
+  const shortSchedName = n => schedShortMap[String(n||'').trim()] || n;
 
   // 封面
   const coverHtml = `<div class="page cover no-count fixed-page">
@@ -2245,8 +2286,8 @@ async function printOrderBook(ver, mode) {
     const W=250,H=262,pos=[{x:44,y:60},{x:206,y:60},{x:206,y:196},{x:44,y:196}];
     const pairs=[[0,1],[1,2],[2,3],[3,0],[0,2],[1,3]],diags={'0,2':true,'1,3':true,'2,0':true,'3,1':true};
     let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%"><rect width="${W}" height="${H}" fill="#f9f9f9" rx="6"/>`;
-    svg+=`<text x="${W/2}" y="${H/2+6}" text-anchor="middle" font-size="40" font-weight="900" fill="#00695C" opacity=".08">${label}</text>`;
-    pairs.forEach(p=>{const k=p[0]+','+p[1],d=!!diags[k];svg+=`<line x1="${pos[p[0]].x}" y1="${pos[p[0]].y}" x2="${pos[p[1]].x}" y2="${pos[p[1]].y}" stroke="${d?'#9FD9CE':'#00695C'}" stroke-width="1.5"${d?' stroke-dasharray="5,4"':''}/>`; });
+    svg+=`<text x="${W/2}" y="${H/2+6}" text-anchor="middle" font-size="40" font-weight="900" fill="#0F9D93" opacity=".08">${label}</text>`;
+    pairs.forEach(p=>{const k=p[0]+','+p[1],d=!!diags[k];svg+=`<line x1="${pos[p[0]].x}" y1="${pos[p[0]].y}" x2="${pos[p[1]].x}" y2="${pos[p[1]].y}" stroke="${d?'#9FD9CE':'#0F9D93'}" stroke-width="1.5"${d?' stroke-dasharray="5,4"':''}/>`; });
     const lbl=[{x:48,y:60,dy:-14},{x:202,y:60,dy:-14},{x:202,y:196,dy:20},{x:48,y:196,dy:20}];
     lbl.forEach((l,i)=>{
       const name=teams[i]||('第'+(i+1)+'籤');
@@ -2262,25 +2303,25 @@ async function printOrderBook(ver, mode) {
         const dy=isTop?(l.dy-(lines.length-1-li)*12):(l.dy+li*12);
         return `<tspan x="${l.x}" y="${l.y+dy}">${bkEsc(ln)}</tspan>`;
       }).join('');
-      svg+=`<circle cx="${l.x}" cy="${l.y}" r="5" fill="#00695C"/><text text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">${tspans}</text>`;
+      svg+=`<circle cx="${l.x}" cy="${l.y}" r="5" fill="#0F9D93"/><text text-anchor="middle" font-size="10" font-weight="700" fill="#0F9D93">${tspans}</text>`;
     });
     svg+='</svg>';
-    return `<div style="border:1.5px solid #9FD9CE;border-radius:8px;overflow:hidden"><div style="background:#00695C;color:#fff;font-size:12px;font-weight:700;padding:6px 12px">⚾ ${label} 組</div><div style="padding:8px">${svg}</div></div>`;
+    return `<div style="border:1.5px solid #9FD9CE;border-radius:8px;overflow:hidden"><div style="background:#0F9D93;color:#fff;font-size:12px;font-weight:700;padding:6px 12px">⚾ ${label} 組</div><div style="padding:8px">${svg}</div></div>`;
   }
 
   function bkElimSVG() {
     const W=700,H=240,q8=[{x:48,label:'A1',display:'A組第1名'},{x:136,label:'D2',display:'D組第2名'},{x:224,label:'B1',display:'B組第1名'},{x:312,label:'C2',display:'C組第2名'},{x:400,label:'C1',display:'C組第1名'},{x:488,label:'B2',display:'B組第2名'},{x:576,label:'D1',display:'D組第1名'},{x:664,label:'A2',display:'A組第2名'}];
     const y8=218,y4=154,yS=98,yF=36;
     let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:500px"><rect width="${W}" height="${H}" fill="#f9f9f9" rx="8"/>`;
-    q8.forEach(t=>{const short=t.display.length>5?t.display.slice(0,5)+'…':t.display;svg+=`<rect x="${t.x-36}" y="${y8-16}" width="72" height="30" rx="4" fill="white" stroke="#9FD9CE" stroke-width="1.5"/><text x="${t.x}" y="${y8-4}" text-anchor="middle" font-size="8" fill="#aaa">${t.label}</text><text x="${t.x}" y="${y8+10}" text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">${bkEsc(short)}</text>`;});
+    q8.forEach(t=>{const short=t.display.length>5?t.display.slice(0,5)+'…':t.display;svg+=`<rect x="${t.x-36}" y="${y8-16}" width="72" height="30" rx="4" fill="white" stroke="#9FD9CE" stroke-width="1.5"/><text x="${t.x}" y="${y8-4}" text-anchor="middle" font-size="8" fill="#aaa">${t.label}</text><text x="${t.x}" y="${y8+10}" text-anchor="middle" font-size="10" font-weight="700" fill="#0F9D93">${bkEsc(short)}</text>`;});
     const pairs4=[[0,1],[2,3],[4,5],[6,7]],q4x=pairs4.map(p=>(q8[p[0]].x+q8[p[1]].x)/2),yQ=y8-16-18;
-    pairs4.forEach((pair,i)=>{const mx=q4x[i];svg+=`<rect x="${mx-14}" y="${yQ-10}" width="28" height="18" rx="3" fill="#E0F5F2" stroke="#00876f" stroke-width="1"/><text x="${mx}" y="${yQ+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">Q${i+1}</text><line x1="${q8[pair[0]].x}" y1="${y8-16}" x2="${q8[pair[0]].x}" y2="${yQ}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${q8[pair[1]].x}" y1="${y8-16}" x2="${q8[pair[1]].x}" y2="${yQ}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${q8[pair[0]].x}" y1="${yQ}" x2="${q8[pair[1]].x}" y2="${yQ}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${mx}" y1="${yQ-10}" x2="${mx}" y2="${y4+15}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${mx-36}" y="${y4-15}" width="72" height="28" rx="4" fill="white" stroke="#00876f" stroke-width="1.5"/><text x="${mx}" y="${y4-3}" text-anchor="middle" font-size="8" fill="#aaa">Q${i+1}</text><text x="${mx}" y="${y4+10}" text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">Q${i+1}勝</text>`;});
+    pairs4.forEach((pair,i)=>{const mx=q4x[i];svg+=`<rect x="${mx-14}" y="${yQ-10}" width="28" height="18" rx="3" fill="#E0F5F2" stroke="#0F9D93" stroke-width="1"/><text x="${mx}" y="${yQ+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#0F9D93">Q${i+1}</text><line x1="${q8[pair[0]].x}" y1="${y8-16}" x2="${q8[pair[0]].x}" y2="${yQ}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${q8[pair[1]].x}" y1="${y8-16}" x2="${q8[pair[1]].x}" y2="${yQ}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${q8[pair[0]].x}" y1="${yQ}" x2="${q8[pair[1]].x}" y2="${yQ}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${mx}" y1="${yQ-10}" x2="${mx}" y2="${y4+15}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${mx-36}" y="${y4-15}" width="72" height="28" rx="4" fill="white" stroke="#0F9D93" stroke-width="1.5"/><text x="${mx}" y="${y4-3}" text-anchor="middle" font-size="8" fill="#aaa">Q${i+1}</text><text x="${mx}" y="${y4+10}" text-anchor="middle" font-size="10" font-weight="700" fill="#0F9D93">Q${i+1}勝</text>`;});
     const pairs2=[[0,1],[2,3]],sfx=pairs2.map(p=>(q4x[p[0]]+q4x[p[1]])/2),yS2=y4-15-16;
-    pairs2.forEach((pair,i)=>{const xa=q4x[pair[0]],xb=q4x[pair[1]],mx=sfx[i];svg+=`<line x1="${xa}" y1="${y4-15}" x2="${xa}" y2="${yS2}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${xb}" y1="${y4-15}" x2="${xb}" y2="${yS2}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${xa}" y1="${yS2}" x2="${xb}" y2="${yS2}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${mx-14}" y="${yS2-10}" width="28" height="18" rx="3" fill="#E0F5F2" stroke="#00876f" stroke-width="1"/><text x="${mx}" y="${yS2+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#00695C">${i===0?'S1':'S2'}</text><line x1="${mx}" y1="${yS2-10}" x2="${mx}" y2="${yS+13}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${mx-36}" y="${yS-13}" width="72" height="28" rx="4" fill="white" stroke="#F47920" stroke-width="1.5"/><text x="${mx}" y="${yS-1}" text-anchor="middle" font-size="8" fill="#aaa">${i===0?'S1勝→決賽':'S2勝→決賽'}</text><text x="${mx}" y="${yS+12}" text-anchor="middle" font-size="10" font-weight="700" fill="#c4601a">${i===0?'S1勝':'S2勝'}</text>`;});
+    pairs2.forEach((pair,i)=>{const xa=q4x[pair[0]],xb=q4x[pair[1]],mx=sfx[i];svg+=`<line x1="${xa}" y1="${y4-15}" x2="${xa}" y2="${yS2}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${xb}" y1="${y4-15}" x2="${xb}" y2="${yS2}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${xa}" y1="${yS2}" x2="${xb}" y2="${yS2}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${mx-14}" y="${yS2-10}" width="28" height="18" rx="3" fill="#E0F5F2" stroke="#0F9D93" stroke-width="1"/><text x="${mx}" y="${yS2+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#0F9D93">${i===0?'S1':'S2'}</text><line x1="${mx}" y1="${yS2-10}" x2="${mx}" y2="${yS+13}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${mx-36}" y="${yS-13}" width="72" height="28" rx="4" fill="white" stroke="#F47920" stroke-width="1.5"/><text x="${mx}" y="${yS-1}" text-anchor="middle" font-size="8" fill="#aaa">${i===0?'S1勝→決賽':'S2勝→決賽'}</text><text x="${mx}" y="${yS+12}" text-anchor="middle" font-size="10" font-weight="700" fill="#c4601a">${i===0?'S1勝':'S2勝'}</text>`;});
     const bx=W/2;
     svg+=`<line x1="${sfx[0]+36}" y1="${yS}" x2="${bx-40}" y2="${yS}" stroke="#F47920" stroke-width="1.2" stroke-dasharray="4,3"/><line x1="${bx+40}" y1="${yS}" x2="${sfx[1]-36}" y2="${yS}" stroke="#F47920" stroke-width="1.2" stroke-dasharray="4,3"/><rect x="${bx-40}" y="${yS-13}" width="80" height="28" rx="4" fill="#fff0e6" stroke="#F47920" stroke-width="1.5"/><text x="${bx}" y="${yS-1}" text-anchor="middle" font-size="8" fill="#c4601a">S1敗 vs S2敗</text><text x="${bx}" y="${yS+12}" text-anchor="middle" font-size="10" font-weight="700" fill="#c4601a">🥉 季軍賽</text>`;
     const fx=W/2;
-    svg+=`<line x1="${sfx[0]}" y1="${yS-13}" x2="${sfx[0]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${sfx[1]}" y1="${yS-13}" x2="${sfx[1]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${sfx[0]}" y1="${yF+18}" x2="${sfx[1]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${fx-44}" y="${yF-18}" width="88" height="36" rx="6" fill="#00695C"/><text x="${fx}" y="${yF-3}" text-anchor="middle" font-size="10" fill="white">🏆 決賽</text><text x="${fx}" y="${yF+13}" text-anchor="middle" font-size="11" font-weight="700" fill="white">冠亞軍</text></svg>`;
+    svg+=`<line x1="${sfx[0]}" y1="${yS-13}" x2="${sfx[0]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${sfx[1]}" y1="${yS-13}" x2="${sfx[1]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.2"/><line x1="${sfx[0]}" y1="${yF+18}" x2="${sfx[1]}" y2="${yF+18}" stroke="#9FD9CE" stroke-width="1.2"/><rect x="${fx-44}" y="${yF-18}" width="88" height="36" rx="6" fill="#0F9D93"/><text x="${fx}" y="${yF-3}" text-anchor="middle" font-size="10" fill="white">🏆 決賽</text><text x="${fx}" y="${yF+13}" text-anchor="middle" font-size="11" font-weight="700" fill="white">冠亞軍</text></svg>`;
     return svg;
   }
 
@@ -2290,7 +2331,7 @@ async function printOrderBook(ver, mode) {
   // 賽程圖（強制另起新頁）
   const bracketHtml = `<div class="page bracket-page fixed-page" data-sec="bracket" style="page-break-before:always">
     <div class="section-title">賽程圖</div>
-    <div style="font-size:12px;color:#00695C;font-weight:600;margin-bottom:10px">⚾ 預賽：各組循環賽，取前二名晉級複決賽　｜　🏆 複決賽：單淘汰制</div>
+    <div style="font-size:12px;color:#0F9D93;font-weight:600;margin-bottom:10px">⚾ 預賽：各組循環賽，取前二名晉級複決賽　｜　🏆 複決賽：單淘汰制</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
       ${bkGroupSVG(gt.A,'A')}${bkGroupSVG(gt.B,'B')}${bkGroupSVG(gt.C,'C')}${bkGroupSVG(gt.D,'D')}
     </div>
@@ -2317,13 +2358,13 @@ async function printOrderBook(ver, mode) {
     const dateKeys = Object.keys(byDate).sort();
     const schedBlocks = dateKeys.map((date) => {
       const day=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-      let tbl=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:34px">場次</th><th style="width:46px">組別</th><th class="tm-col">隊伍 A</th><th style="width:18px"></th><th class="tm-col">隊伍 B</th><th style="width:40px">時間</th><th style="width:38px">比分</th><th style="width:52px">勝隊</th></tr></thead><tbody>`;
+      let tbl=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:30px">場次</th><th style="width:40px">組別</th><th class="tm-col">隊伍 A</th><th style="width:16px"></th><th class="tm-col">隊伍 B</th><th style="width:36px">時間</th><th style="width:32px">比分</th><th style="width:42px">勝隊</th></tr></thead><tbody>`;
       day.forEach(m=>{
         const tA=resolve(m.teamA),tB=resolve(m.teamB),ph=(m.phase||'').replace('分組賽 ','預賽 ');
         const hs=m.scoreA!==undefined&&m.scoreA!=='';
         const scoreCell=hs?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.scoreA)} : ${bkEsc(m.scoreB)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
         const winnerCell=m.winner?`<td style="text-align:center;font-weight:700;color:#00695C">${bkEsc(m.winner)}</td>`:'<td style="text-align:center;color:#ccc">—</td>';
-        tbl+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:10px;color:#666">${bkEsc(ph)}</td><td class="tm" style="font-weight:600">${splitName(tA)}</td><td class="vs-tag">VS</td><td class="tm" style="font-weight:600">${splitName(tB)}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
+        tbl+=`<tr><td>${bkEsc(m.matchNum)}</td><td style="font-size:10px;color:#666">${bkEsc(ph)}</td><td class="tm" style="font-weight:600">${splitName(shortSchedName(tA))}</td><td class="vs-tag">VS</td><td class="tm" style="font-weight:600">${splitName(shortSchedName(tB))}</td><td>${bkEsc(fmtTime(m.time))}</td>${scoreCell}${winnerCell}</tr>`;
       });
       tbl+='</tbody></table>';
       return `<div class="sched-day">${tbl}</div>`;
@@ -2543,8 +2584,8 @@ async function printOrderBook(ver, mode) {
       body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;color:#1c1c1a;font-size:11pt}
       .page{page-break-after:always}
       .page:last-child{page-break-after:auto}
-      .section-title{font-size:16pt;font-weight:700;color:#fff;background:#00695C;padding:8px 14px;margin-bottom:12px}
-      .rule-main{font-size:12pt;font-weight:700;color:#00695C;margin:10px 0 4px}
+      .section-title{font-size:16pt;font-weight:700;color:#fff;background:#0F9D93;padding:8px 14px;margin-bottom:12px}
+      .rule-main{font-size:12pt;font-weight:700;color:#0F9D93;margin:10px 0 4px}
       .rule-sec{margin-bottom:8px}
       .team-header{background:#E0F5F2;border:1px solid #9FD9CE;padding:8px 14px}
       .team-name{font-size:12pt;font-weight:700;color:#00695C}
@@ -2555,8 +2596,8 @@ async function printOrderBook(ver, mode) {
       .roster{margin-bottom:14px}
       .roster td{border:1px solid #ddd;padding:4px 6px;font-size:10pt}
       .roster .n{color:#00695C;font-weight:700;width:26px;text-align:center}
-      .sched-date-header{background:#00695C;color:#fff;font-size:12pt;font-weight:700;padding:6px 12px;margin:12px 0 6px}
-      .sched-table th{background:#004d40;color:#fff;padding:6px;font-size:10pt;border:1px solid #004d40}
+      .sched-date-header{background:#0F9D93;color:#fff;font-size:12pt;font-weight:700;padding:6px 12px;margin:12px 0 6px}
+      .sched-table th{background:#0F9D93;color:#fff;padding:6px;font-size:10pt;border:1px solid #0F9D93}
       .sched-table td{padding:6px;border:1px solid #ddd;font-size:10pt;text-align:center}
       .cover-w{text-align:center;padding:80px 20px}
       .cover-w h1{font-size:26pt;color:#00695C;margin-bottom:10px}
@@ -2608,7 +2649,7 @@ async function printOrderBook(ver, mode) {
         day.forEach(m=>{
           const ph=(m.phase||'').replace('分組賽 ','預賽 ');
           const sc=(m.scoreA!==undefined&&m.scoreA!=='')?`${bkEsc(m.scoreA)} : ${bkEsc(m.scoreB)}`:'—';
-          rows+=`<tr><td>${bkEsc(m.matchNum)}</td><td>${bkEsc(ph)}</td><td>${bkEsc(m.teamA)}</td><td>VS</td><td>${bkEsc(m.teamB)}</td><td>${bkEsc(fmtTime(m.time))}</td><td>${sc}</td><td>${bkEsc(m.winner||'—')}</td></tr>`;
+          rows+=`<tr><td>${bkEsc(m.matchNum)}</td><td>${bkEsc(ph)}</td><td>${bkEsc(shortSchedName(m.teamA))}</td><td>VS</td><td>${bkEsc(shortSchedName(m.teamB))}</td><td>${bkEsc(fmtTime(m.time))}</td><td>${sc}</td><td>${bkEsc(m.winner||'—')}</td></tr>`;
         });
         wSched += `<div class="sched-date-header">${bkEsc(fmtDate(date))}</div>
           <table class="sched-table"><thead><tr><th>場次</th><th>組別</th><th>隊伍 A</th><th></th><th>隊伍 B</th><th>時間</th><th>比分</th><th>勝隊</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -2709,7 +2750,7 @@ function numOrBlank(n) {
 }
 function esc(s) {
   if (s===undefined||s===null) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function today() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
 function statusBadge(s) {
