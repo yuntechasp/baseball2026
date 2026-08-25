@@ -1271,9 +1271,11 @@ function closeGameModal() {
 
 // ── 最新戰況比數卡 ──
 function renderScoreCards() {
-  const live    = matchData.filter(isLiveOf);
-  const finals  = matchData.filter(isFinalOf);
-  const pending = matchData.filter(m => !hasScoreOf(m));
+  // 先照真正的日期+時間排序，讓卡片從最早的場次開始（不受場次編號 P01… 影響）
+  const ordered = [...matchData].sort(bySchedTime);
+  const live    = ordered.filter(isLiveOf);
+  const finals  = ordered.filter(isFinalOf);
+  const pending = ordered.filter(m => !hasScoreOf(m));
   // 比賽中優先 ＋ 已完賽最近 6 場 ＋ 即將進行 4 場
   const cards = live.concat(finals.slice(-6).reverse()).concat(pending.slice(0, 4));
   if (!cards.length) return '';
@@ -1286,8 +1288,8 @@ function renderScoreCards() {
     const winB = fin && Number(m.scoreB) > Number(m.scoreA);
     html += '<div class="score-card" style="cursor:pointer" onclick="openGameModal(\''+esc(String(m.matchNum))+'\')">' +
       '<div class="score-card-status"><span class="'+(fin?'final':liv?'live':'')+'">'+(fin?'終場':liv?'● 比賽中':'未開賽')+'</span><span>'+esc(m.matchNum)+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+'</span></div>' +
-      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(a))+'</span></span><span class="s">'+((fin||liv)?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
-      '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(b))+'</span></span><span class="s">'+((fin||liv)?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
+      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(a))+'</span></span><span class="s">'+((fin||liv)?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
+      '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(b))+'</span></span><span class="s">'+((fin||liv)?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
       '</div>';
   });
   return '<div class="strip-wrap" id="sched-strip-wrap">' +
@@ -1744,6 +1746,21 @@ function fmtDate(d){if(!d)return '';const s=String(d);if(s.includes('T')||s.incl
 // 依真正的日期先後排序，避免 9/12 被字串排序排到 9/2 前面。支援 9/2、9月2日、2026-09-02。
 function dateSortKey(d){if(!d)return Infinity;const s=String(d).trim();let mo=0,day=0,mt;if((mt=s.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/))){mo=+mt[1];day=+mt[2];}else if((mt=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))){mo=+mt[2];day=+mt[3];}else if((mt=s.match(/^(\d{1,2})\/(\d{1,2})/))){mo=+mt[1];day=+mt[2];}else{const dt=new Date(s);if(!isNaN(dt)){mo=dt.getMonth()+1;day=dt.getDate();}else return Infinity;}return mo*100+day;}
 function sortDateKeys(keys){return [...keys].sort((a,b)=>dateSortKey(a)-dateSortKey(b));}
+// 把一場比賽的日期+時間轉成可比大小的數字，讓卡片照真正的時間先後排序
+// （解決場次編號 P01 不是最早比賽、卡片卻從 P01 開始顯示的問題）。
+function matchSortKey(m){
+  const ds=fmtDate(m&&m.date), ts=fmtTime(m&&m.time);
+  let mo=0,day=0,hh=0,mm=0,mt;
+  if(ds){
+    if((mt=String(ds).match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/))){mo=+mt[1];day=+mt[2];}
+    else if((mt=String(ds).match(/^(\d{1,2})\/(\d{1,2})/))){mo=+mt[1];day=+mt[2];}
+    else{const dt=new Date(ds);if(!isNaN(dt)){mo=dt.getMonth()+1;day=dt.getDate();}}
+  }
+  if(ts&&(mt=String(ts).match(/(\d{1,2}):(\d{2})/))){hh=+mt[1];mm=+mt[2];}
+  if(!mo&&!day) return Infinity;
+  return ((mo*100+day)*10000)+(hh*100+mm);
+}
+function bySchedTime(a,b){return matchSortKey(a)-matchSortKey(b);}
 function fmtTime(t){if(!t)return '';const s=String(t);if(s.includes('GMT')||s.includes('1899')||s.includes('T')){const d=new Date(s);if(!isNaN(d))return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}return s;}
 // ── 每 5 分鐘自動刷新比分 ──
 async function refreshScores() {
