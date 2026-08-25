@@ -1573,8 +1573,8 @@ function renderHomeScoreCards() {
     const winB = fin && Number(m.scoreB) > Number(m.scoreA);
     html += '<div class="score-card" onclick="openGameModal(\''+esc(String(m.matchNum))+'\')">' +
       '<div class="score-card-status"><span class="'+(fin?'final':liv?'live':'')+'">'+(fin?'終場':liv?'● 比賽中':'未開賽')+'</span><span>'+esc(m.matchNum)+' · '+fmtDateS(m.date)+' '+fmtTimeS(m.time)+'</span></div>' +
-      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(a))+'</span></span><span class="s">'+((fin||liv)?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
-      '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(b))+'</span></span><span class="s">'+((fin||liv)?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
+      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(a))+'</span></span><span class="s">'+((fin||liv)?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
+      '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(b))+'</span></span><span class="s">'+((fin||liv)?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
       '</div>';
   });
   box.innerHTML = '<div class="strip-wrap" id="home-strip-wrap">' +
