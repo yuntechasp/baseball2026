@@ -1557,6 +1557,7 @@ async function submitNews() {
       date:      item.date,
       imageUrl:  imageUrl,
       rowIndex:  rowIndex,
+      password:  ADMIN_PW,
     });
     const res = await fetch(API_URL + '?' + p.toString()).then(r => r.json());
     saved = res && res.ok;
