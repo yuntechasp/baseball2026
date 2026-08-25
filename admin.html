@@ -2356,7 +2356,7 @@ async function printOrderBook(ver, mode) {
     const byDate={};
     BK.matches.forEach(m=>{const d=m.date||'日期未定';if(!byDate[d])byDate[d]=[];byDate[d].push(m);});
     const resolve=name=>{if(!name)return name;const mt=String(name).match(/([A-D])組第(\d+)籤/);if(!mt)return name;const labels=['A','B','C','D'];let ss=1;for(let g=0;g<4;g++){if(labels[g]===mt[1]){return drawSlotMap[ss+parseInt(mt[2])-1]||name;}ss+=4;}return name;};
-    const dateKeys = Object.keys(byDate).sort();
+    const dateKeys = sortDateKeys(Object.keys(byDate));
     const schedBlocks = dateKeys.map((date) => {
       const day=byDate[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
       let tbl=`<div class="sched-date-header">📅 ${bkEsc(fmtDate(date))}</div><table class="sched-table"><thead><tr><th style="width:30px">場次</th><th style="width:40px">組別</th><th class="tm-col">隊伍 A</th><th style="width:16px"></th><th class="tm-col">隊伍 B</th><th style="width:36px">時間</th><th style="width:32px">比分</th><th style="width:42px">勝隊</th></tr></thead><tbody>`;
@@ -2644,7 +2644,7 @@ async function printOrderBook(ver, mode) {
     if (BK.matches.length) {
       const byDateW = {};
       BK.matches.forEach(m=>{const d=m.date||'日期未定';(byDateW[d]=byDateW[d]||[]).push(m);});
-      Object.keys(byDateW).sort().forEach(date=>{
+      sortDateKeys(Object.keys(byDateW)).forEach(date=>{
         const day = byDateW[date].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
         let rows='';
         day.forEach(m=>{
@@ -2725,6 +2725,25 @@ function goPage(name) {
 // ═══════════════════════════════════════════
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+// 依「真正的日期先後」排序日期字串，避免 9月12日 被字串排序排到 9月2日 前面。
+// 支援格式：9月2日 / 9/2 / 2026-09-02 / ISO 日期字串。解析不出來的排到最後。
+function dateSortKey(d) {
+  if (!d) return Infinity;
+  const s = String(d).trim();
+  let mo = 0, day = 0, mt;
+  if ((mt = s.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/)))      { mo = +mt[1]; day = +mt[2]; }
+  else if ((mt = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)))    { mo = +mt[2]; day = +mt[3]; }
+  else if ((mt = s.match(/^(\d{1,2})\/(\d{1,2})/)))          { mo = +mt[1]; day = +mt[2]; }
+  else {
+    const dt = new Date(s);
+    if (!isNaN(dt)) { mo = dt.getMonth()+1; day = dt.getDate(); }
+    else return Infinity;
+  }
+  return mo * 100 + day;
+}
+function sortDateKeys(keys) {
+  return [...keys].sort((a,b) => dateSortKey(a) - dateSortKey(b));
+}
 function fmtDate(d) {
   if (!d) return '';
   const s = String(d);
