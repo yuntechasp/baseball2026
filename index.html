@@ -1102,6 +1102,21 @@ function fmtDate(x){return fmtDateS(x);}
 function fmtTime(x){return fmtTimeS(x);}
 function fmtDateS(dv){if(!dv)return '';const str=String(dv);if(str.includes('T')||str.includes('-')){const dt=new Date(str);if(!isNaN(dt))return(dt.getMonth()+1)+'/'+dt.getDate();}return str;}
 function fmtTimeS(t){if(!t)return '';const str=String(t);if(str.includes('GMT')||str.includes('1899')||str.includes('T')){const dt=new Date(str);if(!isNaN(dt))return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');}return str;}
+// 把一場比賽的日期+時間轉成可比大小的數字，讓場次能照真正的時間先後排序
+// （解決場次編號 P01 不是最早比賽、首頁卻從 P01 開始顯示的問題）。
+function matchSortKey(m){
+  const ds=fmtDateS(m&&m.date), ts=fmtTimeS(m&&m.time);
+  let mo=0,day=0,hh=0,mm=0,mt;
+  if(ds){
+    if((mt=String(ds).match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/))){mo=+mt[1];day=+mt[2];}
+    else if((mt=String(ds).match(/^(\d{1,2})\/(\d{1,2})/))){mo=+mt[1];day=+mt[2];}
+    else{const dt=new Date(ds);if(!isNaN(dt)){mo=dt.getMonth()+1;day=dt.getDate();}}
+  }
+  if(ts&&(mt=String(ts).match(/(\d{1,2}):(\d{2})/))){hh=+mt[1];mm=+mt[2];}
+  if(!mo&&!day) return Infinity;               // 沒日期的排最後
+  return ((mo*100+day)*10000)+(hh*100+mm);
+}
+function bySchedTime(a,b){return matchSortKey(a)-matchSortKey(b);}
 
 // ═══ 循環賽排名引擎（依競賽規程：積分→對戰→TQB→人工裁定）═══
 function groupTeamList(label) {
@@ -1534,9 +1549,11 @@ function renderHomeScoreCards() {
   const box = document.getElementById('score-cards');
   const sec = document.getElementById('live-scores');
   if (!matchData.length) { sec.style.display = 'none'; return; }
-  const live    = matchData.filter(isLiveOf);
-  const finals  = matchData.filter(isFinalOf);
-  const pending = matchData.filter(m => !hasScoreOf(m));
+  // 先照真正的日期+時間排序，讓「待賽/終場」都從最早的場次開始（不受場次編號 P01… 影響）
+  const ordered = [...matchData].sort(bySchedTime);
+  const live    = ordered.filter(isLiveOf);
+  const finals  = ordered.filter(isFinalOf);
+  const pending = ordered.filter(m => !hasScoreOf(m));
   const started = live.length > 0 || finals.length > 0;
   let cards;
   if (started) {
