@@ -1840,8 +1840,28 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, ws0, '報名總表');
 
   // Per team
+  // 排序：職員照角色順序集中在前（領隊→總教練→教練→管理→…）→ 隊長 → 運動員（依背號小到大）
+  // 與秩序冊一致，並去除 role 前後空白容錯，避免新增職員被排到最後面。
+  const xRoleClean = m => String(m.role||'').trim();
+  const xIsPlayer  = m => { const r = xRoleClean(m); return r === '隊長' || r.startsWith('運動員'); };
+  const xStaffOrder = ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'];
+  const xByNumber = (a,b) => {
+    const na=parseInt(a.number,10), nb=parseInt(b.number,10);
+    const va=isNaN(na)?Infinity:na, vb=isNaN(nb)?Infinity:nb;
+    if(va!==vb) return va-vb;
+    return (a.name||'').localeCompare(b.name||'','zh-TW');
+  };
+  const sortMembers = (mems) => {
+    const staff = mems.filter(m => !xIsPlayer(m)).sort((a,b)=>{
+      const ai=xStaffOrder.indexOf(xRoleClean(a)); const bi=xStaffOrder.indexOf(xRoleClean(b));
+      return (ai===-1?99:ai)-(bi===-1?99:bi);
+    });
+    const cap  = mems.filter(m => xRoleClean(m)==='隊長');
+    const athl = mems.filter(m => xRoleClean(m).startsWith('運動員')).sort(xByNumber);
+    return [...staff, ...cap, ...athl];
+  };
   teams.forEach(t => {
-    const mems = DB.members[t.teamId] || [];
+    const mems = sortMembers(DB.members[t.teamId] || []);
     const data = [[t.teamname],['領隊',t.manager,'教練',t.coach],['信箱',t.email,'狀態',statusText(t.status)],[''],
       ['角色','姓名','背號','學號']];
     mems.forEach(m => data.push([m.role,m.name,m.number,m.studentId]));
