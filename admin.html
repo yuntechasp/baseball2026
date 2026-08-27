@@ -2400,11 +2400,18 @@ async function printOrderBook(ver, mode) {
       tbl+='</tbody></table>';
       return `<div class="sched-day">${tbl}</div>`;
     });
-    // 整份賽程表為一個連續流動區塊，由分頁腳本依實際高度自動切頁
-    schedHtml = `<div class="page flow-page schedule-page" data-pclass="schedule-page" data-sec="sched" style="min-height:auto">
-      <div class="section-title">賽程時間表</div>
-      ${schedBlocks.join('')}
-    </div>`;
+    // 每頁固定放 3 個「有比賽的日期」，各自為獨立實體頁（不走自動切頁，避免某天被切斷或擠掉一場）
+    const DATES_PER_PAGE = 3;
+    const schedPages = [];
+    for (let i = 0; i < schedBlocks.length; i += DATES_PER_PAGE) {
+      const group = schedBlocks.slice(i, i + DATES_PER_PAGE).join('');
+      const isFirst = i === 0;
+      schedPages.push(`<div class="page schedule-page fixed-page" data-sec="sched"${isFirst?'':' style="page-break-before:always"'}>
+        ${isFirst ? '<div class="section-title">賽程時間表</div>' : ''}
+        ${group}
+      </div>`);
+    }
+    schedHtml = schedPages.join('');
   }
 
   // ── 開啟列印視窗 ────────────────────────────
