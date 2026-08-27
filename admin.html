@@ -2233,12 +2233,16 @@ async function printOrderBook(ver, mode) {
   BK.draws.forEach(d => { slotMap[d.teamId] = d.slot; });
   const sortedTeams = [...BK.teams].sort((a,b) => a.teamname.localeCompare(b.teamname,'zh-TW-u-co-stroke'));
   const staffRoles = ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'];
+  // 判斷是否為球員：只有「隊長」或「運動員/運動員1…」才算球員，其餘一律視為職員。
+  // 用反向判斷（非球員即職員）＋ 去除前後空白，避免 role 有多餘空格或非預期值時漏掉職員。
+  const roleClean = m => String(m.role||'').trim();
+  const isBkPlayer = m => { const r = roleClean(m); return r === '隊長' || r.startsWith('運動員'); };
 
   let allTeamsHtml = '';
   sortedTeams.forEach((team, idx) => {
     const mems = BK.members[team.teamId] || [];
-    const staff = mems.filter(m => staffRoles.includes(m.role) && m.name && m.name.trim());
-    const allP  = mems.filter(m => !staffRoles.includes(m.role));
+    const staff = mems.filter(m => !isBkPlayer(m) && m.name && String(m.name).trim());
+    const allP  = mems.filter(m => isBkPlayer(m));
     // 依背號由小到大排序（非數字背號如「—」排最後，背號相同再依姓名）
     const byNumber = (a, b) => {
       const na = parseInt(a.number, 10);
@@ -2248,8 +2252,14 @@ async function printOrderBook(ver, mode) {
       if (va !== vb) return va - vb;
       return (a.name || '').localeCompare(b.name || '', 'zh-TW');
     };
-    const cap   = allP.find(m => m.role==='隊長');
-    const athl  = allP.filter(m => m.role!=='隊長').sort(byNumber);
+    // 職員照角色順序排列（領隊→總教練→教練→管理→…），清單外的角色排最後
+    const bkRoleOrder = ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'];
+    staff.sort((a,b)=>{
+      const ai=bkRoleOrder.indexOf(roleClean(a)); const bi=bkRoleOrder.indexOf(roleClean(b));
+      return (ai===-1?99:ai)-(bi===-1?99:bi);
+    });
+    const cap   = allP.find(m => roleClean(m)==='隊長');
+    const athl  = allP.filter(m => roleClean(m)!=='隊長').sort(byNumber);
     const ordered = cap ? [cap,...athl] : athl;   // 隊長固定第一位
     const slot = slotMap[team.teamId];
     const cols = isVerify ? 3 : 4;
@@ -2257,7 +2267,7 @@ async function printOrderBook(ver, mode) {
 
     const staffHtml2 = staff.map(s=>`<span class="team-staff-item"><span class="lbl">${bkEsc(s.role)}</span>${bkEsc(s.name)}</span>`).join('');
     const cells = ordered.map(p=>{
-      const isCap=p.role==='隊長';
+      const isCap=roleClean(p)==='隊長';
       const numTxt = (p.number === 0 || (p.number !== null && p.number !== undefined && String(p.number).trim() !== '')) ? String(p.number).trim() : '—';
       const nameHtml = `${bkEsc(p.name)}${isCap?'<sup class="cap-mark">©</sup>':''}`;
       if (isVerify) {
@@ -2606,19 +2616,27 @@ async function printOrderBook(ver, mode) {
     `;
 
     // 隊職員名單改用真表格（Word 對 CSS Grid 支援不佳）
+    // 職員/球員判斷與 PDF 版一致：非球員（隊長/運動員）即職員，並去除 role 前後空白容錯。
+    const roleCleanW = m => String(m.role||'').trim();
+    const isPlayerW  = m => { const r = roleCleanW(m); return r === '隊長' || r.startsWith('運動員'); };
+    const wRoleOrder = ['領隊','總教練','教練','管理','訓練員','運動防護員','其他'];
     let wTeams = '';
     sortedTeams.forEach(team => {
       const mems = BK.members[team.teamId] || [];
-      const staff = mems.filter(m => staffRoles.includes(m.role) && m.name && m.name.trim());
-      const allP  = mems.filter(m => !staffRoles.includes(m.role));
+      const staff = mems.filter(m => !isPlayerW(m) && m.name && String(m.name).trim());
+      const allP  = mems.filter(m => isPlayerW(m));
+      staff.sort((a,b)=>{
+        const ai=wRoleOrder.indexOf(roleCleanW(a)); const bi=wRoleOrder.indexOf(roleCleanW(b));
+        return (ai===-1?99:ai)-(bi===-1?99:bi);
+      });
       const byNum = (a,b)=>{
         const na=parseInt(a.number,10), nb=parseInt(b.number,10);
         const va=isNaN(na)?Infinity:na, vb=isNaN(nb)?Infinity:nb;
         if(va!==vb) return va-vb;
         return (a.name||'').localeCompare(b.name||'','zh-TW');
       };
-      const cap = allP.find(m=>m.role==='隊長');
-      const others = allP.filter(m=>m.role!=='隊長').sort(byNum);
+      const cap = allP.find(m=>roleCleanW(m)==='隊長');
+      const others = allP.filter(m=>roleCleanW(m)!=='隊長').sort(byNum);
       const ordered = cap ? [cap,...others] : others;
       const COLS = isVerify ? 3 : 4;
       let rows = '';
@@ -2628,7 +2646,7 @@ async function printOrderBook(ver, mode) {
           const p = ordered[i+j];
           if (!p) { rows += '<td class="n"></td><td></td>' + (isVerify?'<td></td>':''); continue; }
           const nt = (p.number===0 || (p.number!==null && p.number!==undefined && String(p.number).trim()!=='')) ? String(p.number).trim() : '—';
-          rows += `<td class="n">${bkEsc(nt)}</td><td>${bkEsc(p.name)}${p.role==='隊長'?' (隊長)':''}</td>`
+          rows += `<td class="n">${bkEsc(nt)}</td><td>${bkEsc(p.name)}${roleCleanW(p)==='隊長'?' (隊長)':''}</td>`
                + (isVerify?`<td>${bkEsc(p.studentId||'')}</td>`:'');
         }
         rows += '</tr>';
