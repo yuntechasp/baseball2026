@@ -1438,7 +1438,7 @@ function renderTotalSchedule() {
       const phaseLabel = (m.phase||'').replace('分組賽 ','預賽 ');
       const hasLine = !!(m.lineA || m.lineB);
       const lsId = 'ls-' + String(m.matchNum).replace(/\W/g,'');
-      const lsBtn = hasLine ? '<br><span class="ls-btn" onclick="toggleLineScore(\''+lsId+'\', this)">📊 每局</span>' : '';
+      const lsBtn = hasScore ? '<br><span class="ls-btn" onclick="openGameModal(\''+esc(String(m.matchNum))+'\')">📋 詳情</span>' : '';
       const recCell = recordCellHtml(m.recordUrl);
       html += '<tr>' +
         '<td><strong>'+esc(m.matchNum)+'</strong></td>' +
@@ -1448,8 +1448,7 @@ function renderTotalSchedule() {
         '<td class="'+(isWinB?'win-team':'')+'">'+esc(teamB)+'</td>' +
         '<td style="text-align:center">'+fmtTime(m.time)+'</td>' +
         '<td style="text-align:center">'+scoreCell+lsBtn+'</td>' +
-        '<td style="text-align:center">'+recCell+'</td></tr>' +
-        (hasLine ? '<tr id="'+lsId+'" style="display:none"><td colspan="8" style="padding:6px 10px">'+buildLineScore(m)+'</td></tr>' : '');
+        '<td style="text-align:center">'+recCell+'</td></tr>';
     });
     html += '</tbody></table></div></div>';
   });
