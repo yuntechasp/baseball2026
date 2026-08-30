@@ -1212,8 +1212,8 @@ function lineupCol(team, raw) {
 function buildLineupSection(m, a, b) {
   if (!m.lineupA && !m.lineupB) return '';
   let cols = '';
-  if (m.lineupA) cols += lineupCol(a, m.lineupA);
   if (m.lineupB) cols += lineupCol(b, m.lineupB);
+  if (m.lineupA) cols += lineupCol(a, m.lineupA);
   return '<div class="gm-sec"><div class="gm-sec-title">STARTING LINEUP</div><div class="gm-lineup">'+cols+'</div></div>';
 }
 
@@ -1235,8 +1235,8 @@ function pitcherUsageCol(team, raw) {
 function buildPitchersSection(m, a, b) {
   if (!m.pitchersA && !m.pitchersB) return '';
   let cols = '';
-  if (m.pitchersA) cols += pitcherUsageCol(a, m.pitchersA);
   if (m.pitchersB) cols += pitcherUsageCol(b, m.pitchersB);
+  if (m.pitchersA) cols += pitcherUsageCol(a, m.pitchersA);
   return '<div class="gm-sec"><div class="gm-sec-title">PITCHERS 投手運用</div><div class="gm-lineup">'+cols+'</div></div>';
 }
 
@@ -1252,9 +1252,9 @@ function openGameModal(num) {
   let html = '<div class="gm-head"><span class="m">'+esc(m.matchNum)+' · '+esc((m.phase||'').replace('分組賽 ','預賽 '))+'</span>' +
     '<button class="gm-close" onclick="closeGameModal()">✕</button></div>';
   html += '<div class="gm-score">' +
-    '<div class="gm-team">'+teamLogoHtml(a)+'<span class="n">'+esc(a)+'</span></div>' +
-    '<div class="gm-big">'+((fin||liv)?'<span class="'+(winA?'win':'')+'">'+m.scoreA+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winB?'win':'')+'">'+m.scoreB+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
-    '<div class="gm-team">'+teamLogoHtml(b)+'<span class="n">'+esc(b)+'</span></div></div>';
+    '<div class="gm-team">'+teamLogoHtml(b)+'<span class="n">'+esc(b)+'</span></div>' +
+    '<div class="gm-big">'+((fin||liv)?'<span class="'+(winB?'win':'')+'">'+m.scoreB+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winA?'win':'')+'">'+m.scoreA+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
+    '<div class="gm-team">'+teamLogoHtml(a)+'<span class="n">'+esc(a)+'</span></div></div>';
   html += '<div class="gm-status">'+(fin?'終場':liv?'<span style="color:#c0392b">● 比賽中</span>':'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
   if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
   html += buildLineupSection(m, a, b);
@@ -1304,8 +1304,9 @@ function renderScoreCards() {
     const winB = fin && Number(m.scoreB) > Number(m.scoreA);
     html += '<div class="score-card" style="cursor:pointer" onclick="openGameModal(\''+esc(String(m.matchNum))+'\')">' +
       '<div class="score-card-status"><span class="'+(fin?'final':liv?'live':'')+'">'+(fin?'終場':liv?'● 比賽中':'未開賽')+'</span><span>'+esc(m.matchNum)+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+'</span></div>' +
-      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(a))+'</span></span><span class="s">'+((fin||liv)?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
+      // 後者(B)先攻，先攻在上：B 列在上、A 列在下
       '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(b))+'</span></span><span class="s">'+((fin||liv)?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
+      '<div class="score-card-row'+(winA?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(a)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(a))+'</span></span><span class="s">'+((fin||liv)?m.scoreA+(winA?' ◂':''):'')+'</span></div>' +
       '</div>';
   });
   return '<div class="strip-wrap" id="sched-strip-wrap">' +
@@ -1326,7 +1327,7 @@ function buildLineScore(m) {
   let html = '<div class="linescore-wrap"><table class="linescore"><thead><tr><th></th>';
   for (let i=1;i<=n;i++) html += '<th>'+i+'</th>';
   html += '<th style="border-left:2px solid var(--gray-200)">R</th>'+(hasHE?'<th>H</th><th>E</th>':'')+'</tr></thead><tbody>';
-  [[a,lineA,m.scoreA,heA],[b,lineB,m.scoreB,heB]].forEach(row => {
+  [[b,lineB,m.scoreB,heB],[a,lineA,m.scoreA,heA]].forEach(row => {
     html += '<tr><td class="tname"><span style="display:inline-flex;align-items:center;gap:7px">'+teamLogoHtml(row[0])+esc(row[0])+'</span></td>';
     for (let i=0;i<n;i++) html += '<td>'+esc(row[1][i]!==undefined&&row[1][i]!==''?row[1][i]:'')+'</td>';
     html += '<td class="rhe">'+row[2]+'</td>'+(hasHE?'<td class="rhe" style="border-left:none">'+esc(row[3][0]||'')+'</td><td class="rhe" style="border-left:none">'+esc(row[3][1]||'')+'</td>':'');
