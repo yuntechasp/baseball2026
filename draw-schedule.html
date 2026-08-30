@@ -197,6 +197,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .gm-big{font-size:44px;font-weight:800;color:var(--gray-900);display:flex;align-items:center;gap:14px}
 .gm-big .win{color:var(--yt-teal-dark)}
 .gm-status{text-align:center;font-size:13px;font-weight:700;color:var(--gray-400);letter-spacing:.06em;padding-bottom:8px}
+.gm-note{text-align:center;font-size:12.5px;line-height:1.5;color:#8a5a00;background:#fff8e6;border:1px solid #ffe6a3;border-radius:10px;padding:7px 12px;margin:0 auto 10px;max-width:88%}
 .gm-sec{padding:8px 18px 16px}
 .gm-sec-title{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--gray-400);margin:8px 0 8px}
 .gm-pit{display:flex;gap:10px;flex-wrap:wrap}
@@ -1262,6 +1263,7 @@ function openGameModal(num) {
     '<div class="gm-big">'+((fin||liv)?'<span class="'+(winB?'win':'')+'">'+m.scoreB+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winA?'win':'')+'">'+m.scoreA+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
     '<div class="gm-team">'+teamLogoHtml(a)+'<span class="n">'+esc(a)+'</span></div></div>';
   html += '<div class="gm-status">'+(fin?'終場':liv?'<span style="color:#c0392b">● 比賽中</span>':'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
+  if (m.note && String(m.note).trim()) html += '<div class="gm-note">📝 '+esc(String(m.note).trim())+'</div>';
   if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
   html += buildLineupSection(m, a, b);
   const pit = pitcherBlock(m.pitcherW,'w') + pitcherBlock(m.pitcherL,'l') + pitcherBlock(m.pitcherSV,'sv');
