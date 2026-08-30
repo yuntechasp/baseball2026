@@ -1181,9 +1181,9 @@ function pitcherBlock(raw, type) {
   if (!raw) return '';
   const p = String(raw).split(/[,，]/).map(x=>x.trim());
   const tags = {w:['WIN','w'], l:['LOSS','l'], sv:['SAVE','sv']};
-  const labels = ['投球局數','自責分','三振','四壞'];
+  const labels = ['投球局數','三振','四壞'];
   let stats = '';
-  for (let i=0;i<4;i++){
+  for (let i=0;i<3;i++){
     if (p[i+1]!==undefined&&p[i+1]!=='') stats += '<div class="gm-pit-stat"><div class="v">'+esc(p[i+1])+'</div><div class="k">'+labels[i]+'</div></div>';
   }
   return '<div class="gm-pit-card">' +
@@ -1241,7 +1241,7 @@ function buildLineupSection(m, a, b) {
   return '<div class="gm-sec"><div class="gm-sec-title">STARTING LINEUP</div><div class="gm-lineup">'+cols+'</div></div>';
 }
 
-// ── 投手運用區塊：Y/Z 欄「姓名(角色):局數,自責分,三振,四壞」逗號分隔，成績選填 ──
+// ── 投手運用區塊：Y/Z 欄「姓名(角色):局數,三振,四壞」逗號分隔，成績選填 ──
 function pitcherUsageCol(team, raw) {
   // 先以「,姓名(」的節奏切出每位投手（成績內也有逗號，需聰明切分）
   const items = String(raw).split(/[,，、](?=[^,，、:：]+[\(（])/).map(x=>x.trim()).filter(Boolean);
@@ -1251,7 +1251,7 @@ function pitcherUsageCol(team, raw) {
     const m = it.match(/^(.+?)[\(（](.+?)[\)）]\s*(?:[:：]\s*(.+))?$/);
     const nm = m ? m[1] : it, role = m ? m[2] : '', stats = m && m[3] ? m[3].split(/[,，]/).map(x=>x.trim()) : null;
     const cls = roleMap[role] || 'xx';
-    const statTxt = stats ? [stats[0]&&stats[0]+'局', stats[1]!==undefined&&stats[1]!==''?'自責'+stats[1]:'', stats[2]?'K'+stats[2]:'', stats[3]?'BB'+stats[3]:''].filter(Boolean).join(' · ') : '';
+    const statTxt = stats ? [stats[0]&&stats[0]+'局', stats[1]?'K'+stats[1]:'', stats[2]?'BB'+stats[2]:''].filter(Boolean).join(' · ') : '';
     rows += '<div class="gm-pu-row">'+(role?'<span class="gm-role '+cls+'">'+esc(role)+'</span>':'')+'<span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(nm)+'</span>'+(statTxt?'<span class="gm-pu-stats">'+esc(statTxt)+'</span>':'')+'</div>';
   });
   return '<div class="gm-lineup-col"><div class="gm-lineup-head">'+teamLogoHtml(team)+esc(shortTeamName(team))+'</div>'+rows+'</div>';
