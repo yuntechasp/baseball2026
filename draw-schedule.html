@@ -1079,9 +1079,7 @@ function renderGroupTable(group, groupMatches) {
           ? '<span style="font-size:12px;color:var(--gray-400)">平局</span>'
           : '<span style="font-size:12px;font-weight:600;color:var(--green)">✅ '+esc(winnerName)+'</span>')
       : '<span style="font-size:12px;color:var(--gray-300)">—</span>';
-    const recCell = m.recordUrl
-      ? '<a href="'+esc(m.recordUrl)+'" target="_blank" rel="noopener" style="display:inline-block;padding:3px 10px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:12px;font-size:11px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">📄 紀錄表</a>'
-      : '<span style="font-size:11px;color:var(--gray-300)">—</span>';
+    const recCell = recordCellHtml(m.recordUrl);
     html += '<tr>' +
       '<td><strong>'+esc(m.matchNum)+'</strong></td>' +
       '<td class="'+(isWinA?'win-team':'')+'">'+esc(teamA)+'</td>' +
@@ -1110,6 +1108,25 @@ function shortTeamName(n){
   };
   const name = NAME_FIX[raw] || raw;
   return name.replace(/^(國立|私立|市立|縣立)/,'');
+}
+// ── 紀錄表：同一格可放多個連結（逗號、換行或空白分隔），拆成陣列 ──
+function recordUrls(raw){
+  return String(raw||'').split(/[\s,，]+/).map(s=>s.trim()).filter(s=>/^https?:\/\//i.test(s));
+}
+// 賽程表小按鈕：一顆或多顆「紀錄表N」（只有一顆時不加編號）
+function recordCellHtml(raw){
+  const us = recordUrls(raw);
+  if (!us.length) return '—';
+  const st = 'display:inline-block;margin:2px 3px 0 0;padding:3px 10px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:12px;font-size:11px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none';
+  return us.map((u,i)=>'<a href="'+esc(u)+'" target="_blank" rel="noopener" style="'+st+'">📄 紀錄表'+(us.length>1?(i+1):'')+'</a>').join('');
+}
+// 彈窗大按鈕：一顆或多顆「查看紀錄表N」
+function recordModalHtml(raw){
+  const us = recordUrls(raw);
+  if (!us.length) return '';
+  const st = 'display:inline-block;margin:0 5px 6px;padding:8px 20px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:20px;font-size:13px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none';
+  const btns = us.map((u,i)=>'<a href="'+esc(u)+'" target="_blank" rel="noopener" style="'+st+'">📄 查看紀錄表'+(us.length>1?(i+1):'')+'</a>').join('');
+  return '<div class="gm-sec" style="text-align:center;padding-top:0">'+btns+'</div>';
 }
 // ── 隊徽：logos/隊名.png；無檔案時顯示色圓＋校名首字 ──
 function teamLogoHtml(name) {
@@ -1269,7 +1286,7 @@ function openGameModal(num) {
   const pit = pitcherBlock(m.pitcherW,'w') + pitcherBlock(m.pitcherL,'l') + pitcherBlock(m.pitcherSV,'sv');
   if (pit) html += '<div class="gm-sec"><div class="gm-sec-title">PITCHING SUMMARY</div><div class="gm-pit">'+pit+'</div></div>';
   html += buildPitchersSection(m, a, b);
-  if (m.recordUrl) html += '<div class="gm-sec" style="text-align:center;padding-top:0"><a href="'+esc(m.recordUrl)+'" target="_blank" rel="noopener" style="display:inline-block;padding:8px 20px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:20px;font-size:13px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">📄 查看紀錄表</a></div>';
+  html += recordModalHtml(m.recordUrl);
   let ov = document.getElementById('game-modal');
   if (!ov) {
     ov = document.createElement('div');
@@ -1422,9 +1439,7 @@ function renderTotalSchedule() {
       const hasLine = !!(m.lineA || m.lineB);
       const lsId = 'ls-' + String(m.matchNum).replace(/\W/g,'');
       const lsBtn = hasLine ? '<br><span class="ls-btn" onclick="toggleLineScore(\''+lsId+'\', this)">📊 每局</span>' : '';
-      const recCell = m.recordUrl
-        ? '<a href="'+esc(m.recordUrl)+'" target="_blank" rel="noopener" style="display:inline-block;padding:3px 10px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:12px;font-size:11px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">📄 紀錄表</a>'
-        : '<span style="font-size:11px;color:var(--gray-300)">—</span>';
+      const recCell = recordCellHtml(m.recordUrl);
       html += '<tr>' +
         '<td><strong>'+esc(m.matchNum)+'</strong></td>' +
         '<td><span style="font-size:11px;color:var(--gray-600)">'+esc(phaseLabel)+'</span></td>' +
@@ -1470,9 +1485,7 @@ function renderGroup(group) {
       const scoreCell=hasScore
         ?'<span class="score-cell">'+m.scoreA+' : '+m.scoreB+'</span>'+(m.winner&&m.winner!=='平局'?'<br><span style="font-size:11px;color:var(--green)">✅ '+esc(m.winner)+'</span>':'<br><span style="font-size:11px;color:var(--gray-400)">平局</span>')
         :'<span class="pending-tag">待賽</span>';
-      const recCell = m.recordUrl
-        ? '<a href="'+esc(m.recordUrl)+'" target="_blank" rel="noopener" style="display:inline-block;padding:3px 10px;background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:12px;font-size:11px;font-weight:600;color:var(--yt-teal-dark);text-decoration:none">📄 紀錄表</a>'
-        : '<span style="font-size:11px;color:var(--gray-300)">—</span>';
+      const recCell = recordCellHtml(m.recordUrl);
       html+='<tr class="'+(hasScore?'done-row':'')+'">'+'<td><strong>'+esc(m.matchNum)+'</strong></td>'+
         '<td class="'+(isWinA?'win-team':'')+'">'+esc(m.teamA)+'</td>'+
         '<td style="text-align:center">'+scoreCell+'</td>'+
