@@ -1149,6 +1149,12 @@ function initStripArrows(wrapId) {
   R.onclick = () => strip.scrollBy({left: 400, behavior:'smooth'});
   strip.addEventListener('scroll', upd);
   window.addEventListener('resize', upd);
+  // 載入時自動捲到重點卡片（比賽中／最近終場），靠左對齊留一點邊距
+  const focus = strip.querySelector('.score-card[data-focus="1"]');
+  if (focus) {
+    const target = Math.max(0, focus.offsetLeft - strip.offsetLeft - 8);
+    strip.scrollTo({ left: target, behavior: 'auto' });
+  }
   setTimeout(upd, 50);
 }
 
@@ -1295,14 +1301,17 @@ function renderScoreCards() {
     cards = pending.slice(0, 4);
   }
   if (!cards.length) return '';
+  // 載入時要自動捲到的卡片：優先「比賽中」，否則「最近一場終場」
+  let focusIdx = cards.findIndex(isLiveOf);
+  if (focusIdx < 0) { for (let i=cards.length-1;i>=0;i--){ if(isFinalOf(cards[i])){ focusIdx=i; break; } } }
   let html = '<div class="score-strip">';
-  cards.forEach(m => {
+  cards.forEach((m, idx) => {
     const a = resolveTeamName(m.teamA), b = resolveTeamName(m.teamB);
     const fin  = isFinalOf(m);
     const liv  = isLiveOf(m);
     const winA = fin && Number(m.scoreA) > Number(m.scoreB);
     const winB = fin && Number(m.scoreB) > Number(m.scoreA);
-    html += '<div class="score-card" style="cursor:pointer" onclick="openGameModal(\''+esc(String(m.matchNum))+'\')">' +
+    html += '<div class="score-card"'+(idx===focusIdx?' data-focus="1"':'')+' style="cursor:pointer" onclick="openGameModal(\''+esc(String(m.matchNum))+'\')">' +
       '<div class="score-card-status"><span class="'+(fin?'final':liv?'live':'')+'">'+(fin?'終場':liv?'● 比賽中':'未開賽')+'</span><span>'+esc(m.matchNum)+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+'</span></div>' +
       // 後者(B)先攻，先攻在上：B 列在上、A 列在下
       '<div class="score-card-row'+(winB?' winner':'')+'"><span class="t" style="display:flex;align-items:center;gap:7px">'+teamLogoHtml(b)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(shortTeamName(b))+'</span></span><span class="s">'+((fin||liv)?m.scoreB+(winB?' ◂':''):'')+'</span></div>' +
