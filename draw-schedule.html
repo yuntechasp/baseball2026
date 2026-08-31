@@ -908,10 +908,14 @@ function hasScoreOf(m){ return m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==u
 // 終場＝比分＋勝隊(J欄)都填；只有比分＝比賽中
 function isFinalOf(m){ return hasScoreOf(m) && !!m.winner; }
 function isLiveOf(m){ return hasScoreOf(m) && !m.winner; }
-// 進行中場次的目前局數：取先攻/後攻逐局中，填了幾局(最多者)為準
+// 進行中場次的目前局數(做法1)：
+//  先攻(B)多填1局 => 正在該局下半, 局數=先攻已填局數
+//  兩邊相等 => 已進入下一局上半, 局數=已填局數+1
 function currentInning(m){
   const cnt = s => String(s||'').split(/[,，]/).map(x=>x.trim()).filter(x=>x!=='').length;
-  return Math.max(cnt(m.lineA), cnt(m.lineB));
+  const a = cnt(m.lineA), b = cnt(m.lineB);
+  if (a===0 && b===0) return 0;
+  return (b > a) ? b : a + 1;
 }
 // 上下半推算(做法1)：後攻A=lineA, 先攻B=lineB
 //  先攻多填1局 => 該局下半, 後攻A進攻; 兩邊相等 => 下一局上半, 先攻B進攻
