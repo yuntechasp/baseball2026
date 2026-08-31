@@ -906,6 +906,11 @@ function hasScoreOf(m){ return m.scoreA!==undefined&&m.scoreA!==''&&m.scoreB!==u
 // 終場＝比分＋勝隊(J欄)都填；只有比分＝比賽中
 function isFinalOf(m){ return hasScoreOf(m) && !!m.winner; }
 function isLiveOf(m){ return hasScoreOf(m) && !m.winner; }
+// 進行中場次的目前局數：取先攻/後攻逐局中，填了幾局(最多者)為準
+function currentInning(m){
+  const cnt = s => String(s||'').split(/[,，]/).map(x=>x.trim()).filter(x=>x!=='').length;
+  return Math.max(cnt(m.lineA), cnt(m.lineB));
+}
 
 function computeStandings(label) {
   const teams = groupTeamList(label);
@@ -1279,7 +1284,8 @@ function openGameModal(num) {
     '<div class="gm-team">'+teamLogoHtml(b)+'<span class="n">'+esc(b)+'</span></div>' +
     '<div class="gm-big">'+((fin||liv)?'<span class="'+(winB?'win':'')+'">'+m.scoreB+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winA?'win':'')+'">'+m.scoreA+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
     '<div class="gm-team">'+teamLogoHtml(a)+'<span class="n">'+esc(a)+'</span></div></div>';
-  html += '<div class="gm-status">'+(fin?'終場':liv?'<span style="color:#c0392b">● 比賽中</span>':'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
+  const inn = liv ? currentInning(m) : 0;
+  html += '<div class="gm-status">'+(fin?'終場':liv?'<span style="color:#c0392b">● 比賽中</span>'+(inn?' · 第'+inn+'局':''):'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
   if (m.note && String(m.note).trim()) html += '<div class="gm-note">📝 '+esc(String(m.note).trim())+'</div>';
   if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
   html += buildLineupSection(m, a, b);
