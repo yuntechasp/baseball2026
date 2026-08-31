@@ -254,6 +254,8 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 .linescore td.tname{text-align:left;font-weight:700;color:var(--gray-900);padding-right:14px;white-space:nowrap}
 .linescore td.rhe{font-weight:800;color:var(--yt-teal-dark);border-left:2px solid var(--gray-200)}
 .linescore td.rhe~td.rhe{border-left:none}
+.linescore tr.ls-batting td{background:#fff8e6}
+.ls-atk{font-size:12px;animation:livePulse 1.6s ease-in-out infinite}
 .ls-btn{display:inline-block;margin-top:3px;padding:2px 8px;font-size:10px;font-weight:600;color:var(--yt-teal-dark);background:var(--yt-teal-light);border:1px solid var(--yt-teal-border);border-radius:10px;cursor:pointer}
 .hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;margin-left:8px}
 .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .2s}
@@ -911,6 +913,16 @@ function currentInning(m){
   const cnt = s => String(s||'').split(/[,，]/).map(x=>x.trim()).filter(x=>x!=='').length;
   return Math.max(cnt(m.lineA), cnt(m.lineB));
 }
+// 上下半推算(做法1)：後攻A=lineA, 先攻B=lineB
+//  先攻多填1局 => 該局下半, 後攻A進攻; 兩邊相等 => 下一局上半, 先攻B進攻
+//  回傳 {half:'上'|'下', batting:'A'|'B'} 或 null(無法判斷)
+function halfInning(m){
+  const cnt = s => String(s||'').split(/[,，]/).map(x=>x.trim()).filter(x=>x!=='').length;
+  const a = cnt(m.lineA), b = cnt(m.lineB);
+  if (a===0 && b===0) return null;
+  if (b > a) return { half:'下', batting:'A' };   // 先攻已打完該局(上半)，換後攻打(下半)
+  return { half:'上', batting:'B' };               // 兩邊相等，進入下一局上半，先攻打
+}
 
 function computeStandings(label) {
   const teams = groupTeamList(label);
@@ -1285,7 +1297,9 @@ function openGameModal(num) {
     '<div class="gm-big">'+((fin||liv)?'<span class="'+(winB?'win':'')+'">'+m.scoreB+'</span><span style="color:var(--gray-300);font-size:20px">:</span><span class="'+(winA?'win':'')+'">'+m.scoreA+'</span>':'<span style="font-size:16px;color:var(--gray-400)">VS</span>')+'</div>' +
     '<div class="gm-team">'+teamLogoHtml(a)+'<span class="n">'+esc(a)+'</span></div></div>';
   const inn = liv ? currentInning(m) : 0;
-  html += '<div class="gm-status">'+(fin?'終場':liv?'<span style="color:#c0392b">● 比賽中</span>'+(inn?' · 第'+inn+'局':''):'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
+  const hf = liv ? halfInning(m) : null;
+  const innTxt = inn ? ' · 第'+inn+'局'+(hf?hf.half:'') : '';
+  html += '<div class="gm-status">'+(fin?'終場':liv?'<span style="color:#c0392b">● 比賽中</span>'+innTxt:'未開賽')+' · '+fmtDate(m.date)+' '+fmtTime(m.time)+(m.court?' · '+esc(m.court):'')+'</div>';
   if (m.note && String(m.note).trim()) html += '<div class="gm-note">📝 '+esc(String(m.note).trim())+'</div>';
   if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
   html += buildLineupSection(m, a, b);
@@ -1361,8 +1375,12 @@ function buildLineScore(m) {
   let html = '<div class="linescore-wrap"><table class="linescore"><thead><tr><th></th>';
   for (let i=1;i<=n;i++) html += '<th>'+i+'</th>';
   html += '<th style="border-left:2px solid var(--gray-200)">R</th>'+(hasHE?'<th>H</th><th>E</th>':'')+'</tr></thead><tbody>';
-  [[b,lineB,m.scoreB,heB],[a,lineA,m.scoreA,heA]].forEach(row => {
-    html += '<tr><td class="tname"><span style="display:inline-flex;align-items:center;gap:7px">'+teamLogoHtml(row[0])+esc(row[0])+'</span></td>';
+  const liv = isLiveOf(m);
+  const hf = liv ? halfInning(m) : null;
+  [[b,lineB,m.scoreB,heB,'B'],[a,lineA,m.scoreA,heA,'A']].forEach(row => {
+    const bat = hf && hf.batting === row[4];
+    const atk = bat ? '<span class="ls-atk" title="進攻中">🏏</span>' : '';
+    html += '<tr'+(bat?' class="ls-batting"':'')+'><td class="tname"><span style="display:inline-flex;align-items:center;gap:5px">'+teamLogoHtml(row[0])+esc(row[0])+atk+'</span></td>';
     for (let i=0;i<n;i++) html += '<td>'+esc(row[1][i]!==undefined&&row[1][i]!==''?row[1][i]:'')+'</td>';
     html += '<td class="rhe">'+row[2]+'</td>'+(hasHE?'<td class="rhe" style="border-left:none">'+esc(row[3][0]||'')+'</td><td class="rhe" style="border-left:none">'+esc(row[3][1]||'')+'</td>':'');
     html += '</tr>';
