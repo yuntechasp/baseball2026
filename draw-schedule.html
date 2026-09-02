@@ -1122,13 +1122,15 @@ function renderGroupTable(group, groupMatches) {
 // 卡片顯示用簡稱（去除國立/私立前綴；彈窗與其他處仍用全名）
 function shortTeamName(n){
   const raw = String(n||'').trim();
-  // 顯示短名對照：處理資料中同校不同寫法，避免縮成怪短名（如「國立體大」→「體大」）
-  const NAME_FIX = {
-    '國立體大':'國立體育大學',
-    '體大':'國立體育大學',
+  // 強制顯示名：命中者直接用此顯示，不再裁切前綴（避免「國立體大」被縮成「體育大學/體大」）
+  const FORCE = {
+    '國立體大':'國立體大',
+    '國立體育大學':'國立體大',
+    '體育大學':'國立體大',
+    '體大':'國立體大',
   };
-  const name = NAME_FIX[raw] || raw;
-  return name.replace(/^(國立|私立|市立|縣立)/,'');
+  if (FORCE[raw]) return FORCE[raw];
+  return raw.replace(/^(國立|私立|市立|縣立)/,'');
 }
 // ── 紀錄表：同一格可放多個連結（逗號、換行或空白分隔），拆成陣列 ──
 function recordUrls(raw){
