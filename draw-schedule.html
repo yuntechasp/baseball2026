@@ -1309,7 +1309,12 @@ function openGameModal(num) {
   if (m.note && String(m.note).trim()) html += '<div class="gm-note">📝 '+esc(String(m.note).trim())+'</div>';
   if (m.lineA || m.lineB) html += '<div class="gm-sec"><div class="gm-sec-title">SCORE</div>'+buildLineScore(m)+'</div>';
   html += buildLineupSection(m, a, b);
-  const pit = pitcherBlock(m.pitcherW,'w') + pitcherBlock(m.pitcherL,'l') + pitcherBlock(m.pitcherSV,'sv');
+  // 勝敗投卡片排序：先攻(B)隊在左、後攻(A)隊在右，與先發/投手運用一致
+  //  winB(先攻勝) => 勝投是B在左：W,L ; winA(後攻勝) => 敗投是B在左：L,W
+  const pit = (winA
+      ? pitcherBlock(m.pitcherL,'l') + pitcherBlock(m.pitcherW,'w')
+      : pitcherBlock(m.pitcherW,'w') + pitcherBlock(m.pitcherL,'l'))
+    + pitcherBlock(m.pitcherSV,'sv');
   if (pit) html += '<div class="gm-sec"><div class="gm-sec-title">PITCHING SUMMARY</div><div class="gm-pit">'+pit+'</div></div>';
   html += buildPitchersSection(m, a, b);
   html += recordModalHtml(m.recordUrl);
